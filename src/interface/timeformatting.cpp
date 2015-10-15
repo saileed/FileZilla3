@@ -25,7 +25,7 @@ public:
 			m_dateFormat = _T("%Y-%m-%d");
 		else if (!dateFormat.empty() && dateFormat[0] == '2') {
 			dateFormat = dateFormat.Mid(1);
-			if (fz::datetime::verify_format(dateFormat.ToStdWstring())) {
+			if (CDateTime::VerifyFormat(dateFormat)) {
 				m_dateFormat = dateFormat;
 			}
 			else {
@@ -42,7 +42,7 @@ public:
 			m_dateTimeFormat += _T("%H:%M");
 		else if (!timeFormat.empty() && timeFormat[0] == '2') {
 			timeFormat = timeFormat.Mid(1);
-			if (fz::datetime::verify_format(timeFormat.ToStdWstring())) {
+			if (CDateTime::VerifyFormat(timeFormat)) {
 				m_dateTimeFormat += timeFormat;
 			}
 			else {
@@ -69,11 +69,11 @@ Impl& GetImpl()
 }
 }
 
-wxString CTimeFormat::Format(fz::datetime const& time)
+wxString CTimeFormat::Format(CDateTime const& time)
 {
 	wxString ret;
-	if (time.empty()) {
-		if (time.get_accuracy() > fz::datetime::days) {
+	if (time.IsValid()) {
+		if( time.GetAccuracy() > CDateTime::days ) {
 			ret = FormatDateTime(time);
 		}
 		else {
@@ -83,16 +83,16 @@ wxString CTimeFormat::Format(fz::datetime const& time)
 	return ret;
 }
 
-wxString CTimeFormat::FormatDateTime(fz::datetime const& time)
+wxString CTimeFormat::FormatDateTime(CDateTime const& time)
 {
 	Impl& impl = GetImpl();
 
-	return time.format(impl.m_dateTimeFormat.ToStdWstring(), fz::datetime::local);
+	return time.Format(impl.m_dateTimeFormat, CDateTime::local);
 }
 
-wxString CTimeFormat::FormatDate(fz::datetime const& time)
+wxString CTimeFormat::FormatDate(CDateTime const& time)
 {
 	Impl& impl = GetImpl();
 
-	return time.format(impl.m_dateFormat.ToStdWstring(), fz::datetime::local);
+	return time.Format(impl.m_dateFormat, CDateTime::local);
 }

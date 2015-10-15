@@ -1,12 +1,12 @@
 #include <filezilla.h>
 #include "ratelimiter.h"
 
-#include <libfilezilla/event_handler.hpp>
+#include "event_loop.h"
 
 static int const tickDelay = 250;
 
-CRateLimiter::CRateLimiter(fz::event_loop& loop, COptionsBase& options)
-	: event_handler(loop)
+CRateLimiter::CRateLimiter(CEventLoop& loop, COptionsBase& options)
+	: CEventHandler(loop)
 	, options_(options)
 {
 	RegisterOption(OPTION_SPEEDLIMIT_ENABLE);
@@ -19,7 +19,7 @@ CRateLimiter::CRateLimiter(fz::event_loop& loop, COptionsBase& options)
 
 CRateLimiter::~CRateLimiter()
 {
-	remove_handler();
+	RemoveHandler();
 }
 
 int64_t CRateLimiter::GetLimit(rate_direction direction) const
@@ -34,7 +34,7 @@ int64_t CRateLimiter::GetLimit(rate_direction direction) const
 
 void CRateLimiter::AddObject(CRateLimiterObject* pObject)
 {
-	fz::scoped_lock lock(sync_);
+	scoped_lock lock(sync_);
 
 	m_objectList.push_back(pObject);
 
@@ -58,7 +58,7 @@ void CRateLimiter::AddObject(CRateLimiterObject* pObject)
 			pObject->m_bytesAvailable[i] = tokens;
 
 			if (!m_timer)
-				m_timer = add_timer(fz::duration::from_milliseconds(tickDelay), false);
+				m_timer = AddTimer(duration::from_milliseconds(tickDelay), false);
 		}
 		else {
 			pObject->m_bytesAvailable[i] = -1;
@@ -68,7 +68,7 @@ void CRateLimiter::AddObject(CRateLimiterObject* pObject)
 
 void CRateLimiter::RemoveObject(CRateLimiterObject* pObject)
 {
-	fz::scoped_lock lock(sync_);
+	scoped_lock lock(sync_);
 
 	for (auto iter = m_objectList.begin(); iter != m_objectList.end(); ++iter) {
 		if (*iter == pObject) {
@@ -97,9 +97,9 @@ void CRateLimiter::RemoveObject(CRateLimiterObject* pObject)
 	}
 }
 
-void CRateLimiter::OnTimer(fz::timer_id)
+void CRateLimiter::OnTimer(timer_id)
 {
-	fz::scoped_lock lock(sync_);
+	scoped_lock lock(sync_);
 
 	int64_t const limits[2] = { GetLimit(inbound), GetLimit(outbound) };
 
@@ -179,13 +179,13 @@ void CRateLimiter::OnTimer(fz::timer_id)
 
 	if (m_objectList.empty() || (limits[inbound] == 0 && limits[outbound] == 0)) {
 		if (m_timer) {
-			stop_timer(m_timer);
+			StopTimer(m_timer);
 			m_timer = 0;
 		}
 	}
 }
 
-void CRateLimiter::WakeupWaitingObjects(fz::scoped_lock & l)
+void CRateLimiter::WakeupWaitingObjects(scoped_lock & l)
 {
 	for (int i = 0; i < 2; ++i) {
 		while (!m_wakeupList[i].empty()) {
@@ -194,7 +194,7 @@ void CRateLimiter::WakeupWaitingObjects(fz::scoped_lock & l)
 			if (!pObject->m_waiting[i])
 				continue;
 
-			wxASSERT(pObject->m_bytesAvailable[i] != 0);
+			wxASSERT(pObject->m_bytesAvailable != 0);
 			pObject->m_waiting[i] = false;
 
 			l.unlock(); // Do not hold while executing callback
@@ -224,25 +224,26 @@ int CRateLimiter::GetBucketSize() const
 	return bucket_size;
 }
 
-void CRateLimiter::operator()(fz::event_base const& ev)
+void CRateLimiter::operator()(CEventBase const& ev)
 {
-	fz::dispatch<fz::timer_event, CRateLimitChangedEvent>(ev, this,
-		&CRateLimiter::OnTimer,
-		&CRateLimiter::OnRateChanged);
+	if (Dispatch<CTimerEvent>(ev, this, &CRateLimiter::OnTimer)) {
+		return;
+	}
+	Dispatch<CRateLimitChangedEvent>(ev, this, &CRateLimiter::OnRateChanged);
 }
 
 void CRateLimiter::OnRateChanged()
 {
-	fz::scoped_lock lock(sync_);
+	scoped_lock lock(sync_);
 	if (GetLimit(inbound) > 0 || GetLimit(outbound) > 0) {
 		if (!m_timer)
-			m_timer = add_timer(fz::duration::from_milliseconds(tickDelay), false);
+			m_timer = AddTimer(duration::from_milliseconds(tickDelay), false);
 	}
 }
 
 void CRateLimiter::OnOptionsChanged(changed_options_t const&)
 {
-	send_event<CRateLimitChangedEvent>();
+	SendEvent<CRateLimitChangedEvent>();
 }
 
 CRateLimiterObject::CRateLimiterObject()

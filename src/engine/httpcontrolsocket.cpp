@@ -92,7 +92,7 @@ CHttpControlSocket::CHttpControlSocket(CFileZillaEnginePrivate & engine)
 
 CHttpControlSocket::~CHttpControlSocket()
 {
-	remove_handler();
+	RemoveHandler();
 	DoClose();
 	delete [] m_pRecvBuffer;
 }

@@ -21,7 +21,7 @@ int CLogging::m_max_size;
 wxString CLogging::m_file;
 
 int CLogging::m_refcount = 0;
-fz::mutex CLogging::mutex_(false);
+mutex CLogging::mutex_(false);
 
 thread_local int CLogging::debug_level_{0};
 thread_local int CLogging::raw_listing_{0};
@@ -29,13 +29,13 @@ thread_local int CLogging::raw_listing_{0};
 CLogging::CLogging(CFileZillaEnginePrivate & engine)
 	: engine_(engine)
 {
-	fz::scoped_lock l(mutex_);
+	scoped_lock l(mutex_);
 	m_refcount++;
 }
 
 CLogging::~CLogging()
 {
-	fz::scoped_lock l(mutex_);
+	scoped_lock l(mutex_);
 	m_refcount--;
 
 	if (!m_refcount) {
@@ -128,7 +128,7 @@ void CLogging::InitLogFile() const
 
 void CLogging::LogToFile(MessageType nMessageType, const wxString& msg) const
 {
-	fz::scoped_lock l(mutex_);
+	scoped_lock l(mutex_);
 
 	InitLogFile();
 #ifdef __WXMSW__
@@ -139,14 +139,14 @@ void CLogging::LogToFile(MessageType nMessageType, const wxString& msg) const
 		return;
 #endif
 
-	fz::datetime now = fz::datetime::now();
+	CDateTime now = CDateTime::Now();
 	wxString out(wxString::Format(_T("%s %u %d %s %s")
 #ifdef __WXMSW__
 		_T("\r\n"),
 #else
 		_T("\n"),
 #endif
-		now.format(_T("%Y-%m-%d %H:%M:%S"), fz::datetime::local), m_pid, engine_.GetEngineId(), m_prefixes[static_cast<int>(nMessageType)], msg));
+		now.Format(_T("%Y-%m-%d %H:%M:%S"), CDateTime::local), m_pid, engine_.GetEngineId(), m_prefixes[static_cast<int>(nMessageType)], msg));
 
 	const wxWX2MBbuf utf8 = out.mb_str(wxConvUTF8);
 	if (utf8) {

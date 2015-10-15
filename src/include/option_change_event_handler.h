@@ -23,7 +23,6 @@ public:
 
 	void RegisterOption(int option);
 	void UnregisterOption(int option);
-	void UnregisterAllOptions();
 
 protected:
 	virtual void OnOptionsChanged(changed_options_t const& options) = 0;
@@ -35,7 +34,7 @@ private:
 	static void DoNotify(changed_options_t const& options);
 	static std::size_t notify_index_;
 
-	static void UnregisterAllHandlers();
+	static void UnregisterAll();
 
 	static std::vector<COptionChangeEventHandler*> m_handlers;
 };

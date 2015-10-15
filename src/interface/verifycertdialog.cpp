@@ -27,10 +27,9 @@ CVerifyCertDialog::~CVerifyCertDialog()
 bool CVerifyCertDialog::DisplayCert(wxDialogEx* pDlg, const CCertificate& cert)
 {
 	bool warning = false;
-	if (cert.GetActivationTime().empty()) {
-		if (cert.GetActivationTime() > fz::datetime::now()) {
+	if (cert.GetActivationTime().IsValid()) {
+		if (cert.GetActivationTime() > CDateTime::Now()) {
 			pDlg->SetChildLabel(XRCID("ID_ACTIVATION_TIME"), wxString::Format(_("%s - Not yet valid!"), CTimeFormat::Format(cert.GetActivationTime())));
-			xrc_call(*pDlg, "ID_ACTIVATION_TIME", &wxWindow::SetForegroundColour, wxColour(255, 0, 0));
 			warning = true;
 		}
 		else
@@ -41,10 +40,9 @@ bool CVerifyCertDialog::DisplayCert(wxDialogEx* pDlg, const CCertificate& cert)
 		pDlg->SetChildLabel(XRCID("ID_ACTIVATION_TIME"), _("Invalid date"));
 	}
 
-	if (cert.GetExpirationTime().empty()) {
-		if (cert.GetExpirationTime() < fz::datetime::now()) {
+	if (cert.GetExpirationTime().IsValid()) {
+		if (cert.GetExpirationTime() < CDateTime::Now()) {
 			pDlg->SetChildLabel(XRCID("ID_EXPIRATION_TIME"), wxString::Format(_("%s - Certificate expired!"), CTimeFormat::Format(cert.GetExpirationTime())));
-			xrc_call(*pDlg, "ID_EXPIRATION_TIME", &wxWindow::SetForegroundColour, wxColour(255, 0, 0));
 			warning = true;
 		}
 		else
@@ -99,23 +97,6 @@ bool CVerifyCertDialog::DisplayCert(wxDialogEx* pDlg, const CCertificate& cert)
 }
 
 #include <wx/scrolwin.h>
-
-bool CVerifyCertDialog::DisplayAlgorithm(int controlId, wxString name, bool insecure)
-{
-	if (insecure) {
-		name += _T(" - ");
-		name += _("Insecure algorithm!");
-
-		auto wnd = m_pDlg->FindWindow(controlId);
-		if (wnd) {
-			wnd->SetForegroundColour(wxColour(255, 0, 0));
-		}
-	}
-
-	m_pDlg->SetChildLabel(controlId, name);
-
-	return insecure;
-}
 
 void CVerifyCertDialog::ShowVerificationDialog(CCertificateNotification& notification, bool displayOnly /*=false*/)
 {
@@ -179,18 +160,15 @@ void CVerifyCertDialog::ShowVerificationDialog(CCertificateNotification& notific
 
 	bool warning = DisplayCert(m_pDlg, m_certificates[0]);
 
-	DisplayAlgorithm(XRCID("ID_PROTOCOL"), notification.GetProtocol(), (notification.GetAlgorithmWarnings() & CCertificateNotification::tlsver) != 0);
-	DisplayAlgorithm(XRCID("ID_KEYEXCHANGE"), notification.GetKeyExchange(), (notification.GetAlgorithmWarnings() & CCertificateNotification::kex) != 0);
-	DisplayAlgorithm(XRCID("ID_CIPHER"), notification.GetSessionCipher(), (notification.GetAlgorithmWarnings() & CCertificateNotification::cipher) != 0);
-	DisplayAlgorithm(XRCID("ID_MAC"), notification.GetSessionMac(), (notification.GetAlgorithmWarnings() & CCertificateNotification::mac) != 0);
-
-	if (notification.GetAlgorithmWarnings() != 0) {
-		warning = true;
-	}
+	m_pDlg->SetChildLabel(XRCID("ID_PROTOCOL"), notification.GetProtocol());
+	m_pDlg->SetChildLabel(XRCID("ID_KEYEXCHANGE"), notification.GetKeyExchange());
+	m_pDlg->SetChildLabel(XRCID("ID_CIPHER"), notification.GetSessionCipher());
+	m_pDlg->SetChildLabel(XRCID("ID_MAC"), notification.GetSessionMac());
 
 	if (warning) {
 		XRCCTRL(*m_pDlg, "ID_IMAGE", wxStaticBitmap)->SetBitmap(wxArtProvider::GetBitmap(wxART_WARNING));
-		XRCCTRL(*m_pDlg, "ID_ALWAYS", wxCheckBox)->Enable(false);
+		if (!displayOnly)
+			XRCCTRL(*m_pDlg, "ID_ALWAYS", wxCheckBox)->Enable(false);
 	}
 
 	m_pDlg->GetSizer()->Fit(m_pDlg);
@@ -204,18 +182,16 @@ void CVerifyCertDialog::ShowVerificationDialog(CCertificateNotification& notific
 
 			notification.m_trusted = true;
 
-			if (!notification.GetAlgorithmWarnings()) {
-				if (!warning && XRCCTRL(*m_pDlg, "ID_ALWAYS", wxCheckBox)->GetValue())
-					SetPermanentlyTrusted(notification);
-				else {
-					t_certData cert;
-					cert.host = notification.GetHost();
-					cert.port = notification.GetPort();
-					const unsigned char* data = m_certificates[0].GetRawData(cert.len);
-					cert.data = new unsigned char[cert.len];
-					memcpy(cert.data, data, cert.len);
-					m_sessionTrustedCerts.push_back(cert);
-				}
+			if (!warning && XRCCTRL(*m_pDlg, "ID_ALWAYS", wxCheckBox)->GetValue())
+				SetPermanentlyTrusted(notification);
+			else {
+				t_certData cert;
+				cert.host = notification.GetHost();
+				cert.port = notification.GetPort();
+				const unsigned char* data = m_certificates[0].GetRawData(cert.len);
+				cert.data = new unsigned char[cert.len];
+				memcpy(cert.data, data, cert.len);
+				m_sessionTrustedCerts.push_back(cert);
 			}
 		}
 		else
@@ -318,11 +294,6 @@ void CVerifyCertDialog::ParseDN_by_prefix(wxWindow* parent, std::list<wxString>&
 
 bool CVerifyCertDialog::IsTrusted(CCertificateNotification const& notification)
 {
-	if (notification.GetAlgorithmWarnings() != 0) {
-		// These certs are never trusted.
-		return false;
-	}
-
 	LoadTrustedCerts();
 
 	unsigned int len;
@@ -528,8 +499,8 @@ void CVerifyCertDialog::SetPermanentlyTrusted(CCertificateNotification const& no
 
 	auto xCert = certs.append_child("Certificate");
 	AddTextElement(xCert, "Data", ConvertHexToString(data, len));
-	AddTextElement(xCert, "ActivationTime", static_cast<int64_t>(certificate.GetActivationTime().get_time_t()));
-	AddTextElement(xCert, "ExpirationTime", static_cast<int64_t>(certificate.GetExpirationTime().get_time_t()));
+	AddTextElement(xCert, "ActivationTime", static_cast<int64_t>(certificate.GetActivationTime().GetTimeT()));
+	AddTextElement(xCert, "ExpirationTime", static_cast<int64_t>(certificate.GetExpirationTime().GetTimeT()));
 	AddTextElement(xCert, "Host", notification.GetHost());
 	AddTextElement(xCert, "Port", notification.GetPort());
 

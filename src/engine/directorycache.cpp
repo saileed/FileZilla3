@@ -26,7 +26,7 @@ CDirectoryCache::~CDirectoryCache()
 
 void CDirectoryCache::Store(const CDirectoryListing &listing, const CServer &server)
 {
-	fz::scoped_lock lock(mutex_);
+	scoped_lock lock(mutex_);
 
 	tServerIter sit = CreateServerEntry(server);
 	wxASSERT(sit != m_serverList.end());
@@ -37,7 +37,7 @@ void CDirectoryCache::Store(const CDirectoryListing &listing, const CServer &ser
 	bool unused;
 	if (Lookup(cit, sit, listing.path, true, unused)) {
 		auto & entry = const_cast<CCacheEntry&>(*cit);
-		entry.modificationTime = fz::monotonic_clock::now();
+		entry.modificationTime = CMonotonicClock::now();
 
 		m_totalFileCount -= cit->listing.GetCount();
 		entry.listing = listing;
@@ -54,7 +54,7 @@ void CDirectoryCache::Store(const CDirectoryListing &listing, const CServer &ser
 
 bool CDirectoryCache::Lookup(CDirectoryListing &listing, const CServer &server, const CServerPath &path, bool allowUnsureEntries, bool& is_outdated)
 {
-	fz::scoped_lock lock(mutex_);
+	scoped_lock lock(mutex_);
 
 	tServerIter sit = GetServerEntry(server);
 	if (sit == m_serverList.end())
@@ -84,7 +84,7 @@ bool CDirectoryCache::Lookup(tCacheIter &cacheIter, tServerIter &sit, const CSer
 			if (!allowUnsureEntries && entry.listing.get_unsure_flags())
 				return false;
 
-			is_outdated = (fz::monotonic_clock::now() - entry.listing.m_firstListTime).get_seconds() > CACHE_TIMEOUT;
+			is_outdated = (CMonotonicClock::now() - entry.listing.m_firstListTime).get_seconds() > CACHE_TIMEOUT;
 			return true;
 		}
 	}
@@ -94,7 +94,7 @@ bool CDirectoryCache::Lookup(tCacheIter &cacheIter, tServerIter &sit, const CSer
 
 bool CDirectoryCache::DoesExist(const CServer &server, const CServerPath &path, int &hasUnsureEntries, bool &is_outdated)
 {
-	fz::scoped_lock lock(mutex_);
+	scoped_lock lock(mutex_);
 
 	tServerIter sit = GetServerEntry(server);
 	if (sit == m_serverList.end())
@@ -111,7 +111,7 @@ bool CDirectoryCache::DoesExist(const CServer &server, const CServerPath &path, 
 
 bool CDirectoryCache::LookupFile(CDirentry &entry, const CServer &server, const CServerPath &path, const wxString& file, bool &dirDidExist, bool &matchedCase)
 {
-	fz::scoped_lock lock(mutex_);
+	scoped_lock lock(mutex_);
 
 	tServerIter sit = GetServerEntry(server);
 	if (sit == m_serverList.end()) {
@@ -148,7 +148,7 @@ bool CDirectoryCache::LookupFile(CDirentry &entry, const CServer &server, const 
 
 bool CDirectoryCache::InvalidateFile(const CServer &server, const CServerPath &path, const wxString& filename, bool *wasDir /*=false*/)
 {
-	fz::scoped_lock lock(mutex_);
+	scoped_lock lock(mutex_);
 
 	tServerIter sit = GetServerEntry(server);
 	if (sit == m_serverList.end())
@@ -169,7 +169,7 @@ bool CDirectoryCache::InvalidateFile(const CServer &server, const CServerPath &p
 			}
 		}
 		entry.listing.m_flags |= CDirectoryListing::unsure_unknown;
-		entry.modificationTime = fz::monotonic_clock::now();
+		entry.modificationTime = CMonotonicClock::now();
 	}
 
 	return true;
@@ -177,7 +177,7 @@ bool CDirectoryCache::InvalidateFile(const CServer &server, const CServerPath &p
 
 bool CDirectoryCache::UpdateFile(const CServer &server, const CServerPath &path, const wxString& filename, bool mayCreate, enum Filetype type /*=file*/, int64_t size /*=-1*/)
 {
-	fz::scoped_lock lock(mutex_);
+	scoped_lock lock(mutex_);
 
 	tServerIter sit = GetServerEntry(server);
 	if (sit == m_serverList.end())
@@ -239,7 +239,7 @@ bool CDirectoryCache::UpdateFile(const CServer &server, const CServerPath &path,
 		}
 		else
 			entry.listing.m_flags |= CDirectoryListing::unsure_unknown;
-		entry.modificationTime = fz::monotonic_clock::now();
+		entry.modificationTime = CMonotonicClock::now();
 
 		updated = true;
 	}
@@ -249,7 +249,7 @@ bool CDirectoryCache::UpdateFile(const CServer &server, const CServerPath &path,
 
 bool CDirectoryCache::RemoveFile(const CServer &server, const CServerPath &path, const wxString& filename)
 {
-	fz::scoped_lock lock(mutex_);
+	scoped_lock lock(mutex_);
 
 	tServerIter sit = GetServerEntry(server);
 	if (sit == m_serverList.end())
@@ -285,7 +285,7 @@ bool CDirectoryCache::RemoveFile(const CServer &server, const CServerPath &path,
 			}
 			entry.listing.m_flags |= CDirectoryListing::unsure_invalid;
 		}
-		entry.modificationTime = fz::monotonic_clock::now();
+		entry.modificationTime = CMonotonicClock::now();
 	}
 
 	return true;
@@ -293,7 +293,7 @@ bool CDirectoryCache::RemoveFile(const CServer &server, const CServerPath &path,
 
 void CDirectoryCache::InvalidateServer(const CServer& server)
 {
-	fz::scoped_lock lock(mutex_);
+	scoped_lock lock(mutex_);
 
 	for (auto iter = m_serverList.begin(); iter != m_serverList.end(); ++iter)
 	{
@@ -317,9 +317,9 @@ void CDirectoryCache::InvalidateServer(const CServer& server)
 	}
 }
 
-bool CDirectoryCache::GetChangeTime(fz::monotonic_clock& time, const CServer &server, const CServerPath &path)
+bool CDirectoryCache::GetChangeTime(CMonotonicClock& time, const CServer &server, const CServerPath &path)
 {
-	fz::scoped_lock lock(mutex_);
+	scoped_lock lock(mutex_);
 
 	tServerIter sit = GetServerEntry(server);
 	if (sit == m_serverList.end())
@@ -337,7 +337,7 @@ bool CDirectoryCache::GetChangeTime(fz::monotonic_clock& time, const CServer &se
 
 void CDirectoryCache::RemoveDir(const CServer& server, const CServerPath& path, const wxString& filename, const CServerPath&)
 {
-	fz::scoped_lock lock(mutex_);
+	scoped_lock lock(mutex_);
 
 	// TODO: This is not 100% foolproof and may not work properly
 	// Perhaps just throw away the complete cache?
@@ -372,7 +372,7 @@ void CDirectoryCache::RemoveDir(const CServer& server, const CServerPath& path, 
 
 void CDirectoryCache::Rename(const CServer& server, const CServerPath& pathFrom, const wxString& fileFrom, const CServerPath& pathTo, const wxString& fileTo)
 {
-	fz::scoped_lock lock(mutex_);
+	scoped_lock lock(mutex_);
 
 	tServerIter sit = GetServerEntry(server);
 	if (sit == m_serverList.end())

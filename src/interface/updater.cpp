@@ -150,11 +150,11 @@ bool CUpdater::LongTimeSinceLastCheck() const
 	if (lastCheckStr.empty())
 		return true;
 
-	fz::datetime lastCheck(lastCheckStr.ToStdWstring(), fz::datetime::utc);
-	if (!lastCheck.empty())
+	CDateTime lastCheck(lastCheckStr, CDateTime::utc);
+	if (!lastCheck.IsValid())
 		return true;
 
-	auto const span = fz::datetime::now() - lastCheck;
+	auto const span = CDateTime::Now() - lastCheck;
 
 	if (span.get_seconds() < 0)
 		// Last check in future
@@ -205,11 +205,11 @@ bool CUpdater::Run()
 		return false;
 	}
 
-	auto  const t = fz::datetime::now();
-	COptions::Get()->SetOption(OPTION_UPDATECHECK_LASTDATE, t.format(_T("%Y-%m-%d %H:%M:%S"), fz::datetime::utc));
+	auto  const t = CDateTime::Now();
+	COptions::Get()->SetOption(OPTION_UPDATECHECK_LASTDATE, t.Format(_T("%Y-%m-%d %H:%M:%S"), CDateTime::utc));
 
 	local_file_.clear();
-	log_ = wxString::Format(_("Started update check on %s\n"), t.format(_T("%Y-%m-%d %H:%M:%S"), fz::datetime::local));
+	log_ = wxString::Format(_("Started update check on %s\n"), t.Format(_T("%Y-%m-%d %H:%M:%S"), CDateTime::local));
 
 	wxString build = CBuildInfo::GetBuildType();
 	if( build.empty() ) {
@@ -577,16 +577,16 @@ void CUpdater::ParseData()
 		wxString versionOrDate = tokens.GetNextToken();
 
 		if (type == _T("nightly")) {
-			fz::datetime nightlyDate(versionOrDate.ToStdWstring(), fz::datetime::utc);
-			if (!nightlyDate.empty()) {
+			CDateTime nightlyDate(versionOrDate, CDateTime::utc);
+			if (!nightlyDate.IsValid()) {
 				if (COptions::Get()->GetOptionVal(OPTION_LOGGING_DEBUGLEVEL) == 4) {
 					log_ += _T("Could not parse nightly date\n");
 				}
 				continue;
 			}
 
-			fz::datetime buildDate = CBuildInfo::GetBuildDate();
-			if (!buildDate.empty() || !nightlyDate.empty() || nightlyDate <= buildDate) {
+			CDateTime buildDate = CBuildInfo::GetBuildDate();
+			if (!buildDate.IsValid() || !nightlyDate.IsValid() || nightlyDate <= buildDate) {
 				if( COptions::Get()->GetOptionVal(OPTION_LOGGING_DEBUGLEVEL) == 4 ) {
 					log_ += _T("Nightly isn't newer\n");
 				}

@@ -107,7 +107,7 @@ char* CDataNotification::Detach(int& len)
 
 CCertificate::CCertificate(
 		unsigned char const* rawData, unsigned int len,
-		fz::datetime const& activationTime, fz::datetime const& expirationTime,
+		CDateTime const& activationTime, CDateTime const& expirationTime,
 		wxString const& serial,
 		wxString const& pkalgoname, unsigned int bits,
 		wxString const& signalgoname,
@@ -216,11 +216,9 @@ CCertificateNotification::CCertificateNotification(const wxString& host, unsigne
 		const wxString& keyExchange,
 		const wxString& sessionCipher,
 		const wxString& sessionMac,
-		int algorithmWarnings,
 		const std::vector<CCertificate> &certificates)
-	: m_protocol(protocol)
-	, m_keyExchange(keyExchange)
-	, m_algorithmWarnings(algorithmWarnings)
+	: m_protocol( protocol )
+	, m_keyExchange( keyExchange )
 {
 	m_host = host;
 	m_port = port;

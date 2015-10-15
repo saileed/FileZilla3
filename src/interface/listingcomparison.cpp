@@ -84,7 +84,7 @@ bool CComparisonManager::CompareListings()
 	}
 
 	const int mode = COptions::Get()->GetOptionVal(OPTION_COMPARISONMODE);
-	fz::duration const threshold = fz::duration::from_minutes( COptions::Get()->GetOptionVal(OPTION_COMPARISON_THRESHOLD) );
+	duration const threshold = duration::from_minutes( COptions::Get()->GetOptionVal(OPTION_COMPARISON_THRESHOLD) );
 
 	m_pLeft->StartComparison();
 	m_pRight->StartComparison();
@@ -93,7 +93,7 @@ bool CComparisonManager::CompareListings()
 	bool localDir = false;
 	bool remoteDir = false;
 	int64_t localSize, remoteSize;
-	fz::datetime localDate, remoteDate;
+	CDateTime localDate, remoteDate;
 
 	const int dirSortMode = COptions::Get()->GetOptionVal(OPTION_FILELIST_DIRSORT);
 
@@ -114,8 +114,8 @@ bool CComparisonManager::CompareListings()
 				}
 			}
 			else {
-				if (!localDate.empty() || !remoteDate.empty()) {
-					if (!hide_identical || localDate.empty() || remoteDate.empty() || localFile == _T("..")) {
+				if (!localDate.IsValid() || !remoteDate.IsValid()) {
+					if (!hide_identical || localDate.IsValid() || remoteDate.IsValid() || localFile == _T("..")) {
 						const CComparableListing::t_fileEntryFlags flag = CComparableListing::normal;
 						m_pLeft->CompareAddFile(flag);
 						m_pRight->CompareAddFile(flag);
@@ -124,14 +124,14 @@ bool CComparisonManager::CompareListings()
 				else {
 					CComparableListing::t_fileEntryFlags localFlag, remoteFlag;
 
-					int dateCmp = localDate.compare(remoteDate);
+					int dateCmp = localDate.Compare(remoteDate);
 					if (dateCmp < 0) {
 						localDate += threshold;
 					}
 					else if (dateCmp > 0 ) {
 						remoteDate += threshold;
 					}
-					int adjustedDateCmp = localDate.compare(remoteDate);
+					int adjustedDateCmp = localDate.Compare(remoteDate);
 					if (dateCmp && dateCmp == -adjustedDateCmp) {
 						dateCmp = 0;
 					}

@@ -5,11 +5,7 @@
 
 #include <gnutls/x509.h>
 
-#if FZ_USE_GNUTLS_SYSTEM_CIPHERS
-char const ciphers[] = "@SYSTEM";
-#else
 char const ciphers[] = "SECURE256:+SECURE128:-ARCFOUR-128:-3DES-CBC:-MD5:+SIGN-ALL:-SIGN-RSA-MD5:+CTYPE-X509:-CTYPE-OPENPGP:-VERS-SSL3.0";
-#endif
 
 #define TLSDEBUG 0
 #if TLSDEBUG
@@ -25,8 +21,8 @@ void log_func(int level, const char* msg)
 }
 #endif
 
-CTlsSocket::CTlsSocket(event_handler* pEvtHandler, CSocket& socket, CControlSocket* pOwner)
-	: event_handler(pOwner->event_loop_)
+CTlsSocket::CTlsSocket(CEventHandler* pEvtHandler, CSocket& socket, CControlSocket* pOwner)
+	: CEventHandler(pOwner->event_loop_)
 	, CBackend(pEvtHandler)
 	, m_pOwner(pOwner)
 	, m_socket(socket)
@@ -39,7 +35,7 @@ CTlsSocket::CTlsSocket(event_handler* pEvtHandler, CSocket& socket, CControlSock
 
 CTlsSocket::~CTlsSocket()
 {
-	remove_handler();
+	RemoveHandler();
 
 	Uninit();
 	delete m_pSocketBackend;
@@ -275,7 +271,7 @@ ssize_t CTlsSocket::PullFunction(void* data, size_t len)
 		m_canReadFromSocket = false;
 		if (error == EAGAIN) {
 			if (m_canCheckCloseSocket && !m_pSocketBackend->IsWaiting(CRateLimiter::inbound)) {
-				send_event<CSocketEvent>(m_pSocketBackend, SocketEventType::close, 0);
+				SendEvent<CSocketEvent>(m_pSocketBackend, SocketEventType::close, 0);
 			}
 		}
 		else {
@@ -289,7 +285,7 @@ ssize_t CTlsSocket::PullFunction(void* data, size_t len)
 	}
 
 	if (m_canCheckCloseSocket) {
-		send_event<CSocketEvent>(m_pSocketBackend, SocketEventType::close, 0);
+		SendEvent<CSocketEvent>(m_pSocketBackend, SocketEventType::close, 0);
 	}
 
 	if (!read) {
@@ -303,9 +299,9 @@ ssize_t CTlsSocket::PullFunction(void* data, size_t len)
 	return read;
 }
 
-void CTlsSocket::operator()(fz::event_base const& ev)
+void CTlsSocket::operator()(CEventBase const& ev)
 {
-	fz::dispatch<CSocketEvent>(ev, this, &CTlsSocket::OnSocketEvent);
+	Dispatch<CSocketEvent>(ev, this, &CTlsSocket::OnSocketEvent);
 }
 
 void CTlsSocket::OnSocketEvent(CSocketEventSource*, SocketEventType t, int error)
@@ -342,7 +338,7 @@ void CTlsSocket::OnSocketEvent(CSocketEventSource*, SocketEventType t, int error
 			m_pOwner->LogMessage(MessageType::Debug_Info, _T("CTlsSocket::OnSocketEvent(): close event received"));
 
 			//Uninit();
-			m_pEvtHandler->send_event<CSocketEvent>(this, SocketEventType::close, 0);
+			m_pEvtHandler->SendEvent<CSocketEvent>(this, SocketEventType::close, 0);
 		}
 		break;
 	default:
@@ -504,7 +500,7 @@ int CTlsSocket::ContinueHandshake()
 		if (m_shutdown_requested) {
 			int error = Shutdown();
 			if (!error || error != EAGAIN) {
-				m_pEvtHandler->send_event<CSocketEvent>(this, SocketEventType::close, 0);
+				m_pEvtHandler->SendEvent<CSocketEvent>(this, SocketEventType::close, 0);
 			}
 		}
 
@@ -646,12 +642,12 @@ void CTlsSocket::TriggerEvents()
 		return;
 
 	if (m_canTriggerRead) {
-		m_pEvtHandler->send_event<CSocketEvent>(this, SocketEventType::read, 0);
+		m_pEvtHandler->SendEvent<CSocketEvent>(this, SocketEventType::read, 0);
 		m_canTriggerRead = false;
 	}
 
 	if (m_canTriggerWrite) {
-		m_pEvtHandler->send_event<CSocketEvent>(this, SocketEventType::write, 0);
+		m_pEvtHandler->SendEvent<CSocketEvent>(this, SocketEventType::write, 0);
 		m_canTriggerWrite = false;
 	}
 }
@@ -723,7 +719,7 @@ void CTlsSocket::Failure(int code, bool send_close, const wxString& function)
 	Uninit();
 
 	if (send_close) {
-		m_pEvtHandler->send_event<CSocketEvent>(this, SocketEventType::close, m_socket_error);
+		m_pEvtHandler->SendEvent<CSocketEvent>(this, SocketEventType::close, m_socket_error);
 	}
 }
 
@@ -795,7 +791,7 @@ void CTlsSocket::ContinueShutdown()
 	if (!res) {
 		m_tlsState = TlsState::closed;
 
-		m_pEvtHandler->send_event<CSocketEvent>(this, SocketEventType::close, 0);
+		m_pEvtHandler->SendEvent<CSocketEvent>(this, SocketEventType::close, 0);
 
 		return;
 	}
@@ -819,7 +815,7 @@ void CTlsSocket::TrustCurrentCert(bool trusted)
 		CheckResumeFailedReadWrite();
 
 		if (m_tlsState == TlsState::conn) {
-			m_pEvtHandler->send_event<CSocketEvent>(this, SocketEventType::connection, 0);
+			m_pEvtHandler->SendEvent<CSocketEvent>(this, SocketEventType::connection, 0);
 		}
 
 		TriggerEvents();
@@ -859,8 +855,8 @@ bool CTlsSocket::ExtractCert(gnutls_datum_t const* datum, CCertificate& out)
 		return false;
 	}
 
-	fz::datetime expirationTime(gnutls_x509_crt_get_expiration_time(cert), fz::datetime::seconds);
-	fz::datetime activationTime(gnutls_x509_crt_get_activation_time(cert), fz::datetime::seconds);
+	CDateTime expirationTime(gnutls_x509_crt_get_expiration_time(cert), CDateTime::seconds);
+	CDateTime activationTime(gnutls_x509_crt_get_activation_time(cert), CDateTime::seconds);
 
 	// Get the serial number of the certificate
 	unsigned char buffer[40];
@@ -1006,61 +1002,6 @@ bool CTlsSocket::CertificateIsBlacklisted(std::vector<CCertificate> const& certi
 	return false;
 }
 
-
-int CTlsSocket::GetAlgorithmWarnings()
-{
-	int algorithmWarnings{};
-
-	switch (gnutls_protocol_get_version(m_session))
-	{
-		case GNUTLS_SSL3:
-		case GNUTLS_VERSION_UNKNOWN:
-			algorithmWarnings |= CCertificateNotification::tlsver;
-			break;
-		default:
-			break;
-	}
-
-	switch (gnutls_cipher_get(m_session)) {
-		case GNUTLS_CIPHER_UNKNOWN:
-		case GNUTLS_CIPHER_NULL:
-		case GNUTLS_CIPHER_ARCFOUR_128:
-		case GNUTLS_CIPHER_3DES_CBC:
-		case GNUTLS_CIPHER_ARCFOUR_40:
-		case GNUTLS_CIPHER_RC2_40_CBC:
-		case GNUTLS_CIPHER_DES_CBC:
-			algorithmWarnings |= CCertificateNotification::cipher;
-			break;
-		default:
-			break;
-	}
-
-	switch (gnutls_mac_get(m_session)) {
-		case GNUTLS_MAC_UNKNOWN:
-		case GNUTLS_MAC_NULL:
-		case GNUTLS_MAC_MD5:
-		case GNUTLS_MAC_MD2:
-		case GNUTLS_MAC_UMAC_96:
-			algorithmWarnings |= CCertificateNotification::mac;
-			break;
-		default:
-			break;
-	}
-
-	switch (gnutls_kx_get(m_session)) {
-		case GNUTLS_KX_UNKNOWN:
-		case GNUTLS_KX_ANON_DH:
-		case GNUTLS_KX_RSA_EXPORT:
-		case GNUTLS_KX_ANON_ECDH:
-			algorithmWarnings |= CCertificateNotification::kex;
-		default:
-			break;
-	}
-
-	return algorithmWarnings;
-}
-
-
 int CTlsSocket::VerifyCertificate()
 {
 	if (m_tlsState != TlsState::handshake) {
@@ -1141,8 +1082,6 @@ int CTlsSocket::VerifyCertificate()
 		return FZ_REPLY_ERROR;
 	}
 
-	int const algorithmWarnings = GetAlgorithmWarnings();
-
 	CCertificateNotification *pNotification = new CCertificateNotification(
 		m_pOwner->GetCurrentServer()->GetHost(),
 		m_pOwner->GetCurrentServer()->GetPort(),
@@ -1150,7 +1089,6 @@ int CTlsSocket::VerifyCertificate()
 		GetKeyExchange(),
 		GetCipherName(),
 		GetMacName(),
-		algorithmWarnings,
 		certificates);
 
 	m_pOwner->SendAsyncRequest(pNotification);
@@ -1158,7 +1096,7 @@ int CTlsSocket::VerifyCertificate()
 	return FZ_REPLY_WOULDBLOCK;
 }
 
-void CTlsSocket::OnRateAvailable(CRateLimiter::rate_direction)
+void CTlsSocket::OnRateAvailable(enum CRateLimiter::rate_direction)
 {
 }
 

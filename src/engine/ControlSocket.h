@@ -46,7 +46,7 @@ public:
 	CServerPath remotePath;
 	const bool download;
 
-	fz::datetime fileTime;
+	CDateTime fileTime;
 	int64_t localFileSize{-1};
 	int64_t remoteFileSize{-1};
 
@@ -111,7 +111,7 @@ enum class TransferEndReason
 };
 
 class CTransferStatus;
-class CControlSocket: public CLogging, public fz::event_handler
+class CControlSocket: public CLogging, public CEventHandler
 {
 public:
 	CControlSocket(CFileZillaEnginePrivate & engine);
@@ -171,7 +171,7 @@ public:
 	void InvalidateCurrentWorkingDir(const CServerPath& path);
 
 protected:
-	fz::duration GetTimezoneOffset() const;
+	duration GetTimezoneOffset() const;
 
 	virtual int DoClose(int nErrorCode = FZ_REPLY_DISCONNECTED);
 	bool m_closed;
@@ -204,8 +204,8 @@ protected:
 	bool m_useUTF8;
 
 	// Timeout data
-	fz::timer_id m_timer{};
-	fz::monotonic_clock m_lastActivity;
+	timer_id m_timer{};
+	CMonotonicClock m_lastActivity;
 
 	// -------------------------
 	// Begin cache locking stuff
@@ -256,9 +256,9 @@ protected:
 
 	bool m_invalidateCurrentPath;
 
-	virtual void operator()(fz::event_base const& ev);
+	virtual void operator()(CEventBase const& ev);
 
-	void OnTimer(fz::timer_id id);
+	void OnTimer(timer_id id);
 	void OnObtainLock();
 };
 
@@ -278,7 +278,7 @@ protected:
 	virtual int DoClose(int nErrorCode = FZ_REPLY_DISCONNECTED);
 	void ResetSocket();
 
-	virtual void operator()(fz::event_base const& ev);
+	virtual void operator()(CEventBase const& ev);
 	void OnSocketEvent(CSocketEventSource* source, SocketEventType t, int error);
 	void OnHostAddress(CSocketEventSource* source, wxString const& address);
 

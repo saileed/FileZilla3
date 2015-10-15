@@ -23,12 +23,12 @@ public:
 	virtual void cb();
 
 protected:
-	fz::monotonic_clock m_start;
+	CMonotonicClock m_start;
 
 	int64_t m_summed_latency{};
 	int m_measurements{};
 
-	mutable fz::mutex m_sync;
+	mutable mutex m_sync;
 };
 
 #endif

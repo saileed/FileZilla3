@@ -6,19 +6,20 @@ check_PROGRAMS = $(TESTS)
 test_SOURCES =  test.cpp \
 		cmpnatural.cpp \
 		dirparsertest.cpp \
+		dispatch.cpp \
+		eventloop.cpp \
 		ipaddress.cpp \
 		localpathtest.cpp \
-		serverpathtest.cpp
+		serverpathtest.cpp \
+		time.cpp
 
 test_CPPFLAGS = -I$(top_srcdir)/src/include
 test_CPPFLAGS += -I$(top_srcdir)/src/engine
-test_CPPFLAGS += $(LIBFILEZILLA_CFLAGS)
 test_CPPFLAGS += $(WX_CPPFLAGS)
 test_CXXFLAGS = $(WX_CXXFLAGS_ONLY) $(CPPUNIT_CFLAGS)
 
 test_LDFLAGS = $(CPPUNIT_LIBS)
 test_LDFLAGS += ../src/engine/libengine.a
-test_LDFLAGS += $(LIBFILEZILLA_LIBS)
 test_LDFLAGS += $(LIBGNUTLS_LIBS)
 test_LDFLAGS += $(WX_LIBS)
 test_LDFLAGS += $(IDN_LIB)

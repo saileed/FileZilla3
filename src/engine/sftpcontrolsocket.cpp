@@ -3,14 +3,13 @@
 #include "directorycache.h"
 #include "directorylistingparser.h"
 #include "engineprivate.h"
+#include "event_loop.h"
 #include "pathcache.h"
 #include "local_filesys.h"
+#include "fzprocess.h"
 #include "proxy.h"
 #include "servercapabilities.h"
 #include "sftpcontrolsocket.h"
-
-#include <libfilezilla/event_loop.hpp>
-#include <libfilezilla/process.hpp>
 
 #include <wx/filename.h>
 #include <wx/log.h>
@@ -20,10 +19,10 @@
 #define FZSFTP_PROTOCOL_VERSION 3
 
 struct sftp_event_type;
-typedef fz::simple_event<sftp_event_type> CSftpEvent;
+typedef CEvent<sftp_event_type> CSftpEvent;
 
 struct terminate_event_type;
-typedef fz::simple_event<terminate_event_type> CTerminateEvent;
+typedef CEvent<terminate_event_type> CTerminateEvent;
 
 class CSftpFileTransferOpData : public CFileTransferOpData
 {
@@ -58,16 +57,16 @@ struct sftp_message
 class CSftpInputThread final : public wxThread
 {
 public:
-	CSftpInputThread(CSftpControlSocket* pOwner, fz::process& proc)
+	CSftpInputThread(CSftpControlSocket* pOwner, CProcess& process)
 		: wxThread(wxTHREAD_JOINABLE)
-		, process_(proc)
+		, process_(process)
 		, m_pOwner(pOwner)
 	{
 	}
 
 	virtual ~CSftpInputThread()
 	{
-		fz::scoped_lock l(m_sync);
+		scoped_lock l(m_sync);
 		for (auto & msg : m_sftpMessages) {
 			delete msg;
 		}
@@ -85,7 +84,7 @@ public:
 
 	void GetMessages(std::vector<sftp_message*>& messages)
 	{
-		fz::scoped_lock l(m_sync);
+		scoped_lock l(m_sync);
 		messages.swap(m_sftpMessages);
 	}
 
@@ -96,13 +95,13 @@ protected:
 		bool sendEvent;
 
 		{
-			fz::scoped_lock l(m_sync);
+			scoped_lock l(m_sync);
 			sendEvent = m_sftpMessages.empty();
 			m_sftpMessages.push_back(message);
 		}
 
 		if (sendEvent)
-			m_pOwner->send_event<CSftpEvent>();
+			m_pOwner->SendEvent<CSftpEvent>();
 	}
 
 	int ReadNumber(bool &error)
@@ -111,7 +110,7 @@ protected:
 
 		while(true) {
 			char c;
-			int read = process_.read(&c, 1);
+			int read = process_.Read(&c, 1);
 			if (read != 1) {
 				if (!read)
 					m_pOwner->LogMessage(MessageType::Debug_Warning, _T("Unexpected EOF."));
@@ -139,7 +138,7 @@ protected:
 
 		while(true) {
 			char c;
-			int read = process_.read(&c, 1);
+			int read = process_.Read(&c, 1);
 			if (read != 1) {
 				if (!read)
 					m_pOwner->LogMessage(MessageType::Debug_Warning, _T("Unexpected EOF."));
@@ -179,7 +178,7 @@ protected:
 		bool error = false;
 		while (!error) {
 			char readType = 0;
-			int read = process_.read(&readType, 1);
+			int read = process_.Read(&readType, 1);
 			if (read != 1)
 				break;
 
@@ -285,7 +284,7 @@ protected:
 		}
 loopexit:
 
-		m_pOwner->send_event<CTerminateEvent>();
+		m_pOwner->SendEvent<CTerminateEvent>();
 		return reinterpret_cast<ExitCode>(Close());
 	}
 
@@ -294,11 +293,11 @@ loopexit:
 		return 0;
 	}
 
-	fz::process& process_;
+	CProcess& process_;
 	CSftpControlSocket* m_pOwner;
 
 	std::vector<sftp_message*> m_sftpMessages;
-	fz::mutex m_sync;
+	mutex m_sync;
 };
 
 class CSftpDeleteOpData final : public COpData
@@ -314,9 +313,9 @@ public:
 	CServerPath path;
 	std::deque<wxString> files;
 
-	// Set to fz::datetime::Now initially and after
+	// Set to CDateTime::Now initially and after
 	// sending an updated listing to the UI.
-	fz::datetime m_time;
+	CDateTime m_time;
 
 	bool m_needSendListing{};
 
@@ -332,7 +331,7 @@ CSftpControlSocket::CSftpControlSocket(CFileZillaEnginePrivate & engine)
 
 CSftpControlSocket::~CSftpControlSocket()
 {
-	remove_handler();
+	RemoveHandler();
 	DoClose();
 }
 
@@ -406,20 +405,20 @@ int CSftpControlSocket::Connect(const CServer &server)
 	else
 		pData->pKeyFiles = pTokenizer;
 
-	m_pProcess = new fz::process();
+	m_pProcess = new CProcess();
 
 	engine_.GetRateLimiter().AddObject(this);
 
-	auto executable = fz::to_native(engine_.GetOptions().GetOption(OPTION_FZSFTP_EXECUTABLE));
+	wxString executable = engine_.GetOptions().GetOption(OPTION_FZSFTP_EXECUTABLE);
 	if (executable.empty())
-		executable = fzT("fzsftp");
+		executable = _T("fzsftp");
 	LogMessage(MessageType::Debug_Verbose, _T("Going to execute %s"), executable);
 
-	std::vector<fz::native_string> args = {fzT("-v")};
+	std::vector<wxString> args = {_T("-v")};
 	if (engine_.GetOptions().GetOptionVal(OPTION_SFTP_COMPRESSION)) {
-		args.push_back(fzT("-C"));
+		args.push_back(_T("-C"));
 	}
-	if (!m_pProcess->spawn(executable, args)) {
+	if (!m_pProcess->Execute(executable, args)) {
 		LogMessage(MessageType::Debug_Warning, _T("Could not create process: %s"), wxSysErrorMsg());
 		DoClose();
 		return FZ_REPLY_ERROR;
@@ -795,7 +794,7 @@ bool CSftpControlSocket::AddToStream(const wxString& cmd, bool force_utf8 /*=fal
 	}
 
 	unsigned int len = strlen(str);
-	return m_pProcess->write(str, len);
+	return m_pProcess->Write(str, len);
 }
 
 bool CSftpControlSocket::SetAsyncRequestReply(CAsyncRequestNotification *pNotification)
@@ -1020,11 +1019,11 @@ int CSftpControlSocket::ListParseResponse(bool successful, const wxString& reply
 				seconds += c - '0';
 			}
 			if (parsed) {
-				fz::datetime date(seconds, fz::datetime::seconds);
-				if (date.empty()) {
+				CDateTime date(seconds, CDateTime::seconds);
+				if (date.IsValid()) {
 					wxASSERT(pData->directoryListing[pData->mtime_index].has_date());
-					fz::datetime listTime = pData->directoryListing[pData->mtime_index].time;
-					listTime -= fz::duration::from_minutes(m_pCurrentServer->GetTimezoneOffset());
+					CDateTime listTime = pData->directoryListing[pData->mtime_index].time;
+					listTime -= duration::from_minutes(m_pCurrentServer->GetTimezoneOffset());
 
 					int serveroffset = static_cast<int>((date - listTime).get_seconds());
 					if (!pData->directoryListing[pData->mtime_index].has_seconds()) {
@@ -1036,7 +1035,7 @@ int CSftpControlSocket::ListParseResponse(bool successful, const wxString& reply
 
 					LogMessage(MessageType::Status, _("Timezone offset of server is %d seconds."), -serveroffset);
 
-					fz::duration span = fz::duration::from_seconds(serveroffset);
+					duration span = duration::from_seconds(serveroffset);
 					const int count = pData->directoryListing.GetCount();
 					for (int i = 0; i < count; ++i) {
 						CDirentry& entry = pData->directoryListing[i];
@@ -1781,7 +1780,7 @@ int CSftpControlSocket::FileTransferSend()
 	}
 	else if (pData->opState == filetransfer_chmtime)
 	{
-		wxASSERT(pData->fileTime.empty());
+		wxASSERT(pData->fileTime.IsValid());
 		if (pData->download)
 		{
 			LogMessage(__TFILE__, __LINE__, this, MessageType::Debug_Info, _T("  filetransfer_chmtime during download"));
@@ -1791,7 +1790,7 @@ int CSftpControlSocket::FileTransferSend()
 
 		wxString quotedFilename = QuoteFilename(pData->remotePath.FormatFilename(pData->remoteFile, !pData->tryAbsolutePath));
 		// Y2K38
-		time_t ticks = pData->fileTime.get_time_t();
+		time_t ticks = pData->fileTime.GetTimeT();
 		wxString seconds = wxString::Format(_T("%d"), (int)ticks);
 		if (!SendCommand(_T("chmtime ") + seconds + _T(" ") + WildcardEscape(quotedFilename),
 			_T("chmtime ") + seconds + _T(" ") + quotedFilename))
@@ -1822,14 +1821,14 @@ int CSftpControlSocket::FileTransferParseResponse(bool successful, const wxStrin
 
 		if (engine_.GetOptions().GetOptionVal(OPTION_PRESERVE_TIMESTAMPS)) {
 			if (pData->download) {
-				if (pData->fileTime.empty()) {
+				if (pData->fileTime.IsValid()) {
 					if (!CLocalFileSystem::SetModificationTime(pData->localFile, pData->fileTime))
 						LogMessage(__TFILE__, __LINE__, this, MessageType::Debug_Warning, _T("Could not set modification time"));
 				}
 			}
 			else {
 				pData->fileTime = CLocalFileSystem::GetModificationTime(pData->localFile);
-				if (pData->fileTime.empty()) {
+				if (pData->fileTime.IsValid()) {
 					pData->opState = filetransfer_chmtime;
 					return SendNextCommand();
 				}
@@ -1850,10 +1849,10 @@ int CSftpControlSocket::FileTransferParseResponse(bool successful, const wxStrin
 				seconds += c - '0';
 			}
 			if (parsed) {
-				fz::datetime fileTime = fz::datetime(seconds, fz::datetime::seconds);
-				if (fileTime.empty()) {
+				CDateTime fileTime = CDateTime(seconds, CDateTime::seconds);
+				if (fileTime.IsValid()) {
 					pData->fileTime = fileTime;
-					pData->fileTime += fz::duration::from_minutes(m_pCurrentServer->GetTimezoneOffset());
+					pData->fileTime += duration::from_minutes(m_pCurrentServer->GetTimezoneOffset());
 				}
 			}
 		}
@@ -1886,7 +1885,7 @@ int CSftpControlSocket::DoClose(int nErrorCode /*=FZ_REPLY_DISCONNECTED*/)
 	engine_.GetRateLimiter().RemoveObject(this);
 
 	if (m_pProcess) {
-		m_pProcess->kill();
+		m_pProcess->Kill();
 	}
 
 	if (m_pInputThread) {
@@ -2133,8 +2132,8 @@ int CSftpControlSocket::DeleteParseResponse(bool successful, const wxString&)
 
 		engine_.GetDirectoryCache().RemoveFile(*m_pCurrentServer, pData->path, file);
 
-		auto const now = fz::datetime::now();
-		if (now.empty() && pData->m_time.empty() && (now - pData->m_time).get_seconds() >= 1) {
+		auto const now = CDateTime::Now();
+		if (now.IsValid() && pData->m_time.IsValid() && (now - pData->m_time).get_seconds() >= 1) {
 			engine_.SendDirectoryListingNotification(pData->path, false, true, false);
 			pData->m_time = now;
 			pData->m_needSendListing = false;
@@ -2176,8 +2175,8 @@ int CSftpControlSocket::DeleteSend()
 		return FZ_REPLY_ERROR;
 	}
 
-	if (!pData->m_time.empty())
-		pData->m_time = fz::datetime::now();
+	if (!pData->m_time.IsValid())
+		pData->m_time = CDateTime::Now();
 
 	engine_.GetDirectoryCache().InvalidateFile(*m_pCurrentServer, pData->path, file);
 
@@ -2639,9 +2638,9 @@ int CSftpControlSocket::ListCheckTimezoneDetection()
 	return FZ_REPLY_OK;
 }
 
-void CSftpControlSocket::operator()(fz::event_base const& ev)
+void CSftpControlSocket::operator()(CEventBase const& ev)
 {
-	if (fz::dispatch<CSftpEvent, CTerminateEvent>(ev, this,
+	if (Dispatch<CSftpEvent, CTerminateEvent>(ev, this,
 		&CSftpControlSocket::OnSftpEvent,
 		&CSftpControlSocket::OnTerminate)) {
 		return;

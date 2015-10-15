@@ -7,17 +7,15 @@
 
 #include <wx/timer.h>
 
-#include "option_change_event_handler.h"
-
 class CFastTextCtrl;
-class CStatusView final : public wxNavigationEnabled<wxWindow>, private COptionChangeEventHandler
+class CStatusView final : public wxNavigationEnabled<wxWindow>
 {
 public:
 	CStatusView(wxWindow* parent, wxWindowID id);
 	virtual ~CStatusView();
 
 	void AddToLog(CLogmsgNotification const& pNotification);
-	void AddToLog(MessageType messagetype, const wxString& message, fz::datetime const& time);
+	void AddToLog(MessageType messagetype, const wxString& message, CDateTime const& time);
 
 	void InitDefAttr();
 
@@ -25,13 +23,11 @@ public:
 
 	virtual bool Show(bool show = true);
 
-private:
+protected:
 
 	int m_nLineCount{};
 	wxString m_Content;
 	CFastTextCtrl *m_pTextCtrl{};
-
-	void OnOptionsChanged(changed_options_t const& options);
 
 	DECLARE_EVENT_TABLE()
 	void OnSize(wxSizeEvent &);
@@ -63,12 +59,12 @@ private:
 	{
 		MessageType messagetype;
 		wxString message;
-		fz::datetime time;
+		CDateTime time;
 	};
 	std::list<t_line> m_hiddenLines;
 
 	bool m_showTimestamps{};
-	fz::datetime m_lastTime;
+	CDateTime m_lastTime;
 	wxString m_lastTimeString;
 };
 

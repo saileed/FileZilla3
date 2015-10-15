@@ -40,10 +40,7 @@ enum sftpRequestTypes
 	sftpReqUnknown
 };
 
-namespace fz {
-class process;
-}
-
+class CProcess;
 class CSftpInputThread;
 
 class CSftpControlSocket final : public CControlSocket, public CRateLimiterObject
@@ -125,10 +122,10 @@ protected:
 	// see src/putty/wildcard.c
 	wxString WildcardEscape(const wxString& file);
 
-	fz::process* m_pProcess{};
+	CProcess* m_pProcess{};
 	CSftpInputThread* m_pInputThread{};
 
-	virtual void operator()(fz::event_base const& ev);
+	virtual void operator()(CEventBase const& ev);
 	void OnSftpEvent();
 	void OnTerminate();
 

@@ -17,7 +17,7 @@ public:
 #ifdef __WXMSW__
 	CSparseOptional<wxString> label;
 #endif
-	fz::datetime time;
+	CDateTime time;
 	int64_t size;
 	int attributes;
 	bool dir;
@@ -61,7 +61,7 @@ protected:
 public:
 	virtual bool CanStartComparison();
 	virtual void StartComparison();
-	virtual bool GetNextFile(wxString& name, bool &dir, int64_t &size, fz::datetime& date);
+	virtual bool GetNextFile(wxString& name, bool &dir, int64_t &size, CDateTime& date);
 	virtual void FinishComparison();
 
 	virtual bool ItemIsDir(int index) const;

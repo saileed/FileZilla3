@@ -4,7 +4,7 @@
 #include "dndobjects.h"
 #include "queue.h"
 
-#include <libfilezilla_engine.h>
+#include <libfilezilla.h>
 #include <option_change_event_handler.h>
 
 #include <set>
@@ -35,7 +35,7 @@ public:
 
 	wxString name;
 	int64_t size{};
-	fz::datetime time;
+	CDateTime time;
 	int attributes{};
 	bool dir{};
 };
@@ -230,7 +230,7 @@ protected:
 	void TryRefreshListings();
 	CServer m_last_refresh_server;
 	CServerPath m_last_refresh_path;
-	fz::monotonic_clock m_last_refresh_listing_time;
+	CMonotonicClock m_last_refresh_listing_time;
 
 	// Called from Process Reply.
 	// After a disconnect, check if there's another idle engine that

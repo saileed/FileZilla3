@@ -1,13 +1,13 @@
 #ifndef __FILEZILLAENGINEPRIVATE_H__
 #define __FILEZILLAENGINEPRIVATE_H__
 
-#include <libfilezilla/event.hpp>
-#include <libfilezilla/event_handler.hpp>
-#include <libfilezilla/mutex.hpp>
-#include <libfilezilla/time.hpp>
+#include "timeex.h"
 
 #include "engine_context.h"
+#include "event.h"
+#include "event_handler.h"
 #include "FileZillaEngine.h"
+#include "mutex.h"
 #include "option_change_event_handler.h"
 
 #include <atomic>
@@ -23,7 +23,7 @@ enum EngineNotificationType
 };
 
 struct filezilla_engine_event_type;
-typedef fz::simple_event<filezilla_engine_event_type, EngineNotificationType> CFileZillaEngineEvent;
+typedef CEvent<filezilla_engine_event_type, EngineNotificationType> CFileZillaEngineEvent;
 
 class CTransferStatusManager final
 {
@@ -44,7 +44,7 @@ public:
 	CTransferStatus Get(bool &changed);
 
 protected:
-	fz::mutex mutex_;
+	mutex mutex_;
 
 	CTransferStatus status_;
 	std::atomic<int64_t> currentOffset_{};
@@ -53,7 +53,7 @@ protected:
 	CFileZillaEnginePrivate& engine_;
 };
 
-class CFileZillaEnginePrivate final : public fz::event_handler, COptionChangeEventHandler
+class CFileZillaEnginePrivate final : public CEventHandler, COptionChangeEventHandler
 {
 public:
 	CFileZillaEnginePrivate(CFileZillaEngineContext& engine_context, CFileZillaEngine& parent);
@@ -135,17 +135,17 @@ protected:
 
 	int ContinueConnect();
 
-	void operator()(fz::event_base const& ev);
+	void operator()(CEventBase const& ev);
 	void OnEngineEvent(EngineNotificationType type);
 	void OnTimer(int timer_id);
 	void OnCommandEvent();
 
 	// General mutex for operations on the engine
 	// Todo: More fine-grained locking, a global mutex isn't nice
-	static fz::mutex mutex_;
+	static mutex mutex_;
 
 	// Used to synchronize access to the notification list
-	fz::mutex notification_mutex_;
+	mutex notification_mutex_;
 
 	wxEvtHandler *m_pEventHandler{};
 
@@ -158,7 +158,7 @@ protected:
 
 	// Remember last path used in a dirlisting.
 	CServerPath m_lastListDir;
-	fz::monotonic_clock m_lastListTime;
+	CMonotonicClock m_lastListTime;
 
 	std::unique_ptr<CControlSocket> m_pControlSocket;
 
@@ -187,12 +187,12 @@ protected:
 	struct t_failedLogins final
 	{
 		CServer server;
-		fz::datetime time;
+		CDateTime time;
 		bool critical{};
 	};
 	static std::list<t_failedLogins> m_failedLogins;
 	int m_retryCount{};
-	fz::timer_id m_retryTimer{};
+	timer_id m_retryTimer{};
 
 	CRateLimiter& m_rateLimiter;
 	CDirectoryCache& directory_cache_;
@@ -205,9 +205,9 @@ protected:
 };
 
 struct command_event_type{};
-typedef fz::simple_event<command_event_type> CCommandEvent;
+typedef CEvent<command_event_type> CCommandEvent;
 
 struct async_request_reply_event_type{};
-typedef fz::simple_event<async_request_reply_event_type, std::unique_ptr<CAsyncRequestNotification>> CAsyncRequestReplyEvent;
+typedef CEvent<async_request_reply_event_type, std::unique_ptr<CAsyncRequestNotification>> CAsyncRequestReplyEvent;
 
 #endif //__FILEZILLAENGINEPRIVATE_H__

@@ -4,6 +4,7 @@
 #include "directorylistingparser.h"
 #include "engineprivate.h"
 #include "externalipresolver.h"
+#include "file.h"
 #include "ftpcontrolsocket.h"
 #include "iothread.h"
 #include "pathcache.h"
@@ -12,9 +13,6 @@
 #include "transfersocket.h"
 #include "local_filesys.h"
 #include "proxy.h"
-
-#include <libfilezilla/file.hpp>
-#include <libfilezilla/util.hpp>
 
 #include <wx/filename.h>
 #include <wx/log.h>
@@ -156,9 +154,9 @@ public:
 	std::deque<wxString> files;
 	bool omitPath{};
 
-	// Set to fz::datetime::Now initially and after
+	// Set to CDateTime::Now initially and after
 	// sending an updated listing to the UI.
-	fz::datetime m_time;
+	CDateTime m_time;
 
 	bool m_needSendListing{};
 
@@ -191,7 +189,7 @@ CFtpControlSocket::CFtpControlSocket(CFileZillaEnginePrivate & engine)
 
 CFtpControlSocket::~CFtpControlSocket()
 {
-	remove_handler();
+	RemoveHandler();
 	m_pSocket->SetSynchronousReadCallback(0);
 
 	DoClose();
@@ -964,7 +962,7 @@ int CFtpControlSocket::LogonParseResponse()
 				continue;
 			capabilities cap = CServerCapabilities::GetCapability(*GetCurrentServer(), opst_mlst_command);
 			if (cap == unknown) {
-				facts = fz::str_tolower_ascii(facts);
+				MakeLowerAscii(facts);
 
 				bool had_unset = false;
 				wxString opts_facts;
@@ -1243,7 +1241,7 @@ public:
 	// Listing index for list_mdtm
 	int mdtm_index;
 
-	fz::monotonic_clock m_time_before_locking;
+	CMonotonicClock m_time_before_locking;
 };
 
 enum listStates
@@ -1357,7 +1355,7 @@ int CFtpControlSocket::ListSubcommandResult(int prevResult)
 		if (!pData->holdsLock) {
 			if (!TryLockCache(lock_list, m_CurrentPath)) {
 				pData->opState = list_waitlock;
-				pData->m_time_before_locking = fz::monotonic_clock::now();
+				pData->m_time_before_locking = CMonotonicClock::now();
 				return FZ_REPLY_WOULDBLOCK;
 			}
 		}
@@ -1447,7 +1445,7 @@ int CFtpControlSocket::ListSubcommandResult(int prevResult)
 			if (pData->tranferCommandSent && IsMisleadingListResponse()) {
 				CDirectoryListing listing;
 				listing.path = m_CurrentPath;
-				listing.m_firstListTime = fz::monotonic_clock::now();
+				listing.m_firstListTime = CMonotonicClock::now();
 
 				if (pData->viewHiddenCheck) {
 					if (pData->viewHidden) {
@@ -1604,11 +1602,11 @@ int CFtpControlSocket::ListParseResponse()
 	if (CServerCapabilities::GetCapability(*m_pCurrentServer, timezone_offset) == unknown &&
 		m_Response.Left(4) == _T("213 ") && m_Response.Length() > 16)
 	{
-		fz::datetime date(m_Response.Mid(4).ToStdWstring(), fz::datetime::utc);
-		if (date.empty()) {
+		CDateTime date(m_Response.Mid(4), CDateTime::utc);
+		if (date.IsValid()) {
 			wxASSERT(pData->directoryListing[pData->mdtm_index].has_date());
-			fz::datetime listTime = pData->directoryListing[pData->mdtm_index].time;
-			listTime -= fz::duration::from_minutes(m_pCurrentServer->GetTimezoneOffset());
+			CDateTime listTime = pData->directoryListing[pData->mdtm_index].time;
+			listTime -= duration::from_minutes(m_pCurrentServer->GetTimezoneOffset());
 
 			int serveroffset = static_cast<int>((date - listTime).get_seconds());
 			if (!pData->directoryListing[pData->mdtm_index].has_seconds()) {
@@ -1620,7 +1618,7 @@ int CFtpControlSocket::ListParseResponse()
 
 			LogMessage(MessageType::Status, _("Timezone offset of server is %d seconds."), -serveroffset);
 
-			fz::duration span = fz::duration::from_seconds(serveroffset);
+			duration span = duration::from_seconds(serveroffset);
 			const int count = pData->directoryListing.GetCount();
 			for (int i = 0; i < count; ++i) {
 				CDirentry& entry = pData->directoryListing[i];
@@ -1733,11 +1731,11 @@ int CFtpControlSocket::ResetOperation(int nErrorCode)
 		}
 	}
 
-	m_lastCommandCompletionTime = fz::monotonic_clock::now();
+	m_lastCommandCompletionTime = CMonotonicClock::now();
 	if (m_pCurOpData && !(nErrorCode & FZ_REPLY_DISCONNECTED))
 		StartKeepaliveTimer();
 	else {
-		stop_timer(m_idleTimer);
+		StopTimer(m_idleTimer);
 		m_idleTimer = 0;
 	}
 
@@ -1762,7 +1760,7 @@ int CFtpControlSocket::SendNextCommand()
 
 	if (m_repliesToSkip)
 	{
-		LogMessage(MessageType::Status, _T("Waiting for replies to skip before sending next command..."));
+		LogMessage(__TFILE__, __LINE__, this, MessageType::Status, _T("Waiting for replies to skip before sending next command..."));
 		SetWait(true);
 		return FZ_REPLY_WOULDBLOCK;
 	}
@@ -2243,9 +2241,9 @@ int CFtpControlSocket::FileTransferParseResponse()
 	case filetransfer_mdtm:
 		pData->opState = filetransfer_resumetest;
 		if (m_Response.Left(4) == _T("213 ") && m_Response.Length() > 16) {
-			pData->fileTime = fz::datetime(m_Response.Mid(4).ToStdWstring(), fz::datetime::utc);
-			if (pData->fileTime.empty()) {
-				pData->fileTime += fz::duration::from_minutes(m_pCurrentServer->GetTimezoneOffset());
+			pData->fileTime = CDateTime(m_Response.Mid(4), CDateTime::utc);
+			if (pData->fileTime.IsValid()) {
+				pData->fileTime += duration::from_minutes(m_pCurrentServer->GetTimezoneOffset());
 			}
 		}
 
@@ -2397,14 +2395,14 @@ int CFtpControlSocket::FileTransferSubcommandResult(int prevResult)
 			if (!pData->download &&
 				CServerCapabilities::GetCapability(*m_pCurrentServer, mfmt_command) == yes)
 			{
-				fz::datetime mtime = CLocalFileSystem::GetModificationTime(pData->localFile);
-				if (mtime.empty()) {
+				CDateTime mtime = CLocalFileSystem::GetModificationTime(pData->localFile);
+				if (mtime.IsValid()) {
 					pData->fileTime = mtime;
 					pData->opState = filetransfer_mfmt;
 					return SendNextCommand();
 				}
 			}
-			else if (pData->download && pData->fileTime.empty()) {
+			else if (pData->download && pData->fileTime.IsValid()) {
 				delete pData->pIOThread;
 				pData->pIOThread = 0;
 				if (!CLocalFileSystem::SetModificationTime(pData->localFile, pData->fileTime))
@@ -2477,7 +2475,7 @@ int CFtpControlSocket::FileTransferSend()
 		}
 
 		{
-			auto pFile = std::make_unique<fz::file>();
+			auto pFile = std::make_unique<CFile>();
 			if (pData->download) {
 				// Be quiet
 				wxLogNull nullLog;
@@ -2488,7 +2486,7 @@ int CFtpControlSocket::FileTransferSend()
 				bool didExist = wxFile::Exists(pData->localFile);
 
 				if (pData->resume) {
-					if (!pFile->open(fz::to_native(pData->localFile), fz::file::writing, fz::file::existing)) {
+					if (!pFile->Open(pData->localFile, CFile::write, CFile::existing)) {
 						LogMessage(MessageType::Error, _("Failed to open \"%s\" for appending/writing"), pData->localFile);
 						ResetOperation(FZ_REPLY_ERROR);
 						return FZ_REPLY_ERROR;
@@ -2496,7 +2494,7 @@ int CFtpControlSocket::FileTransferSend()
 
 					pData->fileDidExist = didExist;
 
-					startOffset = pFile->seek(0, fz::file::end);
+					startOffset = pFile->Seek(0, CFile::end);
 
 					if (startOffset == wxInvalidOffset) {
 						LogMessage(MessageType::Error, _("Could not seek to the end of the file"));
@@ -2520,7 +2518,7 @@ int CFtpControlSocket::FileTransferSend()
 				else {
 					CreateLocalDir(pData->localFile);
 
-					if (!pFile->open(fz::to_native(pData->localFile), fz::file::writing, fz::file::empty)) {
+					if (!pFile->Open(pData->localFile, CFile::write, CFile::truncate)) {
 						LogMessage(MessageType::Error, _("Failed to open \"%s\" for writing"), pData->localFile);
 						ResetOperation(FZ_REPLY_ERROR);
 						return FZ_REPLY_ERROR;
@@ -2539,22 +2537,22 @@ int CFtpControlSocket::FileTransferSend()
 
 				if (engine_.GetOptions().GetOptionVal(OPTION_PREALLOCATE_SPACE)) {
 					// Try to preallocate the file in order to reduce fragmentation
-					int64_t sizeToPreallocate = pData->remoteFileSize - startOffset;
+					wxFileOffset sizeToPreallocate = pData->remoteFileSize - startOffset;
 					if (sizeToPreallocate > 0) {
 						LogMessage(MessageType::Debug_Info, _T("Preallocating %") + wxString(wxFileOffsetFmtSpec) + _T("d bytes for the file \"%s\""), sizeToPreallocate, pData->localFile);
-						auto oldPos = pFile->seek(0, fz::file::current);
+						wxFileOffset oldPos = pFile->Seek(0, CFile::current);
 						if (oldPos >= 0) {
-							if (pFile->seek(sizeToPreallocate, fz::file::end) == pData->remoteFileSize) {
-								if (!pFile->truncate())
+							if (pFile->Seek(sizeToPreallocate, CFile::end) == pData->remoteFileSize) {
+								if (!pFile->Truncate())
 									LogMessage(MessageType::Debug_Warning, _T("Could not preallocate the file"));
 							}
-							pFile->seek(oldPos, fz::file::begin);
+							pFile->Seek(oldPos, CFile::begin);
 						}
 					}
 				}
 			}
 			else {
-				if (!pFile->open(fz::to_native(pData->localFile), fz::file::reading)) {
+				if (!pFile->Open(pData->localFile, CFile::read)) {
 					LogMessage(MessageType::Error, _("Failed to open \"%s\" for reading"), pData->localFile);
 					ResetOperation(FZ_REPLY_ERROR);
 					return FZ_REPLY_ERROR;
@@ -2565,12 +2563,8 @@ int CFtpControlSocket::FileTransferSend()
 					if (pData->remoteFileSize > 0) {
 						startOffset = pData->remoteFileSize;
 
-						if (pData->localFileSize < 0) {
-							auto s = pFile->size();
-							if (s >= 0) {
-								pData->localFileSize = s;
-							}
-						}
+						if (pData->localFileSize < 0)
+							pData->localFileSize = pFile->Length();
 
 						if (startOffset == pData->localFileSize && pData->binary) {
 							LogMessage(MessageType::Debug_Info, _T("No need to resume, remote file size matches local file size."));
@@ -2578,8 +2572,8 @@ int CFtpControlSocket::FileTransferSend()
 							if (engine_.GetOptions().GetOptionVal(OPTION_PRESERVE_TIMESTAMPS) &&
 								CServerCapabilities::GetCapability(*m_pCurrentServer, mfmt_command) == yes)
 							{
-								fz::datetime mtime = CLocalFileSystem::GetModificationTime(pData->localFile);
-								if (mtime.empty()) {
+								CDateTime mtime = CLocalFileSystem::GetModificationTime(pData->localFile);
+								if (mtime.IsValid()) {
 									pData->fileTime = mtime;
 									pData->opState = filetransfer_mfmt;
 									return SendNextCommand();
@@ -2590,7 +2584,7 @@ int CFtpControlSocket::FileTransferSend()
 						}
 
 						// Assume native 64 bit type exists
-						if (pFile->seek(startOffset, fz::file::begin) == wxInvalidOffset) {
+						if (pFile->Seek(startOffset, CFile::begin) == wxInvalidOffset) {
 							wxString const s = std::to_wstring(startOffset);
 							LogMessage(MessageType::Error, _("Could not seek to offset %s within file"), s);
 							ResetOperation(FZ_REPLY_ERROR);
@@ -2612,7 +2606,7 @@ int CFtpControlSocket::FileTransferSend()
 					pData->resumeOffset = 0;
 				}
 
-				auto len = pFile->size();
+				wxFileOffset len = pFile->Length();
 				engine_.transfer_status_.Init(len, startOffset, false);
 			}
 			pData->pIOThread = new CIOThread;
@@ -2649,7 +2643,7 @@ int CFtpControlSocket::FileTransferSend()
 	case filetransfer_mfmt:
 		{
 			cmd = _T("MFMT ");
-			cmd += pData->fileTime.format(_T("%Y%m%d%H%M%S "), fz::datetime::utc);
+			cmd += pData->fileTime.Format(_T("%Y%m%d%H%M%S "), CDateTime::utc);
 			cmd += pData->remotePath.FormatFilename(pData->remoteFile, !pData->tryAbsolutePath);
 
 			break;
@@ -2759,7 +2753,7 @@ bool CFtpControlSocket::SetAsyncRequestReply(CAsyncRequestNotification *pNotific
 				else {
 					pData->remoteFile = pFileExistsNotification->newName;
 					pData->remoteFileSize = -1;
-					pData->fileTime = fz::datetime();
+					pData->fileTime = CDateTime();
 
 					CDirentry entry;
 					bool dir_did_exist;
@@ -2976,8 +2970,8 @@ int CFtpControlSocket::DeleteSend()
 		return FZ_REPLY_ERROR;
 	}
 
-	if (!pData->m_time.empty())
-		pData->m_time = fz::datetime::now();
+	if (!pData->m_time.IsValid())
+		pData->m_time = CDateTime::Now();
 
 	engine_.GetDirectoryCache().InvalidateFile(*m_pCurrentServer, pData->path, file);
 
@@ -3007,8 +3001,8 @@ int CFtpControlSocket::DeleteParseResponse()
 
 		engine_.GetDirectoryCache().RemoveFile(*m_pCurrentServer, pData->path, file);
 
-		fz::datetime now = fz::datetime::now();
-		if (now.empty() && pData->m_time.empty() && (now - pData->m_time).get_seconds() >= 1) {
+		CDateTime now = CDateTime::Now();
+		if (now.IsValid() && pData->m_time.IsValid() && (now - pData->m_time).get_seconds() >= 1) {
 			engine_.SendDirectoryListingNotification(pData->path, false, true, false);
 			pData->m_time = now;
 			pData->m_needSendListing = false;
@@ -4276,13 +4270,13 @@ bool CFtpControlSocket::CheckInclusion(const CDirectoryListing& listing1, const 
 	if (listing2.GetCount() > listing1.GetCount())
 		return false;
 
-	std::vector<std::wstring> names1, names2;
+	std::vector<fzstring> names1, names2;
 	listing1.GetFilenames(names1);
 	listing2.GetFilenames(names2);
 	std::sort(names1.begin(), names1.end());
 	std::sort(names2.begin(), names2.end());
 
-	std::vector<std::wstring>::const_iterator iter1, iter2;
+	std::vector<fzstring>::const_iterator iter1, iter2;
 	iter1 = names1.cbegin();
 	iter2 = names2.cbegin();
 	while (iter2 != names2.cbegin()) {
@@ -4301,7 +4295,7 @@ bool CFtpControlSocket::CheckInclusion(const CDirectoryListing& listing1, const 
 	return true;
 }
 
-void CFtpControlSocket::OnTimer(fz::timer_id id)
+void CFtpControlSocket::OnTimer(timer_id id)
 {
 	if (id != m_idleTimer) {
 		CControlSocket::OnTimer(id);
@@ -4317,7 +4311,7 @@ void CFtpControlSocket::OnTimer(fz::timer_id id)
 	LogMessage(MessageType::Status, _("Sending keep-alive command"));
 
 	wxString cmd;
-	int i = fz::random_number(0, 2);
+	int i = GetRandomNumber(0, 2);
 	if (!i)
 		cmd = _T("NOOP");
 	else if (i == 1)
@@ -4346,13 +4340,13 @@ void CFtpControlSocket::StartKeepaliveTimer()
 	if (!m_lastCommandCompletionTime)
 		return;
 
-	fz::duration const span = fz::monotonic_clock::now() - m_lastCommandCompletionTime;
+	duration const span = CMonotonicClock::now() - m_lastCommandCompletionTime;
 	if (span.get_minutes() >= 30) {
 		return;
 	}
 
-	stop_timer(m_idleTimer);
-	m_idleTimer = add_timer(fz::duration::from_seconds(30), true);
+	StopTimer(m_idleTimer);
+	m_idleTimer = AddTimer(duration::from_seconds(30), true);
 }
 
 int CFtpControlSocket::ParseSubcommandResult(int prevResult)
@@ -4390,13 +4384,13 @@ int CFtpControlSocket::ParseSubcommandResult(int prevResult)
 	return FZ_REPLY_ERROR;
 }
 
-void CFtpControlSocket::operator()(fz::event_base const& ev)
+void CFtpControlSocket::operator()(CEventBase const& ev)
 {
-	if (fz::dispatch<fz::timer_event>(ev, this, &CFtpControlSocket::OnTimer)) {
+	if (Dispatch<CTimerEvent>(ev, this, &CFtpControlSocket::OnTimer)) {
 		return;
 	}
 
-	if (fz::dispatch<CExternalIPResolveEvent>(ev, this, &CFtpControlSocket::OnExternalIPAddress)) {
+	if (Dispatch<CExternalIPResolveEvent>(ev, this, &CFtpControlSocket::OnExternalIPAddress)) {
 		return;
 	}
 
@@ -4421,5 +4415,6 @@ wxString CFtpControlSocket::GetPassiveCommand(CRawTransferOpData& data)
 		// EPSV is mandatory for IPv6, don't check capabilities
 		ret = _T("EPSV");
 	}
+
 	return ret;
 }

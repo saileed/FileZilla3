@@ -19,7 +19,7 @@ enum class TransferMode
 
 class CIOThread;
 class CTlsSocket;
-class CTransferSocket final : public fz::event_handler
+class CTransferSocket final : public CEventHandler
 {
 public:
 	CTransferSocket(CFileZillaEnginePrivate & engine, CFtpControlSocket & controlSocket, TransferMode transferMode);
@@ -63,7 +63,7 @@ protected:
 
 	void SetSocketBufferSizes(CSocket* pSocket);
 
-	virtual void operator()(fz::event_base const& ev);
+	virtual void operator()(CEventBase const& ev);
 	void OnIOThreadEvent();
 
 	CSocket *m_pSocket{};

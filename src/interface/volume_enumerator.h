@@ -64,7 +64,7 @@ protected:
 
 	std::list<t_VolumeInfoInternal> m_volumeInfo;
 
-	fz::mutex sync_;
+	mutex sync_;
 };
 
 #endif //__WXMSW__
