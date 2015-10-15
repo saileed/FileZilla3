@@ -30,7 +30,7 @@ class CThemeProvider;
 class CToolBar;
 class CWindowStateManager;
 
-class CMainFrame final : public wxNavigationEnabled<wxFrame>
+class CMainFrame final : public wxNavigationEnabled<wxFrame>, private COptionChangeEventHandler
 #if FZ_MANUALUPDATECHECK
 	, protected CUpdateHandler
 #endif
@@ -45,8 +45,6 @@ public:
 	CStatusView* GetStatusView() { return m_pStatusView; }
 	CQueueView* GetQueue() { return m_pQueueView; }
 	CQuickconnectBar* GetQuickconnectBar() { return m_pQuickconnectBar; }
-
-	void UpdateLayout(int layout = -1, int swap = -1, int messagelog_position = -1);
 
 	// Window size and position as well as pane sizes
 	void RememberSplitterPositions();
@@ -70,7 +68,8 @@ public:
 	bool ConnectToSite(CSiteManagerItemData_Site & data, bool newTab = false);
 
 	CFileZillaEngineContext& GetEngineContext() { return m_engineContext; }
-protected:
+private:
+	void UpdateLayout();
 	void FixTabOrder();
 
 	bool CloseDialogsAndQuit(wxCloseEvent &event);
@@ -117,6 +116,8 @@ protected:
 	void HandleResize();
 
 	void SetupKeyboardAccelerators();
+
+	void OnOptionsChanged(changed_options_t const& options);
 
 	// Event handlers
 	DECLARE_EVENT_TABLE()

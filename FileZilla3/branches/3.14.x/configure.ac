@@ -73,7 +73,7 @@ if ! test "$localesonly" = "yes"; then
 
   # Get buildtype.
   AC_ARG_ENABLE(buildtype, AS_HELP_STRING([--enable-buildtype=TYPE],[DO NOT USE. Reserved for use by official maintainer. TYPE can either be 'official' or 'nightly'.]),
-    [buildtype=$enableval], [buildtype=])
+    [buildtype="$enableval"], [buildtype=])
   buildtype_valid=false
   if test -z "$buildtype"; then
     buildtype_valid=true
@@ -452,7 +452,7 @@ if test "$buildmain" = "yes"; then
   # -------------------------
 
   AC_ARG_ENABLE(manualupdatecheck, AS_HELP_STRING([--disable-manualupdatecheck],[Disallow the user to manually check for new versions. Implies --disable-autoupdatecheck]),
-    [manualupdatecheck=$enableval], [manualupdatecheck="yes"])
+    [manualupdatecheck="$enableval"], [manualupdatecheck="yes"])
 
   if test "$manualupdatecheck" = "no"; then
     manualupdatecheck="0"
@@ -462,7 +462,7 @@ if test "$buildmain" = "yes"; then
   AC_DEFINE_UNQUOTED(FZ_MANUALUPDATECHECK, $manualupdatecheck, [Set to 1 to enable user initiated update checks])
 
   AC_ARG_ENABLE(autoupdatecheck, AS_HELP_STRING([--disable-autoupdatecheck],[Disables the ability of FileZilla to check for new versions automatically.]),
-    [autoupdatecheck=$enableval], [autoupdatecheck="yes"])
+    [autoupdatecheck="$enableval"], [autoupdatecheck="yes"])
 
   if test "$manualupdatecheck" = "1" -a "$autoupdatecheck" != "no"; then
     autoupdatecheck="1"
@@ -481,6 +481,13 @@ if test "$buildmain" = "yes"; then
   AC_SUBST(LIBGNUTLS_LIBS)
   AC_SUBST(LIBGNUTLS_CFLAGS)
 
+  AC_ARG_ENABLE(gnutlssystemciphers, AS_HELP_STRING([--enable-gnutlssystemciphers],[Enables the use of gnutls system ciphers.]),
+    [gnutlssystemciphers="$enableval"], [gnutlssystemciphers="no"])
+
+  if test "$gnutlssystemciphers" = "yes"; then
+    AC_DEFINE(FZ_USE_GNUTLS_SYSTEM_CIPHERS, 1, [Set to 1 to use ciphers defined in system policy.])
+  fi
+ 
   # pugixml
   # ------
 
