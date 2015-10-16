@@ -5,10 +5,10 @@
 #include "socket.h"
 
 class CControlSocket;
-class CProxySocket final : protected fz::event_handler, public CBackend
+class CProxySocket final : protected CEventHandler, public CBackend
 {
 public:
-	CProxySocket(event_handler* pEvtHandler, CSocket* pSocket, CControlSocket* pOwner);
+	CProxySocket(CEventHandler* pEvtHandler, CSocket* pSocket, CControlSocket* pOwner);
 	virtual ~CProxySocket();
 
 	enum ProxyState {
@@ -66,7 +66,7 @@ protected:
 	int m_recvBufferPos{};
 	int m_recvBufferLen{};
 
-	virtual void operator()(fz::event_base const& ev);
+	virtual void operator()(CEventBase const& ev);
 	void OnSocketEvent(CSocketEventSource* source, SocketEventType t, int error);
 	void OnHostAddress(CSocketEventSource* source, wxString const& address);
 

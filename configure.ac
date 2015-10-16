@@ -130,15 +130,6 @@ if test "$buildmain" = "yes"; then
     AC_MSG_ERROR([pkg-config not found. pkg-config is required to check for some dependencies.])
   fi
   
-  # Find libfilezilla
-  # -----------------
-  PKG_CHECK_MODULES(LIBFILEZILLA, libfilezilla,, [
-	AC_MSG_ERROR([libfilezilla not found. You can download it from https://lib.filezilla-project.org/])
-  ])
-  AC_SUBST(LIBFILEZILLA_CFLAGS)
-  AC_SUBST(LIBFILEZILLA_LIBS)
-
-
   # Detect wxWidgets
   # ----------------
 

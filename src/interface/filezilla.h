@@ -1,7 +1,7 @@
 #ifndef __FILEZILLA_H__
 #define __FILEZILLA_H__
 
-#include <libfilezilla_engine.h>
+#include <libfilezilla.h>
 #include <msgbox.h>
 
 #ifndef PACKAGE_NAME

@@ -17,7 +17,7 @@ public:
 	virtual ~CStatusView();
 
 	void AddToLog(CLogmsgNotification const& pNotification);
-	void AddToLog(MessageType messagetype, const wxString& message, fz::datetime const& time);
+	void AddToLog(MessageType messagetype, const wxString& message, CDateTime const& time);
 
 	void InitDefAttr();
 
@@ -63,12 +63,12 @@ private:
 	{
 		MessageType messagetype;
 		wxString message;
-		fz::datetime time;
+		CDateTime time;
 	};
 	std::list<t_line> m_hiddenLines;
 
 	bool m_showTimestamps{};
-	fz::datetime m_lastTime;
+	CDateTime m_lastTime;
 	wxString m_lastTimeString;
 };
 

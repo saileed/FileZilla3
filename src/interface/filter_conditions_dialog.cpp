@@ -610,8 +610,8 @@ CFilter CFilterConditionsDialog::GetFilter()
 				continue;
 			else {
 				condition.strValue = controls.pValue->GetValue();
-				condition.date = fz::datetime(condition.strValue.ToStdWstring(), fz::datetime::local);
-				if (!condition.date.empty()) {
+				condition.date = CDateTime(condition.strValue, CDateTime::local);
+				if (!condition.date.IsValid()) {
 					continue;
 				}
 			}

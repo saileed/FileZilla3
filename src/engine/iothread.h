@@ -1,7 +1,8 @@
 #ifndef __IOTHREAD_H__
 #define __IOTHREAD_H__
 
-#include <libfilezilla/event.hpp>
+#include <wx/file.h>
+#include "event_loop.h"
 
 #define BUFFERCOUNT 5
 #define BUFFERSIZE 128*1024
@@ -12,7 +13,7 @@
 //#define SIMULATE_IO
 
 struct io_thread_event_type{};
-typedef fz::simple_event<io_thread_event_type> CIOThreadEvent;
+typedef CEvent<io_thread_event_type> CIOThreadEvent;
 
 enum IORet
 {
@@ -21,24 +22,21 @@ enum IORet
 	IO_Again = -1
 };
 
-namespace fz {
-class file;
-}
-
+class CFile;
 class CIOThread final : protected wxThread
 {
 public:
 	CIOThread();
 	virtual ~CIOThread();
 
-	bool Create(std::unique_ptr<fz::file> && pFile, bool read, bool binary);
+	bool Create(std::unique_ptr<CFile> && pFile, bool read, bool binary);
 	virtual void Destroy(); // Only call that might be blocking
 
 	// Call before first call to one of the GetNext*Buffer functions
 	// This handler will receive the CIOThreadEvent events. The events
 	// get triggerd iff a buffer is available after a call to the
 	// GetNext*Buffer functions returned IO_Again
-	void SetEventHandler(fz::event_handler* handler);
+	void SetEventHandler(CEventHandler* handler);
 
 	// Gets next buffer
 	// Return value:  IO_Success on EOF
@@ -57,26 +55,26 @@ public:
 
 	wxString GetError();
 
-private:
+protected:
 	void Close();
 
 	virtual ExitCode Entry();
 
-	int64_t ReadFromFile(char* pBuffer, int64_t maxLen);
-	bool WriteToFile(char* pBuffer, int64_t len);
-	bool DoWrite(const char* pBuffer, int64_t len);
+	int ReadFromFile(char* pBuffer, int maxLen);
+	bool WriteToFile(char* pBuffer, int len);
+	bool DoWrite(const char* pBuffer, int len);
 
-	fz::event_handler* m_evtHandler{};
+	CEventHandler* m_evtHandler{};
 
 	bool m_read{};
 	bool m_binary{};
-	std::unique_ptr<fz::file> m_pFile;
+	std::unique_ptr<CFile> m_pFile;
 
 	char* m_buffers[BUFFERCOUNT];
 	unsigned int m_bufferLens[BUFFERCOUNT];
 
-	fz::mutex m_mutex;
-	fz::condition m_condition;
+	mutex m_mutex;
+	condition m_condition;
 
 	int m_curAppBuf{};
 	int m_curThreadBuf{};
@@ -93,7 +91,7 @@ private:
 	wxString m_error_description;
 
 #ifdef SIMULATE_IO
-	int64_t size_{};
+	wxFileOffset size_{};
 #endif
 };
 

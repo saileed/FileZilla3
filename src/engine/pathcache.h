@@ -1,7 +1,7 @@
 #ifndef __PATHCACHE_H__
 #define __PATHCACHE_H__
 
-#include <libfilezilla/mutex.hpp>
+#include <mutex.h>
 
 class CPathCache final
 {
@@ -38,7 +38,7 @@ protected:
 		}
 	};
 
-	fz::mutex mutex_;
+	mutex mutex_;
 
 	typedef std::map<CSourcePath, CServerPath> tServerCache;
 	typedef tServerCache::iterator tServerCacheIterator;

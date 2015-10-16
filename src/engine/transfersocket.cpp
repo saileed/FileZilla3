@@ -9,10 +9,8 @@
 #include "proxy.h"
 #include "servercapabilities.h"
 
-#include <libfilezilla/util.hpp>
-
 CTransferSocket::CTransferSocket(CFileZillaEnginePrivate & engine, CFtpControlSocket & controlSocket, TransferMode transferMode)
-: fz::event_handler(controlSocket.event_loop_)
+: CEventHandler(controlSocket.event_loop_)
 , engine_(engine)
 , controlSocket_(controlSocket)
 , m_transferMode(transferMode)
@@ -21,7 +19,7 @@ CTransferSocket::CTransferSocket(CFileZillaEnginePrivate & engine, CFtpControlSo
 
 CTransferSocket::~CTransferSocket()
 {
-	remove_handler();
+	RemoveHandler();
 	if (m_transferEndReason == TransferEndReason::none)
 		m_transferEndReason = TransferEndReason::successful;
 	ResetSocket();
@@ -312,7 +310,7 @@ void CTransferSocket::OnReceive()
 			FinalizeWrite();
 		}
 		else {
-			send_event<CSocketEvent>(m_pBackend, SocketEventType::read, 0);
+			SendEvent<CSocketEvent>(m_pBackend, SocketEventType::read, 0);
 		}
 	}
 	else if (m_transferMode == TransferMode::resumetest) {
@@ -413,7 +411,7 @@ void CTransferSocket::OnSend()
 		}
 	}
 	else if (written > 0) {
-		send_event<CSocketEvent>(m_pBackend, SocketEventType::write, 0);
+		SendEvent<CSocketEvent>(m_pBackend, SocketEventType::write, 0);
 	}
 }
 
@@ -575,7 +573,7 @@ void CTransferSocket::TransferEnd(TransferEndReason reason)
 
 	ResetSocket();
 
-	engine_.send_event<CFileZillaEngineEvent>(engineTransferEnd);
+	engine_.SendEvent<CFileZillaEngineEvent>(engineTransferEnd);
 }
 
 CSocket* CTransferSocket::CreateSocketServer(int port)
@@ -619,7 +617,7 @@ CSocket* CTransferSocket::CreateSocketServer()
 		low = high;
 
 	if (start < low || start > high) {
-		start = fz::random_number(low, high);
+		start = GetRandomNumber(low, high);
 		wxASSERT(start >= low && start <= high);
 	}
 
@@ -795,9 +793,9 @@ void CTransferSocket::SetSocketBufferSizes(CSocket* pSocket)
 	pSocket->SetBufferSizes(size_read, size_write);
 }
 
-void CTransferSocket::operator()(fz::event_base const& ev)
+void CTransferSocket::operator()(CEventBase const& ev)
 {
-	fz::dispatch<CSocketEvent, CIOThreadEvent>(ev, this,
+	Dispatch<CSocketEvent, CIOThreadEvent>(ev, this,
 		&CTransferSocket::OnSocketEvent,
 		&CTransferSocket::OnIOThreadEvent);
 }

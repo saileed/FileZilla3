@@ -63,7 +63,7 @@ public:
 
 	void Reset();
 
-	void SetTimezoneOffset(fz::duration const& span) { m_timezoneOffset = span; }
+	void SetTimezoneOffset(duration const& span) { m_timezoneOffset = span; }
 
 	void SetServer(const CServer& server) { m_server = server; };
 
@@ -140,7 +140,7 @@ protected:
 
 	bool m_maybeMultilineVms;
 
-	fz::duration m_timezoneOffset;
+	duration m_timezoneOffset;
 
 	listingEncoding::type m_listingEncoding;
 

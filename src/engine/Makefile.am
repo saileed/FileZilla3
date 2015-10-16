@@ -1,7 +1,6 @@
 noinst_LIBRARIES = libengine.a
 
 libengine_a_CPPFLAGS = -I$(srcdir)/../include
-libengine_a_CPPFLAGS += $(LIBFILEZILLA_CFLAGS)
 libengine_a_CPPFLAGS += $(LIBGNUTLS_CFLAGS) $(WX_CPPFLAGS)
 libengine_a_CXXFLAGS = $(WX_CXXFLAGS_ONLY)
 libengine_a_CFLAGS = $(WX_CFLAGS_ONLY)
@@ -15,9 +14,13 @@ libengine_a_SOURCES = \
 		directorylistingparser.cpp \
 		engine_context.cpp \
 		engineprivate.cpp \
+		event_handler.cpp \
+		event_loop.cpp \
 		externalipresolver.cpp \
 		FileZillaEngine.cpp \
+		file.cpp \
 		ftpcontrolsocket.cpp \
+		fzprocess.cpp \
 		httpcontrolsocket.cpp \
 		iothread.cpp \
 		local_filesys.cpp \
@@ -25,6 +28,7 @@ libengine_a_SOURCES = \
 		logging.cpp \
 		misc.cpp \
 		msgbox.cpp \
+		mutex.cpp \
 		notification.cpp \
 		option_change_event_handler.cpp \
 		pathcache.cpp \
@@ -37,6 +41,7 @@ libengine_a_SOURCES = \
 		sizeformatting_base.cpp \
 		socket.cpp \
 		tlssocket.cpp \
+		timeex.cpp \
 		transfersocket.cpp
 
 noinst_HEADERS = backend.h \
@@ -46,6 +51,7 @@ noinst_HEADERS = backend.h \
 		engineprivate.h \
 		filezilla.h \
 		ftpcontrolsocket.h \
+		fzprocess.h \
 		httpcontrolsocket.h \
 		iothread.h \
 		logging_private.h \

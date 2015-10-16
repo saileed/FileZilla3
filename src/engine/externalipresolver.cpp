@@ -6,13 +6,13 @@
 #include <wx/regex.h>
 
 namespace {
-fz::mutex s_sync;
+mutex s_sync;
 wxString ip;
 bool checked = false;
 }
 
-CExternalIPResolver::CExternalIPResolver(event_handler & handler)
-	: event_handler(handler.event_loop_)
+CExternalIPResolver::CExternalIPResolver(CEventHandler & handler)
+	: CEventHandler(handler.event_loop_)
 	, m_handler(&handler)
 {
 	ResetHttpData(true);
@@ -32,7 +32,7 @@ CExternalIPResolver::~CExternalIPResolver()
 void CExternalIPResolver::GetExternalIP(const wxString& address, CSocket::address_family protocol, bool force /*=false*/)
 {
 	{
-		fz::scoped_lock l(s_sync);
+		scoped_lock l(s_sync);
 		if (checked) {
 			if (force)
 				checked = false;
@@ -85,9 +85,9 @@ void CExternalIPResolver::GetExternalIP(const wxString& address, CSocket::addres
 	strcpy(m_pSendBuffer, buffer.mb_str());
 }
 
-void CExternalIPResolver::operator()(fz::event_base const& ev)
+void CExternalIPResolver::operator()(CEventBase const& ev)
 {
-	fz::dispatch<CSocketEvent>(ev, this, &CExternalIPResolver::OnSocketEvent);
+	Dispatch<CSocketEvent>(ev, this, &CExternalIPResolver::OnSocketEvent);
 }
 
 void CExternalIPResolver::OnSocketEvent(CSocketEventSource*, SocketEventType t, int error)
@@ -218,7 +218,7 @@ void CExternalIPResolver::Close(bool successful)
 	m_done = true;
 
 	{
-		fz::scoped_lock l(s_sync);
+		scoped_lock l(s_sync);
 		if (!successful) {
 			ip.clear();
 		}
@@ -226,7 +226,7 @@ void CExternalIPResolver::Close(bool successful)
 	}
 
 	if (m_handler) {
-		m_handler->send_event<CExternalIPResolveEvent>();
+		m_handler->SendEvent<CExternalIPResolveEvent>();
 		m_handler = 0;
 	}
 }
@@ -379,7 +379,7 @@ void CExternalIPResolver::OnData(char* buffer, unsigned int len)
 			return;
 		}
 
-		fz::scoped_lock l(s_sync);
+		scoped_lock l(s_sync);
 		ip = m_data;
 	}
 	else {
@@ -396,7 +396,7 @@ void CExternalIPResolver::OnData(char* buffer, unsigned int len)
 			return;
 		}
 
-		fz::scoped_lock l(s_sync);
+		scoped_lock l(s_sync);
 		ip = regex.GetMatch(m_data, 2);
 	}
 
@@ -527,12 +527,12 @@ void CExternalIPResolver::OnChunkedData()
 
 bool CExternalIPResolver::Successful() const
 {
-	fz::scoped_lock l(s_sync);
+	scoped_lock l(s_sync);
 	return !ip.empty();
 }
 
 wxString CExternalIPResolver::GetIP() const
 {
-	fz::scoped_lock l(s_sync);
+	scoped_lock l(s_sync);
 	return ip;
 }

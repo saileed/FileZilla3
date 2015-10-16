@@ -55,8 +55,8 @@ public:
 
 	virtual QueueItemType GetType() const = 0;
 
-	fz::datetime GetTime() const { return m_time; }
-	void UpdateTime() { m_time = fz::datetime::now(); }
+	CDateTime GetTime() const { return m_time; }
+	void UpdateTime() { m_time = CDateTime::Now(); }
 
 	int GetRemovedAtFront() const { return m_removed_at_front; }
 
@@ -67,7 +67,7 @@ protected:
 
 	friend class CServerItem;
 
-	fz::datetime m_time;
+	CDateTime m_time;
 
 private:
 	std::vector<CQueueItem*> m_children;
@@ -156,10 +156,10 @@ public:
 	void SetPriorityRaw(QueuePriority priority);
 	QueuePriority GetPriority() const;
 
-	std::wstring const& GetLocalFile() const { return !Download() ? GetSourceFile() : (m_targetFile ? *m_targetFile : m_sourceFile); }
-	std::wstring const& GetRemoteFile() const { return Download() ? GetSourceFile() : (m_targetFile ? *m_targetFile : m_sourceFile); }
-	std::wstring const& GetSourceFile() const { return m_sourceFile; }
-	CSparseOptional<std::wstring> const& GetTargetFile() const { return m_targetFile; }
+	fzstring const& GetLocalFile() const { return !Download() ? GetSourceFile() : (m_targetFile ? *m_targetFile : m_sourceFile); }
+	fzstring const& GetRemoteFile() const { return Download() ? GetSourceFile() : (m_targetFile ? *m_targetFile : m_sourceFile); }
+	fzstring const& GetSourceFile() const { return m_sourceFile; }
+	CSparseOptional<fzstring> const& GetTargetFile() const { return m_targetFile; }
 	CLocalPath const& GetLocalPath() const { return m_localPath; }
 	CServerPath const& GetRemotePath() const { return m_remotePath; }
 	int64_t GetSize() const { return m_size; }
@@ -261,8 +261,8 @@ public:
 	}
 
 protected:
-	std::wstring const m_sourceFile;
-	CSparseOptional<std::wstring> m_targetFile;
+	fzstring const m_sourceFile;
+	CSparseOptional<fzstring> m_targetFile;
 	CLocalPath const m_localPath;
 	CServerPath const m_remotePath;
 	int64_t m_size{};

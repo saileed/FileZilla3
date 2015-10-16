@@ -127,10 +127,10 @@ void CStatusView::OnSize(wxSizeEvent &)
 
 void CStatusView::AddToLog(CLogmsgNotification const& notification)
 {
-	AddToLog(notification.msgType, notification.msg, fz::datetime::now());
+	AddToLog(notification.msgType, notification.msg, CDateTime::Now());
 }
 
-void CStatusView::AddToLog(MessageType messagetype, const wxString& message, fz::datetime const& time)
+void CStatusView::AddToLog(MessageType messagetype, const wxString& message, CDateTime const& time)
 {
 	if (!m_shown) {
 		if (m_hiddenLines.size() >= MAX_LINECOUNT) {
@@ -186,10 +186,10 @@ void CStatusView::AddToLog(MessageType messagetype, const wxString& message, fz:
 		if (time != m_lastTime) {
 			m_lastTime = time;
 #ifndef __WXMAC__
-			m_lastTimeString = time.format(_T("%H:%M:%S\t"), fz::datetime::local);
+			m_lastTimeString = time.Format(_T("%H:%M:%S\t"), CDateTime::local);
 #else
 			// Tabs on OS X cannot be freely positioned
-			m_lastTimeString = time.format(_T("%H:%M:%S "), fz::datetime::local);
+			m_lastTimeString = time.Format(_T("%H:%M:%S "), CDateTime::local);
 #endif
 		}
 		prefix += m_lastTimeString;
@@ -258,8 +258,8 @@ void CStatusView::AddToLog(MessageType messagetype, const wxString& message, fz:
 void CStatusView::InitDefAttr()
 {
 	m_showTimestamps = COptions::Get()->GetOptionVal(OPTION_MESSAGELOG_TIMESTAMP) != 0;
-	m_lastTime = fz::datetime::now();
-	m_lastTimeString = m_lastTime.format(_T("%H:%M:%S\t"), fz::datetime::local);
+	m_lastTime = CDateTime::Now();
+	m_lastTimeString = m_lastTime.Format(_T("%H:%M:%S\t"), CDateTime::local);
 
 	// Measure withs of all types
 	wxClientDC dc(this);

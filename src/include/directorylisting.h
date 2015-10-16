@@ -2,17 +2,17 @@
 #define __DIRECTORYLISTING_H__
 
 #include "optional.h"
-#include <libfilezilla/time.hpp>
+#include "timeex.h"
 
 #include <map>
 
 class CDirentry
 {
 public:
-	std::wstring name;
+	fzstring name;
 	int64_t size;
-	CRefcountObject<std::wstring> permissions;
-	CRefcountObject<std::wstring> ownerGroup;
+	CRefcountObject<fzstring> permissions;
+	CRefcountObject<fzstring> ownerGroup;
 
 	enum _flags
 	{
@@ -39,22 +39,22 @@ public:
 
 	inline bool has_date() const
 	{
-		return time.empty();;
+		return time.IsValid();;
 	}
 
 	inline bool has_time() const
 	{
-		return time.empty() && time.get_accuracy() >= fz::datetime::hours;
+		return time.IsValid() && time.GetAccuracy() >= CDateTime::hours;
 	}
 
 	inline bool has_seconds() const
 	{
-		return time.empty() && time.get_accuracy() >= fz::datetime::seconds;
+		return time.IsValid() && time.GetAccuracy() >= CDateTime::seconds;
 	}
 
-	CSparseOptional<std::wstring> target; // Set to linktarget it link is true
+	CSparseOptional<fzstring> target; // Set to linktarget it link is true
 
-	fz::datetime time;
+	CDateTime time;
 
 	wxString dump() const;
 	bool operator==(const CDirentry &op) const;
@@ -89,7 +89,7 @@ public:
 	void ClearFindMap();
 
 	CServerPath path;
-	fz::monotonic_clock m_firstListTime;
+	CMonotonicClock m_firstListTime;
 
 	enum
 	{
@@ -130,14 +130,14 @@ public:
 
 	bool RemoveEntry(unsigned int index);
 
-	void GetFilenames(std::vector<std::wstring> &names) const;
+	void GetFilenames(std::vector<fzstring> &names) const;
 
 protected:
 
 	CRefcountObject_Uninitialized<std::vector<CRefcountObject<CDirentry> > > m_entries;
 
-	mutable CRefcountObject_Uninitialized<std::multimap<std::wstring, unsigned int> > m_searchmap_case;
-	mutable CRefcountObject_Uninitialized<std::multimap<std::wstring, unsigned int> > m_searchmap_nocase;
+	mutable CRefcountObject_Uninitialized<std::multimap<fzstring, unsigned int> > m_searchmap_case;
+	mutable CRefcountObject_Uninitialized<std::multimap<fzstring, unsigned int> > m_searchmap_nocase;
 
 	unsigned int m_entryCount{};
 };

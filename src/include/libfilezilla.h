@@ -1,5 +1,5 @@
-#ifndef LIBFILEZILLA_ENGINE_HEADER
-#define LIBFILEZILLA_ENGINE_HEADER
+#ifndef __LIBFILEZILLA_H__
+#define __LIBFILEZILLA_H__
 
 #ifdef HAVE_CONFIG_H
   #include <config.h>
@@ -33,8 +33,6 @@
 #include <vector>
 #include <map>
 
-#include <libfilezilla/libfilezilla.hpp>
-
 #include "fzstring.h"
 #include "optionsbase.h"
 #include "logging.h"
@@ -49,4 +47,4 @@
 
 #define TRANSLATE_T(str) _T(str)
 
-#endif
+#endif //__LIBFILEZILLA_H__

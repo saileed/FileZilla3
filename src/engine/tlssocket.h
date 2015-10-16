@@ -6,7 +6,7 @@
 #include "socket.h"
 
 class CControlSocket;
-class CTlsSocket final : protected fz::event_handler, public CBackend
+class CTlsSocket final : protected CEventHandler, public CBackend
 {
 public:
 	enum class TlsState
@@ -19,7 +19,7 @@ public:
 		closed
 	};
 
-	CTlsSocket(fz::event_handler* pEvtHandler, CSocket& pSocket, CControlSocket* pOwner);
+	CTlsSocket(CEventHandler* pEvtHandler, CSocket& pSocket, CControlSocket* pOwner);
 	virtual ~CTlsSocket();
 
 	bool Init();
@@ -53,7 +53,7 @@ protected:
 	void UninitSession();
 	bool CopySessionData(const CTlsSocket* pPrimarySocket);
 
-	virtual void OnRateAvailable(CRateLimiter::rate_direction direction);
+	virtual void OnRateAvailable(enum CRateLimiter::rate_direction direction);
 
 	int ContinueHandshake();
 	void ContinueShutdown();
@@ -85,7 +85,7 @@ protected:
 
 	void TriggerEvents();
 
-	virtual void operator()(fz::event_base const& ev);
+	virtual void operator()(CEventBase const& ev);
 	void OnSocketEvent(CSocketEventSource* source, SocketEventType t, int error);
 
 	void OnRead();

@@ -5,7 +5,7 @@
 
 #include <option_change_event_handler.h>
 
-#include <libfilezilla/mutex.hpp>
+#include <mutex.h>
 
 #include <wx/timer.h>
 
@@ -182,7 +182,7 @@ protected:
 	DECLARE_EVENT_TABLE()
 	void OnTimer(wxTimerEvent& event);
 
-	fz::mutex m_sync_;
+	mutex m_sync_;
 
 	changed_options_t changedOptions_;
 };

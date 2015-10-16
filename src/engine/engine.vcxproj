@@ -80,11 +80,15 @@
     <ClCompile Include="directorylistingparser.cpp" />
     <ClCompile Include="engineprivate.cpp" />
     <ClCompile Include="engine_context.cpp" />
+    <ClCompile Include="event_handler.cpp" />
+    <ClCompile Include="event_loop.cpp" />
     <ClCompile Include="externalipresolver.cpp" />
+    <ClCompile Include="file.cpp" />
     <ClCompile Include="FileZillaEngine.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="ftpcontrolsocket.cpp" />
+    <ClCompile Include="fzprocess.cpp" />
     <ClCompile Include="httpcontrolsocket.cpp" />
     <ClCompile Include="iothread.cpp" />
     <ClCompile Include="local_filesys.cpp" />
@@ -92,6 +96,7 @@
     <ClCompile Include="logging.cpp" />
     <ClCompile Include="misc.cpp" />
     <ClCompile Include="msgbox.cpp" />
+    <ClCompile Include="mutex.cpp" />
     <ClCompile Include="notification.cpp" />
     <ClCompile Include="option_change_event_handler.cpp" />
     <ClCompile Include="pathcache.cpp" />
@@ -106,11 +111,17 @@
     <ClCompile Include="socket.cpp">
       <PrecompiledHeader />
     </ClCompile>
+    <ClCompile Include="timeex.cpp" />
     <ClCompile Include="tlssocket.cpp" />
     <ClCompile Include="transfersocket.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\engine_context.h" />
+    <ClInclude Include="..\include\event.h" />
+    <ClInclude Include="..\include\event_handler.h" />
+    <ClInclude Include="..\include\event_loop.h" />
+    <ClInclude Include="..\include\file.h" />
+    <ClInclude Include="..\include\mutex.h" />
     <ClInclude Include="..\include\refcount.h" />
     <ClInclude Include="..\include\fzstring.h" />
     <ClInclude Include="backend.h" />
@@ -124,9 +135,10 @@
     <ClInclude Include="filezilla.h" />
     <ClInclude Include="..\include\FileZillaEngine.h" />
     <ClInclude Include="FtpControlSocket.h" />
+    <ClInclude Include="fzprocess.h" />
     <ClInclude Include="httpcontrolsocket.h" />
     <ClInclude Include="iothread.h" />
-    <ClInclude Include="..\include\libfilezilla_engine.h" />
+    <ClInclude Include="..\include\libfilezilla.h" />
     <ClInclude Include="..\include\local_filesys.h" />
     <ClInclude Include="..\include\local_path.h" />
     <ClInclude Include="..\include\logging.h" />
@@ -145,6 +157,7 @@
     <ClInclude Include="sftpcontrolsocket.h" />
     <ClInclude Include="..\include\sizeformatting_base.h" />
     <ClInclude Include="..\include\socket.h" />
+    <ClInclude Include="..\include\timeex.h" />
     <ClInclude Include="tlssocket.h" />
     <ClInclude Include="transfersocket.h" />
   </ItemGroup>

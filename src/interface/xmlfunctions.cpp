@@ -20,7 +20,7 @@ void CXmlFile::SetFileName(const wxString& name)
 {
 	wxASSERT(!name.empty());
 	m_fileName = name;
-	m_modificationTime = fz::datetime();
+	m_modificationTime = CDateTime();
 }
 
 CXmlFile::~CXmlFile()
@@ -93,11 +93,11 @@ bool CXmlFile::Modified()
 {
 	wxCHECK(!m_fileName.empty(), false);
 
-	if (!m_modificationTime.empty())
+	if (!m_modificationTime.IsValid())
 		return true;
 
-	fz::datetime const modificationTime = CLocalFileSystem::GetModificationTime(m_fileName);
-	if (modificationTime.empty() && modificationTime == m_modificationTime)
+	CDateTime const modificationTime = CLocalFileSystem::GetModificationTime(m_fileName);
+	if (modificationTime.IsValid() && modificationTime == m_modificationTime)
 		return false;
 
 	return true;

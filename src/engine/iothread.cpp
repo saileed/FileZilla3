@@ -1,8 +1,7 @@
 #include <filezilla.h>
 
+#include "file.h"
 #include "iothread.h"
-
-#include <libfilezilla/file.hpp>
 
 #include <wx/log.h>
 
@@ -29,13 +28,13 @@ void CIOThread::Close()
 		// The file might have been preallocated and the transfer stopped before being completed
 		// so always truncate the file to the actually written size before closing it.
 		if (!m_read)
-			m_pFile->truncate();
+			m_pFile->Truncate();
 
 		m_pFile.reset();
 	}
 }
 
-bool CIOThread::Create(std::unique_ptr<fz::file> && pFile, bool read, bool binary)
+bool CIOThread::Create(std::unique_ptr<CFile> && pFile, bool read, bool binary)
 {
 	wxASSERT(pFile);
 
@@ -69,9 +68,9 @@ wxThread::ExitCode CIOThread::Entry()
 {
 	if (m_read) {
 		while (m_running) {
-			auto len = ReadFromFile(m_buffers[m_curThreadBuf], BUFFERSIZE);
+			int len = ReadFromFile(m_buffers[m_curThreadBuf], BUFFERSIZE);
 
-			fz::scoped_lock l(m_mutex);
+			scoped_lock l(m_mutex);
 
 			if (m_appWaiting) {
 				if (!m_evtHandler) {
@@ -79,10 +78,10 @@ wxThread::ExitCode CIOThread::Entry()
 					break;
 				}
 				m_appWaiting = false;
-				m_evtHandler->send_event<CIOThreadEvent>();
+				m_evtHandler->SendEvent<CIOThreadEvent>();
 			}
 
-			if (len == -1) {
+			if (len == wxInvalidOffset) {
 				m_error = true;
 				m_running = false;
 				break;
@@ -107,7 +106,7 @@ wxThread::ExitCode CIOThread::Entry()
 		}
 	}
 	else {
-		fz::scoped_lock l(m_mutex);
+		scoped_lock l(m_mutex);
 		while (m_curAppBuf == -1) {
 			if (!m_running) {
 				return 0;
@@ -142,7 +141,7 @@ wxThread::ExitCode CIOThread::Entry()
 					break;
 				}
 				m_appWaiting = false;
-				m_evtHandler->send_event<CIOThreadEvent>();
+				m_evtHandler->SendEvent<CIOThreadEvent>();
 			}
 
 			if (m_error)
@@ -159,7 +158,7 @@ int CIOThread::GetNextWriteBuffer(char** pBuffer)
 {
 	wxASSERT(!m_destroyed);
 
-	fz::scoped_lock l(m_mutex);
+	scoped_lock l(m_mutex);
 
 	if (m_error)
 		return IO_Error;
@@ -211,7 +210,7 @@ bool CIOThread::Finalize(int len)
 #ifndef __WXMSW__
 	if (!m_binary && m_wasCarriageReturn) {
 		const char CR = '\r';
-		if (m_pFile->write(&CR, 1) != 1)
+		if (m_pFile->Write(&CR, 1) != 1)
 			return false;
 	}
 #endif
@@ -225,7 +224,7 @@ int CIOThread::GetNextReadBuffer(char** pBuffer)
 
 	int newBuf = (m_curAppBuf + 1) % BUFFERCOUNT;
 
-	fz::scoped_lock l(m_mutex);
+	scoped_lock l(m_mutex);
 
 	if (newBuf == m_curThreadBuf) {
 		if (m_error)
@@ -255,7 +254,7 @@ void CIOThread::Destroy()
 		return;
 	m_destroyed = true;
 
-	fz::scoped_lock l(m_mutex);
+	scoped_lock l(m_mutex);
 
 	m_running = false;
 	if (m_threadWaiting) {
@@ -267,7 +266,7 @@ void CIOThread::Destroy()
 	Wait(wxTHREAD_WAIT_BLOCK);
 }
 
-int64_t CIOThread::ReadFromFile(char* pBuffer, int64_t maxLen)
+int CIOThread::ReadFromFile(char* pBuffer, int maxLen)
 {
 #ifdef SIMULATE_IO
 	if (size_ < 0) {
@@ -283,7 +282,7 @@ int64_t CIOThread::ReadFromFile(char* pBuffer, int64_t maxLen)
 #ifndef __WXMSW__
 	if (m_binary)
 #endif
-		return m_pFile->read(pBuffer, maxLen);
+		return m_pFile->Read(pBuffer, maxLen);
 
 #ifndef __WXMSW__
 
@@ -292,8 +291,8 @@ int64_t CIOThread::ReadFromFile(char* pBuffer, int64_t maxLen)
 	const int readLen = maxLen / 2;
 
 	char* r = pBuffer + readLen;
-	auto len = m_pFile->read(r, readLen);
-	if (!len || len <= -1)
+	int len = m_pFile->Read(r, readLen);
+	if (!len || len == wxInvalidOffset)
 		return len;
 
 	const char* const end = r + len;
@@ -319,7 +318,7 @@ int64_t CIOThread::ReadFromFile(char* pBuffer, int64_t maxLen)
 #endif
 }
 
-bool CIOThread::WriteToFile(char* pBuffer, int64_t len)
+bool CIOThread::WriteToFile(char* pBuffer, int len)
 {
 #ifdef SIMULATE_IO
 	return true;
@@ -364,9 +363,9 @@ bool CIOThread::WriteToFile(char* pBuffer, int64_t len)
 #endif
 }
 
-bool CIOThread::DoWrite(const char* pBuffer, int64_t len)
+bool CIOThread::DoWrite(const char* pBuffer, int len)
 {
-	auto written = m_pFile->write(pBuffer, len);
+	int written = m_pFile->Write(pBuffer, len);
 	if (written == len) {
 		return true;
 	}
@@ -375,7 +374,7 @@ bool CIOThread::DoWrite(const char* pBuffer, int64_t len)
 
 	const wxString error = wxSysErrorMsg(code);
 
-	fz::scoped_lock locker(m_mutex);
+	scoped_lock locker(m_mutex);
 	m_error_description = error;
 
 	return false;
@@ -383,12 +382,12 @@ bool CIOThread::DoWrite(const char* pBuffer, int64_t len)
 
 wxString CIOThread::GetError()
 {
-	fz::scoped_lock locker(m_mutex);
+	scoped_lock locker(m_mutex);
 	return m_error_description;
 }
 
-void CIOThread::SetEventHandler(fz::event_handler* handler)
+void CIOThread::SetEventHandler(CEventHandler* handler)
 {
-	fz::scoped_lock locker(m_mutex);
+	scoped_lock locker(m_mutex);
 	m_evtHandler = handler;
 }

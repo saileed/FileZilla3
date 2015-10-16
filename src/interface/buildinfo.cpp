@@ -52,9 +52,9 @@ wxString CBuildInfo::GetBuildTimeString()
 	return wxString(__TIME__, wxConvLocal);
 }
 
-fz::datetime CBuildInfo::GetBuildDate()
+CDateTime CBuildInfo::GetBuildDate()
 {
-	fz::datetime date(GetBuildDateString().ToStdWstring(), fz::datetime::utc);
+	CDateTime date(GetBuildDateString(), CDateTime::utc);
 	return date;
 }
 

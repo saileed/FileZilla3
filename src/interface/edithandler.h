@@ -102,7 +102,7 @@ public:
 		wxString name; // The name of the file
 		wxString file; // The actual local filename
 		fileState state;
-		fz::datetime modificationTime;
+		CDateTime modificationTime;
 		CServerPath remotePath;
 		CServer server;
 	};

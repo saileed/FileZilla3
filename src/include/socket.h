@@ -1,7 +1,7 @@
 #ifndef __SOCKET_H__
 #define __SOCKET_H__
 
-#include <libfilezilla/event_handler.hpp>
+#include "event_handler.h"
 
 #include <errno.h>
 
@@ -28,10 +28,10 @@ public:
 };
 
 struct socket_event_type;
-typedef fz::simple_event<socket_event_type, CSocketEventSource*, SocketEventType, int> CSocketEvent;
+typedef CEvent<socket_event_type, CSocketEventSource*, SocketEventType, int> CSocketEvent;
 
 struct hostaddress_event_type;
-typedef fz::simple_event<hostaddress_event_type, CSocketEventSource*, wxString> CHostAddressEvent;
+typedef CEvent<hostaddress_event_type, CSocketEventSource*, wxString> CHostAddressEvent;
 
 class CCallback
 {
@@ -39,14 +39,14 @@ public:
 	virtual void cb() {}
 };
 
-void RemoveSocketEvents(fz::event_handler * handler, CSocketEventSource const* const source);
+void RemoveSocketEvents(CEventHandler * handler, CSocketEventSource const* const source);
 
 class CSocketThread;
 class CSocket final : public CSocketEventSource
 {
 	friend class CSocketThread;
 public:
-	CSocket(fz::event_handler* pEvtHandler);
+	CSocket(CEventHandler* pEvtHandler);
 	virtual ~CSocket();
 
 	CSocket(CSocket const&) = delete;
@@ -113,8 +113,8 @@ public:
 	static wxString GetErrorDescription(int error);
 
 	// Can only be called if the state is none
-	void SetEventHandler(fz::event_handler* pEvtHandler);
-	fz::event_handler* GetEventHandler() { return m_pEvtHandler; }
+	void SetEventHandler(CEventHandler* pEvtHandler);
+	CEventHandler* GetEventHandler() { return m_pEvtHandler; }
 
 	static void Cleanup(bool force);
 
@@ -146,7 +146,7 @@ protected:
 
 	void DetachThread();
 
-	fz::event_handler* m_pEvtHandler;
+	CEventHandler* m_pEvtHandler;
 
 	int m_fd;
 

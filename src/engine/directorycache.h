@@ -14,8 +14,7 @@ but for some operations the engine/interface prefers to retrieve a clean
 version.
 */
 
-#include <libfilezilla/mutex.hpp>
-
+#include <mutex.h>
 #include <set>
 
 const int CACHE_TIMEOUT = 900; // In seconds
@@ -37,7 +36,7 @@ public:
 	CDirectoryCache& operator=(CDirectoryCache const&) = delete;
 
 	void Store(const CDirectoryListing &listing, const CServer &server);
-	bool GetChangeTime(fz::monotonic_clock& time, const CServer &server, const CServerPath &path);
+	bool GetChangeTime(CMonotonicClock& time, const CServer &server, const CServerPath &path);
 	bool Lookup(CDirectoryListing &listing, const CServer &server, const CServerPath &path, bool allowUnsureEntries, bool& is_outdated);
 	bool DoesExist(const CServer &server, const CServerPath &path, int &hasUnsureEntries, bool &is_outdated);
 	bool LookupFile(CDirentry &entry, const CServer &server, const CServerPath &path, const wxString& file, bool &dirDidExist, bool &matchedCase);
@@ -59,11 +58,11 @@ protected:
 
 		explicit CCacheEntry(CDirectoryListing const& l)
 			: listing(l)
-			, modificationTime(fz::monotonic_clock::now())
+			, modificationTime(CMonotonicClock::now())
 		{}
 
 		CDirectoryListing listing;
-		fz::monotonic_clock modificationTime;
+		CMonotonicClock modificationTime;
 
 		CCacheEntry& operator=(CCacheEntry const& a) = default;
 		CCacheEntry& operator=(CCacheEntry && a) noexcept = default;
@@ -97,7 +96,7 @@ protected:
 
 	bool Lookup(tCacheIter &cacheIter, tServerIter &sit, const CServerPath &path, bool allowUnsureEntries, bool& is_outdated);
 
-	fz::mutex mutex_;
+	mutex mutex_;
 
 	std::list<CServerEntry> m_serverList;
 

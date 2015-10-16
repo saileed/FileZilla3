@@ -1,7 +1,6 @@
 #include <filezilla.h>
 
-#include <libfilezilla/event_loop.hpp>
-#include <libfilezilla/util.hpp>
+#include "event_loop.h"
 #include "engine_context.h"
 #include "netconfwizard.h"
 #include "Options.h"
@@ -29,7 +28,7 @@ TRANSLATE_T("< &Back");
 #endif
 
 CNetConfWizard::CNetConfWizard(wxWindow* parent, COptions* pOptions, CFileZillaEngineContext & engine_context)
-	: fz::event_handler(engine_context.GetEventLoop())
+	: CEventHandler(engine_context.GetEventLoop())
 	, m_parent(parent), m_pOptions(pOptions), m_pSocketServer(0)
 {
 	m_socket = 0;
@@ -45,7 +44,7 @@ CNetConfWizard::CNetConfWizard(wxWindow* parent, COptions* pOptions, CFileZillaE
 
 CNetConfWizard::~CNetConfWizard()
 {
-	remove_handler();
+	RemoveHandler();
 
 	delete m_socket;
 	delete m_pIPResolver;
@@ -896,7 +895,7 @@ int CNetConfWizard::CreateListenSocket()
 		XRCCTRL(*this, "ID_ACTIVE_PORTMIN", wxTextCtrl)->GetValue().ToLong(&low);
 		XRCCTRL(*this, "ID_ACTIVE_PORTMAX", wxTextCtrl)->GetValue().ToLong(&high);
 
-		int mid = fz::random_number(low, high);
+		int mid = GetRandomNumber(low, high);
 		wxASSERT(mid >= low && mid <= high);
 
 		for (int port = mid; port <= high; port++)
@@ -1078,9 +1077,9 @@ void CNetConfWizard::OnTimer(wxTimerEvent& event)
 	CloseSocket();
 }
 
-void CNetConfWizard::operator()(fz::event_base const& ev)
+void CNetConfWizard::operator()(CEventBase const& ev)
 {
-	if (fz::dispatch<CExternalIPResolveEvent>(ev, this, &CNetConfWizard::OnExternalIPAddress))
+	if (Dispatch<CExternalIPResolveEvent>(ev, this, &CNetConfWizard::OnExternalIPAddress))
 		return;
 }
 
