@@ -554,32 +554,24 @@ void CState::DestroyEngine()
 	m_pEngine = 0;
 }
 
-void CState::RegisterHandler(CStateEventHandler* pHandler, enum t_statechange_notifications notification, CStateEventHandler* insertBefore)
+void CState::RegisterHandler(CStateEventHandler* pHandler, enum t_statechange_notifications notification)
 {
 	wxASSERT(pHandler);
 	wxASSERT(pHandler->m_pState == this);
 	if (pHandler->m_pState != this)
 		return;
 	wxASSERT(notification != STATECHANGE_MAX && notification != STATECHANGE_NONE);
-	wxASSERT(pHandler != insertBefore);
 
-	
 	auto &handlers = m_handlers[notification];
-	auto insertionPoint = handlers.end();
-
-	for (auto it = handlers.begin(); it != handlers.end(); ++it) {
-		if (it->pHandler == insertBefore) {
-			insertionPoint = it;
-		}
-		if (it->pHandler == pHandler) {
-			wxASSERT(insertionPoint == handlers.end());
+	for (auto const& it : handlers) {
+		if (it.pHandler == pHandler) {
 			return;
 		}
 	}
 
 	t_handler handler;
 	handler.pHandler = pHandler;
-	handlers.insert(insertionPoint, handler);
+	handlers.push_back(handler);
 }
 
 void CState::UnregisterHandler(CStateEventHandler* pHandler, enum t_statechange_notifications notification)
