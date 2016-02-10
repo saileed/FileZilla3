@@ -263,7 +263,7 @@ void CProxySocket::OnSocketEvent(CSocketEventSource*, SocketEventType t, int err
 	}
 }
 
-void CProxySocket::OnHostAddress(CSocketEventSource*, std::string const& address)
+void CProxySocket::OnHostAddress(CSocketEventSource*, wxString const& address)
 {
 	m_pOwner->LogMessage(MessageType::Status, _("Connecting to %s..."), address);
 }
@@ -600,7 +600,7 @@ void CProxySocket::OnReceive()
 				{
 					const wxWX2MBbuf host = m_host.mb_str(wxConvUTF8);
 					const int hostlen = strlen(host);
-					int addrlen = std::max(hostlen, 16);
+					int addrlen = wxMax(hostlen, 16);
 
 					m_pSendBuffer = new char[7 + addrlen];
 					m_pSendBuffer[0] = 5;

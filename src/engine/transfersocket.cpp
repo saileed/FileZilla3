@@ -53,7 +53,7 @@ void CTransferSocket::ResetSocket()
 
 }
 
-wxString CTransferSocket::SetupActiveTransfer(std::string const& ip)
+wxString CTransferSocket::SetupActiveTransfer(const wxString& ip)
 {
 	ResetSocket();
 	m_pSocketServer = CreateSocketServer();
@@ -523,7 +523,7 @@ bool CTransferSocket::SetupPassiveTransfer(wxString host, int port)
 	// In case destination IPs of control and data connection are different, do not bind to the
 	// same source.
 
-	std::string bindAddress;
+	wxString bindAddress;
 	if (m_pProxyBackend) {
 		bindAddress = controlSocket_.m_pSocket->GetLocalIP();
 		controlSocket_.LogMessage(MessageType::Debug_Info, _T("Binding data connection source IP to control connection source IP %s"), bindAddress);
@@ -538,7 +538,7 @@ bool CTransferSocket::SetupPassiveTransfer(wxString host, int port)
 		}
 	}
 
-	int res = m_pSocket->Connect(fz::to_native(host), port, CSocket::unspec, bindAddress);
+	int res = m_pSocket->Connect(host, port, CSocket::unspec, bindAddress);
 	if (res && res != EINPROGRESS) {
 		ResetSocket();
 		return false;

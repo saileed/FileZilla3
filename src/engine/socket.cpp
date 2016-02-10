@@ -237,19 +237,20 @@ public:
 		m_waiting = 0;
 	}
 
-	int Connect(std::string const& bind)
+	int Connect(wxString const& bind)
 	{
-		assert(m_pSocket);
-		if (!m_pSocket) {
+		wxASSERT(m_pSocket);
+
+		auto const hostBuf = m_pSocket->m_host.mb_str();
+		auto const bindBuf = bind.mb_str();
+		if (!hostBuf || !bindBuf) {
+			m_bind.clear();
+			m_host.clear();
+			m_port.clear();
 			return EINVAL;
 		}
-
-		m_host = fz::to_utf8(m_pSocket->m_host);
-		if (m_host.empty()) {
-			return EINVAL;
-		}
-
-		m_bind = bind;
+		m_host = hostBuf;
+		m_bind = bindBuf;
 
 		// Connect method of CSocket ensures port is in range
 		char tmp[7];
@@ -266,7 +267,7 @@ public:
 	{
 		if (m_started) {
 			fz::scoped_lock l(m_sync);
-			assert(m_threadwait);
+			wxASSERT(m_threadwait);
 			m_waiting = 0;
 			WakeupThread(l);
 			return 0;
@@ -630,11 +631,11 @@ protected:
 			if (m_waiting & (WAIT_WRITE | WAIT_CONNECT))
 				FD_SET(m_pSocket->m_fd, &writefds);
 
-			int maxfd = std::max(m_pipe[0], m_pSocket->m_fd) + 1;
+			int max = wxMax(m_pipe[0], m_pSocket->m_fd) + 1;
 
 			l.unlock();
 
-			int res = select(maxfd, &readfds, &writefds, 0, 0);
+			int res = select(max, &readfds, &writefds, 0, 0);
 
 			l.lock();
 
@@ -652,6 +653,8 @@ protected:
 				continue;
 			if (res == -1) {
 				res = errno;
+				//printf("select failed: %s\n", (const char *)CSocket::GetErrorDescription(res).mb_str());
+				//fflush(stdout);
 
 				if (res == EINTR)
 					continue;
@@ -701,6 +704,8 @@ protected:
 		if (!m_pSocket || !m_pSocket->m_pEvtHandler)
 			return;
 		if (m_triggered & WAIT_READ) {
+			if (m_pSocket->m_synchronous_read_cb)
+				m_pSocket->m_synchronous_read_cb->cb();
 			m_pSocket->m_pEvtHandler->send_event<CSocketEvent>(m_pSocket, SocketEventType::read, m_triggered_errors[1]);
 			m_triggered &= ~WAIT_READ;
 		}
@@ -857,6 +862,12 @@ CSocket::CSocket(fz::event_handler* pEvtHandler)
 #ifdef ERRORCODETEST
 	CErrorCodeTest test;
 #endif
+	m_fd = -1;
+	m_state = none;
+	m_pSocketThread = 0;
+	m_flags = 0;
+
+	m_port = 0;
 	m_family = AF_UNSPEC;
 
 	m_buffer_sizes[0] = -1;
@@ -902,17 +913,13 @@ void CSocket::DetachThread()
 	Cleanup(false);
 }
 
-int CSocket::Connect(fz::native_string const& host, unsigned int port, address_family family, std::string const& bind)
+int CSocket::Connect(wxString const& host, unsigned int port, address_family family, wxString const& bind)
 {
 	if (m_state != none)
 		return EISCONN;
 
 	if (port < 1 || port > 65535)
 		return EINVAL;
-
-	if (host.empty()) {
-		return EINVAL;
-	}
 
 	switch (family)
 	{
@@ -1011,12 +1018,12 @@ void CSocket::SetEventHandler(fz::event_handler* pEvtHandler)
 	}
 }
 
-#define ERRORDECL(c, desc) { c, #c, desc },
+#define ERRORDECL(c, desc) { c, _T(#c), desc },
 
 struct Error_table
 {
 	int code;
-	const char* const name;
+	const wxChar* const name;
 	const wxChar* const description;
 };
 
@@ -1094,21 +1101,23 @@ static Error_table const error_table[] =
 	{ 0, 0, 0 }
 };
 
-std::string CSocket::GetErrorString(int error)
+wxString CSocket::GetErrorString(int error)
 {
-	for (int i = 0; error_table[i].code; ++i) {
+	for (int i = 0; error_table[i].code; ++i)
+	{
 		if (error != error_table[i].code)
 			continue;
 
 		return error_table[i].name;
 	}
 
-	return wxString::Format(_T("%d"), error).ToStdString();
+	return wxString::Format(_T("%d"), error);
 }
 
 wxString CSocket::GetErrorDescription(int error)
 {
-	for (int i = 0; error_table[i].code; ++i) {
+	for (int i = 0; error_table[i].code; ++i)
+	{
 		if (error != error_table[i].code)
 			continue;
 
@@ -1128,7 +1137,7 @@ int CSocket::Close()
 		m_pSocketThread->m_host.clear();
 		m_pSocketThread->m_port.clear();
 
-		m_pSocketThread->WakeupThread(l);
+			m_pSocketThread->WakeupThread(l);
 
 		CSocketThread::CloseSocketFd(fd);
 		m_state = none;
@@ -1267,41 +1276,40 @@ int CSocket::Write(const void* buffer, unsigned int size, int& error)
 	return res;
 }
 
-std::string CSocket::AddressToString(const struct sockaddr* addr, int addr_len, bool with_port, bool strip_zone_index)
+wxString CSocket::AddressToString(const struct sockaddr* addr, int addr_len, bool with_port /*=true*/, bool strip_zone_index/*=false*/)
 {
 	char hostbuf[NI_MAXHOST];
 	char portbuf[NI_MAXSERV];
 
 	int res = getnameinfo(addr, addr_len, hostbuf, NI_MAXHOST, portbuf, NI_MAXSERV, NI_NUMERICHOST | NI_NUMERICSERV);
 	if (res) // Should never fail
-		return std::string();
+		return wxString();
 
-	std::string host = hostbuf;
-	std::string port = portbuf;
+	wxString host = wxString(hostbuf, wxConvLibc);
+	wxString port = wxString(portbuf, wxConvLibc);
 
 	// IPv6 uses colons as separator, need to enclose address
 	// to avoid ambiguity if also showing port
 	if (addr->sa_family == AF_INET6) {
 		if (strip_zone_index) {
-			auto pos = host.find('%');
-			if (pos != std::string::npos) {
-				host = host.substr(0, pos);
-			}
+			int pos = host.Find('%');
+			if (pos != -1)
+				host.Truncate(pos);
 		}
 		if (with_port)
-			host = "[" + host + "]";
+			host = _T("[") + host + _T("]");
 	}
 
 	if (with_port)
-		return host + ":" + port;
+		return host + _T(":") + port;
 	else
 		return host;
 }
 
-std::string CSocket::AddressToString(char const* buf, int buf_len)
+wxString CSocket::AddressToString(char const* buf, int buf_len)
 {
 	if (buf_len != 4 && buf_len != 16) {
-		return std::string();
+		return wxString();
 	}
 
 	sockaddr_u addr;
@@ -1314,27 +1322,28 @@ std::string CSocket::AddressToString(char const* buf, int buf_len)
 		addr.in4.sin_family = AF_INET;
 	}
 
+
 	return AddressToString(&addr.sockaddr, sizeof(addr), false, true);
 }
 
-std::string CSocket::GetLocalIP(bool strip_zone_index /*=false*/) const
+wxString CSocket::GetLocalIP(bool strip_zone_index /*=false*/) const
 {
 	struct sockaddr_storage addr;
 	socklen_t addr_len = sizeof(addr);
 	int res = getsockname(m_fd, (sockaddr*)&addr, &addr_len);
 	if (res)
-		return std::string();
+		return wxString();
 
 	return AddressToString((sockaddr *)&addr, addr_len, false, strip_zone_index);
 }
 
-std::string CSocket::GetPeerIP(bool strip_zone_index /*=false*/) const
+wxString CSocket::GetPeerIP(bool strip_zone_index /*=false*/) const
 {
 	struct sockaddr_storage addr;
 	socklen_t addr_len = sizeof(addr);
 	int res = getpeername(m_fd, (sockaddr*)&addr, &addr_len);
 	if (res)
-		return std::string();
+		return wxString();
 
 	return AddressToString((sockaddr *)&addr, addr_len, false, strip_zone_index);
 }
@@ -1615,7 +1624,18 @@ int CSocket::DoSetBufferSizes(int fd, int size_read, int size_write)
 	return ret;
 }
 
-fz::native_string CSocket::GetPeerHost() const
+void CSocket::SetSynchronousReadCallback(CCallback* cb)
+{
+	if (m_pSocketThread)
+		m_pSocketThread->m_sync.lock();
+
+	m_synchronous_read_cb = cb;
+
+	if (m_pSocketThread)
+		m_pSocketThread->m_sync.unlock();
+}
+
+wxString CSocket::GetPeerHost() const
 {
 	return m_host;
 }

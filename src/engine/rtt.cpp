@@ -50,3 +50,8 @@ void CLatencyMeasurement::Reset()
 	m_measurements = 0;
 	m_start = fz::monotonic_clock();
 }
+
+void CLatencyMeasurement::cb()
+{
+	Stop();
+}

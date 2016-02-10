@@ -31,7 +31,13 @@ struct socket_event_type;
 typedef fz::simple_event<socket_event_type, CSocketEventSource*, SocketEventType, int> CSocketEvent;
 
 struct hostaddress_event_type;
-typedef fz::simple_event<hostaddress_event_type, CSocketEventSource*, std::string> CHostAddressEvent;
+typedef fz::simple_event<hostaddress_event_type, CSocketEventSource*, wxString> CHostAddressEvent;
+
+class CCallback
+{
+public:
+	virtual void cb() {}
+};
 
 void RemoveSocketEvents(fz::event_handler * handler, CSocketEventSource const* const source);
 void ChangeSocketEventHandler(fz::event_handler * oldHandler, fz::event_handler * newHandler, CSocketEventSource const* const source);
@@ -80,7 +86,7 @@ public:
 	// If host is a name that can be resolved, a hostaddress socket event gets sent.
 	// Once connections got established, a connection event gets sent. If
 	// connection could not be established, a close event gets sent.
-	int Connect(fz::native_string const& host, unsigned int port, address_family family = unspec, std::string const& bind = std::string());
+	int Connect(wxString const& host, unsigned int port, address_family family = unspec, wxString const& bind = wxString());
 
 	// After receiving a send or receive event, you can call these functions
 	// as long as their return value is positive.
@@ -91,11 +97,11 @@ public:
 	int Close();
 
 	// Returns empty string on error
-	std::string GetLocalIP(bool strip_zone_index = false) const;
-	std::string GetPeerIP(bool strip_zone_index = false) const;
+	wxString GetLocalIP(bool strip_zone_index = false) const;
+	wxString GetPeerIP(bool strip_zone_index = false) const;
 
 	// Returns the hostname passed to Connect()
-	fz::native_string GetPeerHost() const;
+	wxString GetPeerHost() const;
 
 	// -1 on error
 	int GetLocalPort(int& error);
@@ -104,7 +110,7 @@ public:
 	// If connected, either ipv4 or ipv6, unspec otherwise
 	address_family GetAddressFamily() const;
 
-	static std::string GetErrorString(int error);
+	static wxString GetErrorString(int error);
 	static wxString GetErrorDescription(int error);
 
 	// Can only be called if the state is none
@@ -113,8 +119,8 @@ public:
 
 	static void Cleanup(bool force);
 
-	static std::string AddressToString(const struct sockaddr* addr, int addr_len, bool with_port = true, bool strip_zone_index = false);
-	static std::string AddressToString(char const* buf, int buf_len);
+	static wxString AddressToString(const struct sockaddr* addr, int addr_len, bool with_port = true, bool strip_zone_index = false);
+	static wxString AddressToString(char const* buf, int buf_len);
 
 	int Listen(address_family family, int port = 0);
 	CSocket* Accept(int& error);
@@ -132,6 +138,8 @@ public:
 	// accepted sockets
 	int SetBufferSizes(int size_read, int size_write);
 
+	void SetSynchronousReadCallback(CCallback* cb);
+
 protected:
 	static int DoSetFlags(int fd, int flags, int flags_mask);
 	static int DoSetBufferSizes(int fd, int size_read, int size_write);
@@ -141,19 +149,21 @@ protected:
 
 	fz::event_handler* m_pEvtHandler;
 
-	int m_fd{-1};
+	int m_fd;
 
-	SocketState m_state{none};
+	SocketState m_state;
 
-	CSocketThread* m_pSocketThread{};
+	CSocketThread* m_pSocketThread;
 
-	fz::native_string m_host;
-	unsigned int m_port{};
+	wxString m_host;
+	unsigned int m_port;
 	int m_family;
 
-	int m_flags{};
+	int m_flags;
 
 	int m_buffer_sizes[2];
+
+	CCallback* m_synchronous_read_cb{};
 };
 
 #ifdef FZ_WINDOWS
