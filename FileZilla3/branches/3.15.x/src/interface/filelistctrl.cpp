@@ -381,8 +381,7 @@ template<class CFileData> void CFileListCtrl<CFileData>::SortList_UpdateSelectio
 	if (focused_item >= 0) {
 		if (m_indexMapping[focused_item] != focused_index) {
 			SetItemState(focused_item, 0, wxLIST_STATE_FOCUSED);
-		}
-		else {
+
 			for (unsigned int i = m_hasParent ? 1 : 0; i < m_indexMapping.size(); ++i) {
 				if (m_indexMapping[i] == focused_index) {
 					SetItemState(i, wxLIST_STATE_FOCUSED, wxLIST_STATE_FOCUSED);
@@ -487,7 +486,7 @@ wxString GetExt(const wxString& file)
 	wxString ret;
 
 	int pos = file.Find('.', true);
-	if (pos > 0 && file[pos + 1] != 0) // Does neither starts nor end with dot
+	if (pos > 0 && (static_cast<size_t>(pos) + 1) < file.size()) // Does neither starts nor end with dot
 		ret = file.Mid(pos + 1);
 
 	return ret;
