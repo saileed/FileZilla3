@@ -14,7 +14,7 @@
 #include <wx/dnd.h>
 #include "dndobjects.h"
 #include "Options.h"
-#include "remote_recursive_operation.h"
+#include "recursive_operation.h"
 #include "edithandler.h"
 #include "dragdropmanager.h"
 #include "drop_target_ex.h"
@@ -1201,7 +1201,7 @@ void CRemoteListView::TransferSelectedFiles(const CLocalPath& local_parent, bool
 {
 	bool idle = m_pState->IsRemoteIdle();
 
-	CRemoteRecursiveOperation* pRecursiveOperation = m_pState->GetRemoteRecursiveOperation();
+	CRecursiveOperation* pRecursiveOperation = m_pState->GetRecursiveOperationHandler();
 	wxASSERT(pRecursiveOperation);
 
 	wxASSERT(local_parent.IsWriteable());
@@ -1260,7 +1260,7 @@ void CRemoteListView::TransferSelectedFiles(const CLocalPath& local_parent, bool
 		if (IsComparing())
 			ExitComparisonMode();
 		CFilterManager filter;
-		pRecursiveOperation->StartRecursiveOperation(queueOnly ? CRecursiveOperation::recursive_addtoqueue : CRecursiveOperation::recursive_transfer,
+		pRecursiveOperation->StartRecursiveOperation(queueOnly ? CRecursiveOperation::recursive_addtoqueue : CRecursiveOperation::recursive_download,
 													 filter.GetActiveFilters(false), m_pDirectoryListing->path);
 	}
 }
@@ -1405,7 +1405,7 @@ void CRemoteListView::OnMenuDelete(wxCommandEvent&)
 		follow_symlink = XRCCTRL(dlg, "ID_RECURSE", wxRadioButton)->GetValue();
 	}
 
-	CRemoteRecursiveOperation* pRecursiveOperation = m_pState->GetRemoteRecursiveOperation();
+	CRecursiveOperation* pRecursiveOperation = m_pState->GetRecursiveOperationHandler();
 	wxASSERT(pRecursiveOperation);
 
 	std::deque<wxString> filesToDelete;
@@ -1681,7 +1681,7 @@ void CRemoteListView::OnMenuChmod(wxCommandEvent&)
 
 	const int applyType = pChmodDlg->GetApplyType();
 
-	CRemoteRecursiveOperation* pRecursiveOperation = m_pState->GetRemoteRecursiveOperation();
+	CRecursiveOperation* pRecursiveOperation = m_pState->GetRecursiveOperationHandler();
 	wxASSERT(pRecursiveOperation);
 	recursion_root root(m_pDirectoryListing->path, false);
 

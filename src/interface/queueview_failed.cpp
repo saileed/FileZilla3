@@ -71,6 +71,7 @@ void CQueueViewFailed::OnRemoveAll(wxCommandEvent&)
 	m_itemCount = 0;
 	SaveSetItemCount(0);
 	m_fileCount = 0;
+	m_folderScanCount = 0;
 
 	DisplayNumberQueuedFiles();
 

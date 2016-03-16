@@ -457,6 +457,11 @@ void CServerItem::SetDefaultFileExistsAction(CFileExistsNotification::OverwriteA
 				continue;
 			pFileItem->m_defaultFileExistsAction = action;
 		}
+		else if (pItem->GetType() == QueueItemType::FolderScan) {
+			if (direction == TransferDirection::download)
+				continue;
+			((CFolderScanItem *)pItem)->m_defaultFileExistsAction = action;
+		}
 	}
 }
 
@@ -621,7 +626,7 @@ void CServerItem::SaveItem(pugi::xml_node& element) const
 		(*iter)->SaveItem(server);
 }
 
-int64_t CServerItem::GetTotalSize(int& filesWithUnknownSize, int& queuedFiles) const
+int64_t CServerItem::GetTotalSize(int& filesWithUnknownSize, int& queuedFiles, int& folderScanCount) const
 {
 	int64_t totalSize = 0;
 	for (int i = 0; i < static_cast<int>(QueuePriority::count); ++i) {
@@ -641,6 +646,8 @@ int64_t CServerItem::GetTotalSize(int& filesWithUnknownSize, int& queuedFiles) c
 		if ((*iter)->GetType() == QueueItemType::File ||
 			(*iter)->GetType() == QueueItemType::Folder)
 			queuedFiles++;
+		else if ((*iter)->GetType() == QueueItemType::FolderScan)
+			folderScanCount++;
 	}
 
 	return totalSize;
@@ -730,6 +737,24 @@ void CServerItem::SetChildPriority(CFileItem* pItem, QueuePriority oldPriority, 
 	wxFAIL;
 }
 
+CFolderScanItem::CFolderScanItem(CServerItem* parent, bool queued, bool download, const CLocalPath& localPath, const CServerPath& remotePath)
+	: CQueueItem(parent)
+	, m_queued(queued)
+	, m_localPath(localPath)
+	, m_remotePath(remotePath)
+	, m_download(download)
+{
+}
+
+bool CFolderScanItem::TryRemoveAll()
+{
+	if (!m_active)
+		return true;
+
+	m_remove = true;
+	return false;
+}
+
 // --------------
 // CQueueViewBase
 // --------------
@@ -755,7 +780,9 @@ CQueueViewBase::CQueueViewBase(CQueue* parent, int index, const wxString& title)
 	m_allowBackgroundErase = true;
 
 	m_fileCount = 0;
+	m_folderScanCount = 0;
 	m_fileCountChanged = false;
+	m_folderScanCountChanged = false;
 
 	// Create and assign the image list for the queue
 	wxSize s = CThemeProvider::GetIconSize(iconSizeSmall);
@@ -763,6 +790,7 @@ CQueueViewBase::CQueueViewBase(CQueue* parent, int index, const wxString& title)
 
 	pImageList->Add(wxArtProvider::GetBitmap(_T("ART_SERVER"), wxART_OTHER, CThemeProvider::GetIconSize(iconSizeSmall)));
 	pImageList->Add(wxArtProvider::GetBitmap(_T("ART_FILE"), wxART_OTHER, CThemeProvider::GetIconSize(iconSizeSmall)));
+	pImageList->Add(wxArtProvider::GetBitmap(_T("ART_FOLDERCLOSED"), wxART_OTHER, CThemeProvider::GetIconSize(iconSizeSmall)));
 	pImageList->Add(wxArtProvider::GetBitmap(_T("ART_FOLDER"), wxART_OTHER, CThemeProvider::GetIconSize(iconSizeSmall)));
 
 	AssignImageList(pImageList, wxIMAGE_LIST_SMALL);
@@ -895,6 +923,37 @@ wxString CQueueViewBase::OnGetItemText(CQueueItem* pItem, ColumnId column) const
 			}
 		}
 		break;
+	case QueueItemType::FolderScan:
+		{
+			CFolderScanItem* pFolderItem = static_cast<CFolderScanItem*>(pItem);
+			switch (column)
+			{
+			case colLocalName:
+				return _T("  ") + pFolderItem->GetLocalPath().GetPath();
+			case colDirection:
+				if (pFolderItem->Download())
+					if (pFolderItem->queued())
+						return _T("<--");
+					else
+						return _T("<<--");
+				else
+					if (pFolderItem->queued())
+						return _T("-->");
+					else
+						return _T("-->>");
+				break;
+			case colRemoteName:
+				return pFolderItem->GetRemotePath().GetPath();
+			case colTransferStatus:
+			case colErrorReason:
+				return pFolderItem->m_statusMessage;
+			case colTime:
+				return CTimeFormat::FormatDateTime(pItem->GetTime());
+			default:
+				break;
+			}
+		}
+		break;
 	case QueueItemType::Folder:
 		{
 			CFileItem* pFolderItem = static_cast<CFolderItem*>(pItem);
@@ -972,8 +1031,9 @@ int CQueueViewBase::OnGetItemImage(long item) const
 		return 0;
 	case QueueItemType::File:
 		return 1;
+	case QueueItemType::FolderScan:
 	case QueueItemType::Folder:
-		return 2;
+			return 3;
 	default:
 		return -1;
 	}
@@ -1213,7 +1273,7 @@ void CQueueViewBase::CommitChanges()
 		m_insertionCount = 0;
 	}
 
-	if (m_fileCountChanged)
+	if (m_fileCountChanged || m_folderScanCountChanged)
 		DisplayNumberQueuedFiles();
 }
 
@@ -1226,14 +1286,21 @@ void CQueueViewBase::DisplayNumberQueuedFiles()
 
 	wxString str;
 	if (m_fileCount > 0) {
-		str.Printf(m_title + _T(" (%d)"), m_fileCount);
+		if (!m_folderScanCount)
+			str.Printf(m_title + _T(" (%d)"), m_fileCount);
+		else
+			str.Printf(m_title + _T(" (%d+)"), m_fileCount);
 	}
-	else {
+	else
+	{
 		str = m_title;
+		if (m_folderScanCount)
+			str += _T(" (0+)");
 	}
 	m_pQueue->SetPageText(m_pageIndex, str);
 
 	m_fileCountChanged = false;
+	m_folderScanCountChanged = false;
 
 	m_filecount_delay_timer.Start(200, true);
 }
@@ -1253,6 +1320,10 @@ void CQueueViewBase::InsertItem(CServerItem* pServerItem, CQueueItem* pItem)
 		m_fileCount++;
 		m_fileCountChanged = true;
 	}
+	else if (pItem->GetType() == QueueItemType::FolderScan) {
+		m_folderScanCount++;
+		m_folderScanCountChanged = true;
+	}
 }
 
 bool CQueueViewBase::RemoveItem(CQueueItem* pItem, bool destroy, bool updateItemCount, bool updateSelections, bool forward)
@@ -1261,6 +1332,12 @@ bool CQueueViewBase::RemoveItem(CQueueItem* pItem, bool destroy, bool updateItem
 		wxASSERT(m_fileCount > 0);
 		m_fileCount--;
 		m_fileCountChanged = true;
+	}
+	else if (pItem->GetType() == QueueItemType::FolderScan) {
+		wxASSERT(m_folderScanCount > 0);
+		m_folderScanCount--;
+		m_folderScanCountChanged = true;
+
 	}
 
 	int index = 0;
@@ -1308,7 +1385,7 @@ bool CQueueViewBase::RemoveItem(CQueueItem* pItem, bool destroy, bool updateItem
 	}
 
 	if (updateItemCount) {
-		if (m_fileCountChanged)
+		if (m_fileCountChanged || m_folderScanCountChanged)
 			DisplayNumberQueuedFiles();
 		if (oldCount > m_itemCount)
 		{
@@ -1377,12 +1454,13 @@ void CQueueViewBase::OnEndColumnDrag(wxListEvent&)
 
 void CQueueViewBase::OnTimer(wxTimerEvent& event)
 {
-	if (event.GetId() != m_filecount_delay_timer.GetId()) {
+	if (event.GetId() != m_filecount_delay_timer.GetId())
+	{
 		event.Skip();
 		return;
 	}
 
-	if (m_fileCountChanged) {
+	if (m_fileCountChanged || m_folderScanCountChanged) {
 		DisplayNumberQueuedFiles();
 	}
 }
@@ -1391,7 +1469,8 @@ void CQueueViewBase::OnKeyDown(wxKeyEvent& event)
 {
 	const int code = event.GetKeyCode();
 	const int mods = event.GetModifiers();
-	if (code == 'A' && (mods == wxMOD_CMD || mods == (wxMOD_CONTROL | wxMOD_META))) {
+	if (code == 'A' && (mods == wxMOD_CMD || mods == (wxMOD_CONTROL | wxMOD_META)))
+	{
 		for (unsigned int i = 0; i < (unsigned int)GetItemCount(); i++)
 			SetItemState(i, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
 	}

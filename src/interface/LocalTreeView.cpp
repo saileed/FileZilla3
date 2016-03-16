@@ -1067,7 +1067,7 @@ void CLocalTreeView::OnMenuUpload(wxCommandEvent& event)
 	if (!remotePath.ChangePath(GetItemText(m_contextMenuItem)))
 		return;
 
-	// FIXME
+	m_pQueueView->QueueFolder(event.GetId() == XRCID("ID_ADDTOQUEUE"), false, path, remotePath, server);
 }
 
 // Create a new Directory

@@ -2,7 +2,7 @@
 #include "commandqueue.h"
 #include "Mainfrm.h"
 #include "state.h"
-#include "remote_recursive_operation.h"
+#include "recursive_operation.h"
 #include "loginmanager.h"
 #include "queue.h"
 #include "RemoteListView.h"
@@ -75,7 +75,7 @@ void CCommandQueue::ProcessNextCommand()
 		// - Interface cannot obtain listing since not connected
 		// - Yet getting operation successful
 		// To keep things flowing, we need to advance the recursive operation.
-		m_pState->GetRemoteRecursiveOperation()->NextOperation();
+		m_pState->GetRecursiveOperationHandler()->NextOperation();
 	}
 
 	while (!m_CommandList.empty()) {
@@ -199,7 +199,7 @@ void CCommandQueue::ProcessReply(int nReplyCode, Command commandId)
 			if (commandInfo.origin == recursiveOperation) {
 				// Let the recursive operation handler know if a LIST command failed,
 				// so that it may issue the next command in recursive operations.
-				m_pState->GetRemoteRecursiveOperation()->ListingFailed(nReplyCode);
+				m_pState->GetRecursiveOperationHandler()->ListingFailed(nReplyCode);
 			}
 			else {
 				m_pState->ListingFailed(nReplyCode);
@@ -220,7 +220,7 @@ void CCommandQueue::ProcessReply(int nReplyCode, Command commandId)
 
 		// If this was an automatic reconnect during a recursive
 		// operation, stop the recursive operation
-		m_pState->GetRemoteRecursiveOperation()->StopRecursiveOperation();
+		m_pState->GetRecursiveOperationHandler()->StopRecursiveOperation();
 	}
 	else if (commandInfo.command->GetId() == Command::connect && nReplyCode == FZ_REPLY_OK) {
 		m_pState->SetSuccessfulConnect();
@@ -314,7 +314,7 @@ void CCommandQueue::ProcessDirectoryListing(CDirectoryListingNotification const&
 	}
 
 	if (listingIsRecursive) {
-		if (!listingNotification.Modified() && m_pState->GetRemoteRecursiveOperation()->IsActive()) {
+		if (!listingNotification.Modified() && m_pState->GetRecursiveOperationHandler()->IsActive()) {
 			m_pState->NotifyHandlers(STATECHANGE_REMOTE_DIR_OTHER, wxString(), &pListing);
 		}
 	}

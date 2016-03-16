@@ -177,14 +177,12 @@
     <ClCompile Include="locale_initializer.cpp" />
     <ClCompile Include="LocalListView.cpp" />
     <ClCompile Include="LocalTreeView.cpp" />
-    <ClCompile Include="local_recursive_operation.cpp" />
     <ClCompile Include="loginmanager.cpp" />
     <ClCompile Include="Mainfrm.cpp" />
     <ClCompile Include="manual_transfer.cpp" />
     <ClCompile Include="menu_bar.cpp" />
     <ClCompile Include="netconfwizard.cpp" />
     <ClCompile Include="Options.cpp" />
-    <ClCompile Include="recursive_operation.cpp" />
     <ClCompile Include="recursive_operation_status.cpp" />
     <ClCompile Include="settings\optionspage.cpp" />
     <ClCompile Include="settings\optionspage_connection.cpp" />
@@ -216,7 +214,7 @@
     <ClCompile Include="queueview_successful.cpp" />
     <ClCompile Include="quickconnectbar.cpp" />
     <ClCompile Include="recentserverlist.cpp" />
-    <ClCompile Include="remote_recursive_operation.cpp" />
+    <ClCompile Include="recursive_operation.cpp" />
     <ClCompile Include="RemoteListView.cpp" />
     <ClCompile Include="RemoteTreeView.cpp" />
     <ClCompile Include="search.cpp" />
@@ -291,14 +289,12 @@
     <ClInclude Include="locale_initializer.h" />
     <ClInclude Include="LocalListView.h" />
     <ClInclude Include="LocalTreeView.h" />
-    <ClInclude Include="local_recursive_operation.h" />
     <ClInclude Include="loginmanager.h" />
     <ClInclude Include="Mainfrm.h" />
     <ClInclude Include="manual_transfer.h" />
     <ClInclude Include="menu_bar.h" />
     <ClInclude Include="netconfwizard.h" />
     <ClInclude Include="Options.h" />
-    <ClInclude Include="recursive_operation.h" />
     <ClInclude Include="recursive_operation_status.h" />
     <ClInclude Include="settings\optionspage.h" />
     <ClInclude Include="settings\optionspage_connection.h" />
@@ -330,7 +326,7 @@
     <ClInclude Include="queueview_successful.h" />
     <ClInclude Include="quickconnectbar.h" />
     <ClInclude Include="recentserverlist.h" />
-    <ClInclude Include="remote_recursive_operation.h" />
+    <ClInclude Include="recursive_operation.h" />
     <ClInclude Include="RemoteListView.h" />
     <ClInclude Include="RemoteTreeView.h" />
     <ClInclude Include="search.h" />

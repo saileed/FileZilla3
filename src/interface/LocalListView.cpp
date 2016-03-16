@@ -853,7 +853,9 @@ void CLocalListView::OnMenuUpload(wxCommandEvent& event)
 				continue;
 			}
 
-			// FIXME
+			CLocalPath localPath(m_dir);
+			localPath.AddSegment(data->name);
+			m_pQueue->QueueFolder(event.GetId() == XRCID("ID_ADDTOQUEUE"), false, localPath, path, *pServer);
 		}
 		else {
 			m_pQueue->QueueFile(queue_only, false, data->name, wxEmptyString, m_dir, path, *pServer, data->size);
