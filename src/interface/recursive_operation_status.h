@@ -5,13 +5,12 @@
 
 #include <wx/timer.h>
 
-class CRecursiveOperationStatus final : public wxWindow, public CStateEventHandler
+class CRecursiveOperationStatus : public wxWindow, public CStateEventHandler
 {
 public:
-	CRecursiveOperationStatus(wxWindow* pParent, CState* pState, bool local);
+	CRecursiveOperationStatus(wxWindow* pParent, CState* pState);
 
-	CRecursiveOperationStatus(CRecursiveOperationStatus const&) = delete;
-private:
+protected:
 	virtual bool Show(bool show);
 
 	virtual void OnStateChange(CState* pState, enum t_statechange_notifications notification, const wxString&, const void*);
@@ -27,8 +26,6 @@ private:
 	void OnPaint(wxPaintEvent& ev);
 	void OnCancel(wxCommandEvent& ev);
 	void OnTimer(wxTimerEvent&);
-
-	bool const m_local;
 };
 
 #endif

@@ -30,7 +30,7 @@ CToolBar* CToolBar::Load(CMainFrame* pMainFrame)
 		wxToolBarXmlHandlerEx::SetIconSize(iconSize);
 	}
 
-	CToolBar* toolbar = dynamic_cast<CToolBar*>(wxXmlResource::Get()->LoadToolBar(pMainFrame, _T("ID_TOOLBAR")));
+	CToolBar* toolbar = wxDynamicCast(wxXmlResource::Get()->LoadToolBar(pMainFrame, _T("ID_TOOLBAR")), CToolBar);
 	if (!toolbar)
 		return 0;
 

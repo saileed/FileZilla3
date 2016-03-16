@@ -1,56 +1,54 @@
 #include <filezilla.h>
 #include "Mainfrm.h"
 
-#include "aboutdialog.h"
-#include "asyncrequestqueue.h"
-#include "auto_ascii_files.h"
-#include "bookmarks_dialog.h"
-#include "buildinfo.h"
-#include "clearprivatedata.h"
-#include "cmdline.h"
-#include "commandqueue.h"
-#include "conditionaldialog.h"
-#include "context_control.h"
-#include "defaultfileexistsdlg.h"
-#include "edithandler.h"
-#include "export.h"
-#include "filelist_statusbar.h"
-#include "filezillaapp.h"
-#include "filter.h"
-#include "import.h"
-#include "inputdialog.h"
-#include "led.h"
-#include "local_recursive_operation.h"
 #include "LocalListView.h"
 #include "LocalTreeView.h"
-#include "loginmanager.h"
-#include "manual_transfer.h"
-#include "menu_bar.h"
-#include "netconfwizard.h"
-#include "Options.h"
-#include "power_management.h"
 #include "queue.h"
-#include "quickconnectbar.h"
-#include "remote_recursive_operation.h"
 #include "RemoteListView.h"
 #include "RemoteTreeView.h"
-#include "search.h"
-#include "settings/settingsdialog.h"
-#include "sitemanager_dialog.h"
-#include "speedlimits_dialog.h"
-#include "splitter.h"
 #include "StatusView.h"
 #include "state.h"
+#include "Options.h"
+#include "asyncrequestqueue.h"
+#include "commandqueue.h"
+#include "led.h"
+#include "sitemanager_dialog.h"
+#include "settings/settingsdialog.h"
 #include "themeprovider.h"
-#include "toolbar.h"
-#include "update_dialog.h"
-#include "updater.h"
+#include "filezillaapp.h"
 #include "view.h"
 #include "viewheader.h"
-#include "welcome_dialog.h"
-#include "window_state_manager.h"
-
+#include "aboutdialog.h"
+#include "filter.h"
+#include "netconfwizard.h"
+#include "quickconnectbar.h"
+#include "updater.h"
+#include "update_dialog.h"
+#include "defaultfileexistsdlg.h"
+#include "loginmanager.h"
+#include "conditionaldialog.h"
+#include "clearprivatedata.h"
+#include "export.h"
+#include "import.h"
+#include "recursive_operation.h"
 #include <wx/tokenzr.h>
+#include "edithandler.h"
+#include "inputdialog.h"
+#include "window_state_manager.h"
+#include "cmdline.h"
+#include "buildinfo.h"
+#include "filelist_statusbar.h"
+#include "manual_transfer.h"
+#include "auto_ascii_files.h"
+#include "splitter.h"
+#include "bookmarks_dialog.h"
+#include "search.h"
+#include "power_management.h"
+#include "welcome_dialog.h"
+#include "context_control.h"
+#include "speedlimits_dialog.h"
+#include "toolbar.h"
+#include "menu_bar.h"
 
 #ifdef __WXMSW__
 #include <wx/module.h>
@@ -200,7 +198,8 @@ public:
 protected:
 	virtual void OnStateChange(CState* pState, enum t_statechange_notifications notification, const wxString&, const void*)
 	{
-		if (notification == STATECHANGE_CHANGEDCONTEXT) {
+		if (notification == STATECHANGE_CHANGEDCONTEXT)
+		{
 			// Update window title
 			const CServer* pServer = pState ? pState->GetServer() : 0;
 			if (!pServer)
@@ -218,25 +217,29 @@ protected:
 		if (!controls)
 			return;
 
-		if (controls->tab_index == -1) {
+		if (controls->tab_index == -1)
+		{
 			if (notification == STATECHANGE_REMOTE_IDLE || notification == STATECHANGE_SERVER)
 				pState->Disconnect();
 
 			return;
 		}
 
-		if (notification == STATECHANGE_SERVER) {
+		if (notification == STATECHANGE_SERVER)
+		{
 			const CServer* pServer = pState->GetServer();
 
-			if (pState == CContextManager::Get()->GetCurrentContext()) {
-				if (!pServer) {
+			if (pState == CContextManager::Get()->GetCurrentContext())
+			{
+				if (!pServer)
 					m_pMainFrame->SetTitle(_T("FileZilla"));
-				}
-				else {
+				else
+				{
 					m_pMainFrame->SetTitle(pState->GetTitle() + _T(" - FileZilla"));
-					if (pServer->GetName().empty()) {
+					if (pServer->GetName().empty())
+					{
 						// Can only happen through quickconnect bar
-						CMenuBar* pMenuBar = dynamic_cast<CMenuBar*>(m_pMainFrame->GetMenuBar());
+						CMenuBar* pMenuBar = wxDynamicCast(m_pMainFrame->GetMenuBar(), CMenuBar);
 						if (pMenuBar)
 							pMenuBar->ClearBookmarks();
 					}
@@ -1017,9 +1020,10 @@ void CMainFrame::OnCancel(wxCommandEvent&)
 	if (!pState || pState->m_pCommandQueue->Idle())
 		return;
 
-	if (wxMessageBoxEx(_("Really cancel current operation?"), _T("FileZilla"), wxYES_NO | wxICON_QUESTION) == wxYES) {
+	if (wxMessageBoxEx(_("Really cancel current operation?"), _T("FileZilla"), wxYES_NO | wxICON_QUESTION) == wxYES)
+	{
 		pState->m_pCommandQueue->Cancel();
-		pState->GetRemoteRecursiveOperation()->StopRecursiveOperation();
+		pState->GetRecursiveOperationHandler()->StopRecursiveOperation();
 	}
 }
 
@@ -1062,16 +1066,20 @@ bool CMainFrame::CloseDialogsAndQuit(wxCloseEvent &event)
 
 	int size = wxTopLevelWindows.size();
 	static wxTopLevelWindow* pLast = 0;
-	if (wxTopLevelWindows.size()) {
+	if (wxTopLevelWindows.size())
+	{
 		wxWindowList::reverse_iterator iter = wxTopLevelWindows.rbegin();
 		wxTopLevelWindow* pTop = (wxTopLevelWindow*)(*iter);
-		while (pTop != this && (size != prev_size || pLast != pTop)) {
-			wxDialog* pDialog = dynamic_cast<wxDialog*>(pTop);
+		while (pTop != this && (size != prev_size || pLast != pTop))
+		{
+			wxDialog* pDialog = wxDynamicCast(pTop, wxDialog);
 			if (pDialog)
 				pDialog->EndModal(wxID_CANCEL);
-			else {
+			else
+			{
 				wxWindow* pParent = pTop->GetParent();
-				if (m_pQueuePane && pParent == m_pQueuePane) {
+				if (m_pQueuePane && pParent == m_pQueuePane)
+				{
 					// It's the AUI frame manager hint window. Ignore it
 					++iter;
 					if (iter == wxTopLevelWindows.rend())
@@ -1209,11 +1217,8 @@ void CMainFrame::OnClose(wxCloseEvent &event)
 	bool res = true;
 	const std::vector<CState*> *pStates = CContextManager::Get()->GetAllStates();
 	for (CState* pState : *pStates) {
-		if (pState->GetLocalRecursiveOperation()) {
-			pState->GetLocalRecursiveOperation()->StopRecursiveOperation();
-		}
-		if (pState->GetRemoteRecursiveOperation()) {
-			pState->GetRemoteRecursiveOperation()->StopRecursiveOperation();
+		if( pState->GetRecursiveOperationHandler() ) {
+			pState->GetRecursiveOperationHandler()->StopRecursiveOperation();
 		}
 
 		if (pState->m_pCommandQueue) {

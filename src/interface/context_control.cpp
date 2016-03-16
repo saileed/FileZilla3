@@ -3,13 +3,12 @@
 #include "context_control.h"
 #include "filelist_statusbar.h"
 #include "filezillaapp.h"
-#include "local_recursive_operation.h"
 #include "LocalListView.h"
 #include "LocalTreeView.h"
 #include "Mainfrm.h"
 #include "Options.h"
 #include "queue.h"
-#include "remote_recursive_operation.h"
+#include "recursive_operation.h"
 #include "recursive_operation_status.h"
 #include "RemoteListView.h"
 #include "RemoteTreeView.h"
@@ -92,8 +91,7 @@ void CContextControl::CreateTab()
 
 		CreateContextControls(pState);
 
-		pState->GetLocalRecursiveOperation()->SetQueue(m_mainFrame.GetQueue());
-		pState->GetRemoteRecursiveOperation()->SetQueue(m_mainFrame.GetQueue());
+		pState->GetRecursiveOperationHandler()->SetQueue(m_mainFrame.GetQueue());
 
 		wxString const localDir = COptions::Get()->GetOption(OPTION_LASTLOCALDIR);
 		if (!pState->SetLocalDir(localDir)) {
@@ -201,11 +199,8 @@ void CContextControl::CreateContextControls(CState* pState)
 	context_controls.pRemoteListViewPanel->SetStatusBar(pRemoteFilelistStatusBar);
 	context_controls.pRemoteListView->SetFilelistStatusBar(pRemoteFilelistStatusBar);
 
-	auto localRecursiveStatus = new CRecursiveOperationStatus(context_controls.pRemoteListViewPanel, context_controls.pState, true);
-	context_controls.pLocalListViewPanel->SetFooter(localRecursiveStatus);
-
-	auto remoteRecursiveStatus = new CRecursiveOperationStatus(context_controls.pRemoteListViewPanel, context_controls.pState, false);
-	context_controls.pRemoteListViewPanel->SetFooter(remoteRecursiveStatus);
+	auto recursiveStatus = new CRecursiveOperationStatus(context_controls.pRemoteListViewPanel, context_controls.pState);
+	context_controls.pRemoteListViewPanel->SetFooter(recursiveStatus);
 
 	const int layout = COptions::Get()->GetOptionVal(OPTION_FILEPANE_LAYOUT);
 	const int swap = COptions::Get()->GetOptionVal(OPTION_FILEPANE_SWAP);
@@ -365,12 +360,12 @@ bool CContextControl::CloseTab(int tab)
 #endif
 
 	pState->m_pCommandQueue->Cancel();
-	pState->GetLocalRecursiveOperation()->StopRecursiveOperation();
-	pState->GetRemoteRecursiveOperation()->StopRecursiveOperation();
+	pState->GetRecursiveOperationHandler()->StopRecursiveOperation();
 
 	pState->GetComparisonManager()->SetListings(0, 0);
 
-	if (m_tabs->GetPageCount() == 2) {
+	if (m_tabs->GetPageCount() == 2)
+	{
 		// Get rid again of tab bar
 		m_tabs->Disconnect(wxEVT_COMMAND_AUINOTEBOOK_PAGE_CHANGED, wxAuiNotebookEventHandler(CContextControl::OnTabChanged), 0, this);
 
@@ -378,10 +373,10 @@ bool CContextControl::CloseTab(int tab)
 		m_tabs->RemovePage(keep);
 
 		size_t j;
-		for (j = 0; j < m_context_controls.size(); ++j) {
-			if (m_context_controls[j].tab_index != keep) {
+		for (j = 0; j < m_context_controls.size(); j++)
+		{
+			if (m_context_controls[j].tab_index != keep)
 				continue;
-			}
 
 			break;
 		}
@@ -401,25 +396,26 @@ bool CContextControl::CloseTab(int tab)
 
 		tabs->Destroy();
 	}
-	else {
-		if (pState == CContextManager::Get()->GetCurrentContext()) {
+	else
+	{
+		if (pState == CContextManager::Get()->GetCurrentContext())
+		{
 			int newsel = tab + 1;
-			if (newsel >= (int)m_tabs->GetPageCount()) {
+			if (newsel >= (int)m_tabs->GetPageCount())
 				newsel = m_tabs->GetPageCount() - 2;
-			}
 
-			for (size_t j = 0; j < m_context_controls.size(); ++j) {
-				if (m_context_controls[j].tab_index != newsel) {
+			for (size_t j = 0; j < m_context_controls.size(); j++)
+			{
+				if (m_context_controls[j].tab_index != newsel)
 					continue;
-				}
 				m_tabs->SetSelection(newsel);
 				CContextManager::Get()->SetCurrentContext(m_context_controls[j].pState);
 			}
 		}
-		for (size_t j = 0; j < m_context_controls.size(); ++j) {
-			if (m_context_controls[j].tab_index > tab) {
-				--m_context_controls[j].tab_index;
-			}
+		for (size_t j = 0; j < m_context_controls.size(); j++)
+		{
+			if (m_context_controls[j].tab_index > tab)
+				m_context_controls[j].tab_index--;
 		}
 		m_context_controls[i].tab_index = -1;
 		m_context_controls[i].site_bookmarks.reset();

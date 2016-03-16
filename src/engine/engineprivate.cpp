@@ -561,7 +561,7 @@ void CFileZillaEnginePrivate::InvalidateCurrentWorkingDirs(const CServerPath& pa
 	wxASSERT(pOwnServer);
 
 	for (auto & engine : m_engineList) {
-		if (!engine || engine == this)
+		if (engine == this)
 			continue;
 
 		if (!engine->m_pControlSocket)

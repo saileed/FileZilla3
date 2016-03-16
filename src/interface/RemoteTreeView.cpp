@@ -4,7 +4,7 @@
 #include <wx/dnd.h>
 #include "dndobjects.h"
 #include "chmoddialog.h"
-#include "remote_recursive_operation.h"
+#include "recursive_operation.h"
 #include "inputdialog.h"
 #include "dragdropmanager.h"
 #include "drop_target_ex.h"
@@ -968,7 +968,7 @@ void CRemoteTreeView::OnMenuChmod(wxCommandEvent&)
 	}
 
 	if (!cached || pChmodDlg->Recursive()) {
-		CRemoteRecursiveOperation* pRecursiveOperation = m_pState->GetRemoteRecursiveOperation();
+		CRecursiveOperation* pRecursiveOperation = m_pState->GetRecursiveOperationHandler();
 		pRecursiveOperation->AddRecursionRoot(std::move(root));
 		pRecursiveOperation->SetChmodDialog(pChmodDlg);
 
@@ -1013,7 +1013,7 @@ void CRemoteTreeView::OnMenuDownload(wxCommandEvent& event)
 
 	recursion_root root(path, true);
 	root.add_dir_to_visit(path, _T(""), localDir);
-	CRemoteRecursiveOperation* pRecursiveOperation = m_pState->GetRemoteRecursiveOperation();
+	CRecursiveOperation* pRecursiveOperation = m_pState->GetRecursiveOperationHandler();
 	pRecursiveOperation->AddRecursionRoot(std::move(root));
 
 	CServerPath currentPath;
@@ -1023,7 +1023,7 @@ void CRemoteTreeView::OnMenuDownload(wxCommandEvent& event)
 
 	const bool addOnly = event.GetId() == XRCID("ID_ADDTOQUEUE");
 	CFilterManager filter;
-	pRecursiveOperation->StartRecursiveOperation(addOnly ? CRecursiveOperation::recursive_addtoqueue : CRecursiveOperation::recursive_transfer, filter.GetActiveFilters(false), currentPath);
+	pRecursiveOperation->StartRecursiveOperation(addOnly ? CRecursiveOperation::recursive_addtoqueue : CRecursiveOperation::recursive_download, filter.GetActiveFilters(false), currentPath);
 }
 
 void CRemoteTreeView::OnMenuDelete(wxCommandEvent&)
@@ -1043,7 +1043,7 @@ void CRemoteTreeView::OnMenuDelete(wxCommandEvent&)
 
 	const bool hasParent = pathToDelete.HasParent();
 
-	CRemoteRecursiveOperation* pRecursiveOperation = m_pState->GetRemoteRecursiveOperation();
+	CRecursiveOperation* pRecursiveOperation = m_pState->GetRecursiveOperationHandler();
 
 	recursion_root root;
 	CServerPath startDir;

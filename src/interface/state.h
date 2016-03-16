@@ -28,8 +28,7 @@ enum t_statechange_notifications
 	STATECHANGE_SYNC_BROWSE,
 	STATECHANGE_COMPARISON,
 
-	STATECHANGE_REMOTE_RECURSION_STATUS,
-	STATECHANGE_LOCAL_RECURSION_STATUS,
+	STATECHANGE_RECURSION_STATUS,
 
 	/* Global notifications */
 	STATECHANGE_QUEUEPROCESSING,
@@ -43,11 +42,10 @@ enum t_statechange_notifications
 class CDirectoryListing;
 class CFileZillaEngine;
 class CCommandQueue;
-class CLocalRecursiveOperation;
 class CMainFrame;
 class CStateEventHandler;
 class CRemoteDataObject;
-class CRemoteRecursiveOperation;
+class CRecursiveOperation;
 class CComparisonManager;
 
 class CState;
@@ -145,8 +143,7 @@ public:
 	bool IsRemoteConnected() const;
 	bool IsRemoteIdle(bool ignore_recursive = false) const;
 
-	CLocalRecursiveOperation* GetLocalRecursiveOperation() { return m_pLocalRecursiveOperation; }
-	CRemoteRecursiveOperation* GetRemoteRecursiveOperation() { return m_pRemoteRecursiveOperation; }
+	CRecursiveOperation* GetRecursiveOperationHandler() { return m_pRecursiveOperation; }
 
 	void NotifyHandlers(enum t_statechange_notifications notification, wxString const& data = wxString(), const void* data2 = 0);
 
@@ -191,8 +188,7 @@ protected:
 
 	CMainFrame& m_mainFrame;
 
-	CLocalRecursiveOperation* m_pLocalRecursiveOperation;
-	CRemoteRecursiveOperation* m_pRemoteRecursiveOperation;
+	CRecursiveOperation* m_pRecursiveOperation;
 
 	CComparisonManager* m_pComparisonManager;
 

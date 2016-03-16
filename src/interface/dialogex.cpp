@@ -89,7 +89,7 @@ bool wxDialogEx::SetChildLabel(char const* id, const wxString& label, unsigned l
 
 wxString wxDialogEx::GetChildLabel(int id)
 {
-	auto pText = dynamic_cast<wxStaticText*>(FindWindow(id));
+	wxStaticText* pText = wxDynamicCast(FindWindow(id), wxStaticText);
 	if (!pText)
 		return wxString();
 

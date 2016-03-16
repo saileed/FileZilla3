@@ -32,8 +32,9 @@ bool COptionsPage::CreatePage(COptions* pOptions, CSettingsDialog* pOwner, wxWin
 
 void COptionsPage::SetCheck(int id, bool checked, bool& failure)
 {
-	auto pCheckBox = dynamic_cast<wxCheckBox*>(FindWindow(id));
-	if (!pCheckBox) {
+	wxCheckBox* pCheckBox = wxDynamicCast(FindWindow(id), wxCheckBox);
+	if (!pCheckBox)
+	{
 		failure = true;
 		return;
 	}
@@ -48,10 +49,10 @@ void COptionsPage::SetCheckFromOption(int control_id, int option_id, bool& failu
 
 bool COptionsPage::GetCheck(int id) const
 {
-	auto pCheckBox = dynamic_cast<wxCheckBox*>(FindWindow(id));
+	wxCheckBox* pCheckBox = wxDynamicCast(FindWindow(id), wxCheckBox);
 	wxASSERT(pCheckBox);
 
-	return pCheckBox ? pCheckBox->GetValue() : false;
+	return pCheckBox->GetValue();
 }
 
 void COptionsPage::SetOptionFromCheck(int control_id, int option_id)
@@ -61,13 +62,15 @@ void COptionsPage::SetOptionFromCheck(int control_id, int option_id)
 
 void COptionsPage::SetTextFromOption(int ctrlId, int optionId, bool& failure)
 {
-	if (ctrlId == -1) {
+	if (ctrlId == -1)
+	{
 		failure = true;
 		return;
 	}
 
-	auto pTextCtrl = dynamic_cast<wxTextCtrl*>(FindWindow(ctrlId));
-	if (!pTextCtrl) {
+	wxTextCtrl* pTextCtrl = wxDynamicCast(FindWindow(ctrlId), wxTextCtrl);
+	if (!pTextCtrl)
+	{
 		failure = true;
 		return;
 	}
@@ -78,16 +81,17 @@ void COptionsPage::SetTextFromOption(int ctrlId, int optionId, bool& failure)
 
 wxString COptionsPage::GetText(int id) const
 {
-	auto pTextCtrl = dynamic_cast<wxTextCtrl*>(FindWindow(id));
+	wxTextCtrl* pTextCtrl = wxDynamicCast(FindWindow(id), wxTextCtrl);
 	wxASSERT(pTextCtrl);
 
-	return pTextCtrl ? pTextCtrl->GetValue() : wxString();
+	return pTextCtrl->GetValue();
 }
 
 bool COptionsPage::SetText(int id, const wxString& text, bool& failure)
 {
-	auto pTextCtrl = dynamic_cast<wxTextCtrl*>(FindWindow(id));
-	if (!pTextCtrl) {
+	wxTextCtrl* pTextCtrl = wxDynamicCast(FindWindow(id), wxTextCtrl);
+	if (!pTextCtrl)
+	{
 		failure = true;
 		return false;
 	}
@@ -99,8 +103,9 @@ bool COptionsPage::SetText(int id, const wxString& text, bool& failure)
 
 void COptionsPage::SetRCheck(int id, bool checked, bool& failure)
 {
-	auto pRadioButton = dynamic_cast<wxRadioButton*>(FindWindow(id));
-	if (!pRadioButton) {
+	wxRadioButton* pRadioButton = wxDynamicCast(FindWindow(id), wxRadioButton);
+	if (!pRadioButton)
+	{
 		failure = true;
 		return;
 	}
@@ -110,16 +115,17 @@ void COptionsPage::SetRCheck(int id, bool checked, bool& failure)
 
 bool COptionsPage::GetRCheck(int id) const
 {
-	auto pRadioButton = dynamic_cast<wxRadioButton*>(FindWindow(id));
+	wxRadioButton* pRadioButton = wxDynamicCast(FindWindow(id), wxRadioButton);
 	wxASSERT(pRadioButton);
 
-	return pRadioButton ? pRadioButton->GetValue() : false;
+	return pRadioButton->GetValue();
 }
 
 void COptionsPage::SetStaticText(int id, const wxString& text, bool& failure)
 {
-	auto pStaticText = dynamic_cast<wxStaticText*>(FindWindow(id));
-	if (!pStaticText) {
+	wxStaticText* pStaticText = wxDynamicCast(FindWindow(id), wxStaticText);
+	if (!pStaticText)
+	{
 		failure = true;
 		return;
 	}
@@ -129,10 +135,10 @@ void COptionsPage::SetStaticText(int id, const wxString& text, bool& failure)
 
 wxString COptionsPage::GetStaticText(int id) const
 {
-	auto pStaticText = dynamic_cast<wxStaticText*>(FindWindow(id));
+	wxStaticText* pStaticText = wxDynamicCast(FindWindow(id), wxStaticText);
 	wxASSERT(pStaticText);
 
-	return pStaticText ? pStaticText->GetLabel() : wxString();
+	return pStaticText->GetLabel();
 }
 
 void COptionsPage::ReloadSettings()
@@ -158,18 +164,21 @@ void COptionsPage::SetIntOptionFromText(int ctrlId, int optionId)
 
 void COptionsPage::SetChoice(int id, int selection, bool& failure)
 {
-	if (selection < -1) {
+	if (selection < -1)
+	{
 		failure = true;
 		return;
 	}
 
-	auto pChoice = dynamic_cast<wxChoice*>(FindWindow(id));
-	if (!pChoice) {
+	wxChoice* pChoice = wxDynamicCast(FindWindow(id), wxChoice);
+	if (!pChoice)
+	{
 		failure = true;
 		return;
 	}
 
-	if (selection >= (int)pChoice->GetCount()) {
+	if (selection >= (int)pChoice->GetCount())
+	{
 		failure = true;
 		return;
 	}
@@ -179,7 +188,7 @@ void COptionsPage::SetChoice(int id, int selection, bool& failure)
 
 int COptionsPage::GetChoice(int id) const
 {
-	auto pChoice = dynamic_cast<wxChoice*>(FindWindow(id));
+	wxChoice* pChoice = wxDynamicCast(FindWindow(id), wxChoice);
 	wxASSERT(pChoice);
 	if (!pChoice)
 		return 0;

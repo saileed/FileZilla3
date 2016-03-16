@@ -7,7 +7,6 @@
 ; Build environment
 ;--------------------------------
 
-  Unicode true
   !define top_srcdir    @top_srcdir@
   !define srcdir        @srcdir@
   !define VERSION       @PACKAGE_VERSION@

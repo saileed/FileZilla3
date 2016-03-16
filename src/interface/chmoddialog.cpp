@@ -93,7 +93,7 @@ bool CChmodDialog::Create(wxWindow* parent, int fileCount, int dirCount,
 
 	for (int i = 0; i < 9; ++i) {
 		int id = wxXmlResource::GetXRCID(IDs[i]);
-		m_checkBoxes[i] = dynamic_cast<wxCheckBox*>(FindWindow(id));
+		m_checkBoxes[i] = wxDynamicCast(FindWindow(id), wxCheckBox);
 
 		if (!m_checkBoxes[i])
 			return false;

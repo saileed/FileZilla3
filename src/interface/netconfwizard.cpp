@@ -192,10 +192,8 @@ void CNetConfWizard::OnPageChanging(wxWizardEvent& event)
 		}
 	}
 	else if (event.GetPage() == m_pages[5] && !event.GetDirection()) {
-		auto pNext = dynamic_cast<wxButton*>(FindWindow(wxID_FORWARD));
-		if (pNext) {
-			pNext->SetLabel(m_nextLabelText);
-		}
+		wxButton* pNext = wxDynamicCast(FindWindow(wxID_FORWARD), wxButton);
+		pNext->SetLabel(m_nextLabelText);
 	}
 	else if (event.GetPage() == m_pages[5] && event.GetDirection()) {
 		if (m_testDidRun)
@@ -203,14 +201,10 @@ void CNetConfWizard::OnPageChanging(wxWizardEvent& event)
 
 		m_testDidRun = true;
 
-		auto pNext = dynamic_cast<wxButton*>(FindWindow(wxID_FORWARD));
-		if (pNext) {
-			pNext->Disable();
-		}
-		auto pPrev = dynamic_cast<wxButton*>(FindWindow(wxID_BACKWARD));
-		if (pPrev) {
-			pPrev->Disable();
-		}
+		wxButton* pNext = wxDynamicCast(FindWindow(wxID_FORWARD), wxButton);
+		pNext->Disable();
+		wxButton* pPrev = wxDynamicCast(FindWindow(wxID_BACKWARD), wxButton);
+		pPrev->Disable();
 		event.Veto();
 
 		PrintMessage(wxString::Format(_("Connecting to %s"), _T("probe.filezilla-project.org")), 0);
@@ -228,21 +222,15 @@ void CNetConfWizard::OnPageChanging(wxWizardEvent& event)
 void CNetConfWizard::OnPageChanged(wxWizardEvent& event)
 {
 	if (event.GetPage() == m_pages[5]) {
-		auto pNext = dynamic_cast<wxButton*>(FindWindow(wxID_FORWARD));
-		if (pNext) {
-			m_nextLabelText = pNext->GetLabel();
-			pNext->SetLabel(_("&Test"));
-		}
+		wxButton* pNext = wxDynamicCast(FindWindow(wxID_FORWARD), wxButton);
+		m_nextLabelText = pNext->GetLabel();
+		pNext->SetLabel(_("&Test"));
 	}
 	else if (event.GetPage() == m_pages[6]) {
-		auto pPrev = dynamic_cast<wxButton*>(FindWindow(wxID_BACKWARD));
-		if (pPrev) {
-			pPrev->Disable();
-		}
-		auto pNext = dynamic_cast<wxButton*>(FindWindow(wxID_FORWARD));
-		if (pNext) {
-			pNext->SetFocus();
-		}
+		wxButton* pPrev = wxDynamicCast(FindWindow(wxID_BACKWARD), wxButton);
+		pPrev->Disable();
+		wxButton* pNext = wxDynamicCast(FindWindow(wxID_FORWARD), wxButton);
+		pNext->SetFocus();
 	}
 }
 
@@ -563,11 +551,9 @@ void CNetConfWizard::CloseSocket()
 
 	PrintMessage(_("Connection closed"), 0);
 
-	auto pNext = dynamic_cast<wxButton*>(FindWindow(wxID_FORWARD));
-	if (pNext) {
-		pNext->Enable();
-		pNext->SetLabel(m_nextLabelText);
-	}
+	wxButton* pNext = wxDynamicCast(FindWindow(wxID_FORWARD), wxButton);
+	pNext->Enable();
+	pNext->SetLabel(m_nextLabelText);
 
 	wxString text[5];
 	if (!m_connectSuccessful)
@@ -649,13 +635,11 @@ void CNetConfWizard::CloseSocket()
 			break;
 		}
 	}
-	for (unsigned int i = 0; i < 5; ++i) {
+	for (unsigned int i = 0; i < 5; i++)
+	{
 		wxString name = wxString::Format(_T("ID_SUMMARY%d"), i + 1);
 		int id = wxXmlResource::GetXRCID(name);
-		auto ctrl = dynamic_cast<wxStaticText*>(FindWindowById(id, this));
-		if (ctrl) {
-			ctrl->SetLabel(text[i]);
-		}
+		wxDynamicCast(FindWindowById(id, this), wxStaticText)->SetLabel(text[i]);
 	}
 	m_pages[6]->GetSizer()->Layout();
 	m_pages[6]->GetSizer()->Fit(m_pages[6]);

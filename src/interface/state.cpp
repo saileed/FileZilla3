@@ -6,8 +6,7 @@
 #include "Mainfrm.h"
 #include "queue.h"
 #include "filezillaapp.h"
-#include "local_recursive_operation.h"
-#include "remote_recursive_operation.h"
+#include "recursive_operation.h"
 #include "listingcomparison.h"
 #include "xrc_helper.h"
 
@@ -182,8 +181,7 @@ CState::CState(CMainFrame &mainFrame)
 
 	m_pComparisonManager = new CComparisonManager(this);
 
-	m_pLocalRecursiveOperation = new CLocalRecursiveOperation(this);
-	m_pRemoteRecursiveOperation = new CRemoteRecursiveOperation(this);
+	m_pRecursiveOperation = new CRecursiveOperation(this);
 
 	m_sync_browse.is_changing = false;
 	m_sync_browse.compare = false;
@@ -200,14 +198,15 @@ CState::~CState()
 	delete m_pEngine;
 
 	// Unregister all handlers
-	for (int i = 0; i < STATECHANGE_MAX; ++i) {
-		for (auto & handler : m_handlers[i]) {
-			handler.pHandler->m_pState = 0;
+	for (int i = 0; i < STATECHANGE_MAX; i++)
+	{
+		for (auto iter = m_handlers[i].begin(); iter != m_handlers[i].end(); ++iter)
+		{
+			iter->pHandler->m_pState = 0;
 		}
 	}
 
-	delete m_pLocalRecursiveOperation;
-	delete m_pRemoteRecursiveOperation;
+	delete m_pRecursiveOperation;
 }
 
 CLocalPath CState::GetLocalDir() const
@@ -499,13 +498,13 @@ wxString CState::GetTitle() const
 	return m_title;
 }
 
-bool CState::Connect(const CServer& server, const CServerPath& path)
+bool CState::Connect(const CServer& server, const CServerPath& path /*=CServerPath()*/)
 {
 	if (!m_pEngine)
 		return false;
 	if (m_pEngine->IsConnected() || m_pEngine->IsBusy() || !m_pCommandQueue->Idle())
 		m_pCommandQueue->Cancel();
-	m_pRemoteRecursiveOperation->StopRecursiveOperation();
+	m_pRecursiveOperation->StopRecursiveOperation();
 	SetSyncBrowse(false);
 
 	m_pCommandQueue->ProcessCommand(new CConnectCommand(server));
@@ -669,8 +668,11 @@ void CState::UploadDroppedFiles(const wxFileDataObject* pFileDataObject, const C
 		}
 		else if (type == fz::local_filesys::dir) {
 			CLocalPath localPath(files[i]);
-			if (localPath.HasParent()) {
-				//FIXME
+			if (localPath.HasParent())
+			{
+				CServerPath target = path;
+				target.AddSegment(localPath.GetLastSegment());
+				m_mainFrame.GetQueue()->QueueFolder(queueOnly, false, localPath, target, *m_pServer);
 			}
 		}
 	}
@@ -850,10 +852,10 @@ bool CState::DownloadDroppedFiles(const CRemoteDataObject* pRemoteDataObject, co
 		if (m_pComparisonManager->IsComparing())
 			m_pComparisonManager->ExitComparisonMode();
 
-		m_pRemoteRecursiveOperation->AddRecursionRoot(std::move(root));
+		m_pRecursiveOperation->AddRecursionRoot(std::move(root));
 
 		CFilterManager filter;
-		m_pRemoteRecursiveOperation->StartRecursiveOperation(queueOnly ? CRecursiveOperation::recursive_addtoqueue : CRecursiveOperation::recursive_transfer,
+		m_pRecursiveOperation->StartRecursiveOperation(queueOnly ? CRecursiveOperation::recursive_addtoqueue : CRecursiveOperation::recursive_download,
 			filter.GetActiveFilters(false), pRemoteDataObject->GetServerPath());
 	}
 
@@ -870,7 +872,7 @@ bool CState::IsRemoteConnected() const
 
 bool CState::IsRemoteIdle(bool ignore_recursive) const
 {
-	if (!ignore_recursive && m_pRemoteRecursiveOperation->GetOperationMode() != CRecursiveOperation::recursive_none)
+	if (!ignore_recursive && m_pRecursiveOperation->GetOperationMode() != CRecursiveOperation::recursive_none)
 		return false;
 
 	if (!m_pCommandQueue)
