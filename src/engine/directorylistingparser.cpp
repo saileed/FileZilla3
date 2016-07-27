@@ -1915,7 +1915,7 @@ bool CDirectoryListingParser::AddData(char *pData, int len)
 	return ParseData(true);
 }
 
-bool CDirectoryListingParser::AddLine(std::wstring && line, std::wstring && name, fz::datetime const& time)
+bool CDirectoryListingParser::AddLine(std::wstring && line, wxString && name, fz::datetime const& time)
 {
 	if (m_pControlSocket) {
 		m_pControlSocket->LogMessageRaw(MessageType::RawList, line);
@@ -2027,6 +2027,7 @@ CLine *CDirectoryListingParser::GetLine(bool breakAtEnd /*=false*/, bool &error)
 		else
 			m_DataList.erase(m_DataList.begin(), iter);
 
+		size_t lineLength{};
 		std::wstring buffer;
 		if (m_pControlSocket) {
 			buffer = m_pControlSocket->ConvToLocal(res, buflen);

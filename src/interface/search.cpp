@@ -645,12 +645,6 @@ void CSearchDialog::OnSearch(wxCommandEvent&)
 			return;
 		}
 
-		wxString error;
-		if (!path.Exists(&error)) {
-			wxMessageBoxEx(error, _("Local file search"), wxICON_EXCLAMATION);
-			return;
-		}
-
 		m_local_search_root = path;
 	}
 	else {
