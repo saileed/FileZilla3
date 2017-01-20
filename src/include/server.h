@@ -13,8 +13,9 @@ enum ServerProtocol
 	FTPES, // Explicit SSL
 	HTTPS,
 	INSECURE_FTP, // Insecure, as the name suggests
+	STORJ,
 
-	MAX_VALUE = INSECURE_FTP
+	MAX_VALUE = STORJ
 };
 
 enum ServerType

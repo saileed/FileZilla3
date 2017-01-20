@@ -154,7 +154,6 @@ if test "$buildmain" = "yes"; then
   AC_SUBST(LIBFILEZILLA_CFLAGS)
   AC_SUBST(LIBFILEZILLA_LIBS)
 
-
   # Detect wxWidgets
   # ----------------
 
@@ -663,6 +662,14 @@ if test "$buildmain" = "yes"; then
   AC_SUBST(LIBSQLITE3_LIBS)
   AC_SUBST(LIBSQLITE3_CFLAGS)
 
+  # Find libstorj
+  # -----------------
+  PKG_CHECK_MODULES(LIBSTORJ, [libstorj >= 0.1],, [
+	AC_MSG_ERROR([libstorj not found: $LIBSTORJ_PKG_ERRORS. You can download it from https://github.com/Storj/libstorj-c])
+  ])
+  AC_SUBST(LIBSTORJ_CFLAGS)
+  AC_SUBST(LIBSTORJ_LIBS)
+
 fi
 
 # Everything translation related
@@ -768,6 +775,7 @@ src/interface/resources/tango/Makefile
 src/putty/Makefile
 src/putty/unix/Makefile
 src/putty/windows/Makefile
+src/storj/Makefile
 tests/Makefile
 src/interface/resources/version.rc
 src/interface/resources/MacInfo.plist

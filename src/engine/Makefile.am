@@ -34,6 +34,7 @@ libengine_a_SOURCES = \
 		sftpcontrolsocket.cpp \
 		sizeformatting_base.cpp \
 		socket.cpp \
+		storjcontrolsocket.cpp \
 		tlssocket.cpp \
 		transfersocket.cpp \
 		uri.cpp
@@ -54,6 +55,7 @@ noinst_HEADERS = backend.h \
 		rtt.h \
 		servercapabilities.h \
 		sftpcontrolsocket.h \
+		storjcontrolsocket.h \
 		tlssocket.h \
 		transfersocket.h
 

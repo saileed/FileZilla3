@@ -630,8 +630,7 @@ bool CControlSocket::TryLockCache(locking_reason reason, const CServerPath& dire
 	assert(m_pCurOpData);
 
 	std::list<t_lockInfo>::iterator own = GetLockStatus();
-	if (own == m_lockInfoList.end())
-	{
+	if (own == m_lockInfoList.end()) {
 		t_lockInfo info;
 		info.directory = directory;
 		info.pControlSocket = this;
@@ -641,12 +640,9 @@ bool CControlSocket::TryLockCache(locking_reason reason, const CServerPath& dire
 		m_lockInfoList.push_back(info);
 		own = --m_lockInfoList.end();
 	}
-	else
-	{
-		if (own->lockcount)
-		{
-			if (!m_pCurOpData->holdsLock)
-			{
+	else {
+		if (own->lockcount) {
+			if (!m_pCurOpData->holdsLock) {
 				m_pCurOpData->holdsLock = true;
 				own->lockcount++;
 			}
@@ -661,14 +657,16 @@ bool CControlSocket::TryLockCache(locking_reason reason, const CServerPath& dire
 	m_pCurOpData->holdsLock = true;
 
 	// Try to find other instance holding the lock
-	for (std::list<t_lockInfo>::const_iterator iter = m_lockInfoList.begin(); iter != own; ++iter)
-	{
-		if (*m_pCurrentServer != *iter->pControlSocket->m_pCurrentServer)
+	for (std::list<t_lockInfo>::const_iterator iter = m_lockInfoList.begin(); iter != own; ++iter) {
+		if (*m_pCurrentServer != *iter->pControlSocket->m_pCurrentServer) {
 			continue;
-		if (directory != iter->directory)
+		}
+		if (directory != iter->directory) {
 			continue;
-		if (reason != iter->reason)
+		}
+		if (reason != iter->reason) {
 			continue;
+		}
 
 		// Some other instance is holding the lock
 		return false;
