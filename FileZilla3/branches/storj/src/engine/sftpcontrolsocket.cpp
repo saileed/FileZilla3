@@ -907,13 +907,13 @@ int CSftpControlSocket::ListParseResponse(bool successful, std::wstring const& r
 		return FZ_REPLY_ERROR;
 	}
 
-	CSftpListOpData *pData = static_cast<CSftpListOpData *>(m_pCurOpData);
-	if (!pData) {
+	if (m_pCurOpData->opId != Command::list) {
 		LogMessage(__TFILE__, __LINE__, this, MessageType::Debug_Warning, _T("m_pCurOpData of wrong type"));
 		ResetOperation(FZ_REPLY_INTERNALERROR);
 		return FZ_REPLY_ERROR;
 	}
 
+	CSftpListOpData *pData = static_cast<CSftpListOpData *>(m_pCurOpData);
 	if (pData->opState == list_list) {
 		if (!successful) {
 			ResetOperation(FZ_REPLY_ERROR);
@@ -956,13 +956,6 @@ int CSftpControlSocket::ListParseEntry(std::wstring && entry, std::wstring const
 	}
 
 	CSftpListOpData *pData = static_cast<CSftpListOpData *>(m_pCurOpData);
-	if (!pData) {
-		LogMessageRaw(MessageType::RawList, entry);
-		LogMessage(__TFILE__, __LINE__, this, MessageType::Debug_Warning, _T("m_pCurOpData of wrong type"));
-		ResetOperation(FZ_REPLY_INTERNALERROR);
-		return FZ_REPLY_ERROR;
-	}
-
 	if (pData->opState != list_list) {
 		LogMessageRaw(MessageType::RawList, entry);
 		LogMessage(__TFILE__, __LINE__, this, MessageType::Debug_Warning, _T("ListParseResponse called at inproper time: %d"), pData->opState);
@@ -1106,7 +1099,7 @@ int CSftpControlSocket::ListSend()
 		return FZ_REPLY_WOULDBLOCK;
 	}
 
-	LogMessage(MessageType::Debug_Warning, _T("Unknown opStatein CSftpControlSocket::ListSend"));
+	LogMessage(MessageType::Debug_Warning, _T("Unknown opState in CSftpControlSocket::ListSend"));
 	ResetOperation(FZ_REPLY_INTERNALERROR);
 	return FZ_REPLY_ERROR;
 }

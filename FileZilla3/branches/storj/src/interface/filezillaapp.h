@@ -24,6 +24,7 @@ public:
 	std::wstring GetSettingsFile(std::wstring const& name) const;
 
 	void CheckExistsFzsftp();
+	void CheckExistsFzstorj();
 
 	void InitLocale();
 	bool SetLocale(int language);
@@ -40,6 +41,8 @@ public:
 	void AddStartupProfileRecord(std::string const& msg);
 
 protected:
+	void CheckExistsTool(std::wstring const& tool, std::vector<std::wstring> const& searchPaths, std::wstring const& env, int setting, wxString const& description);
+
 	bool InitDefaultsDir();
 	bool LoadResourceFiles();
 	bool LoadLocales();

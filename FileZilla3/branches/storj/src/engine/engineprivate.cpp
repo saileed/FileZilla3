@@ -8,6 +8,7 @@
 #include "pathcache.h"
 #include "ratelimiter.h"
 #include "sftpcontrolsocket.h"
+#include "storjcontrolsocket.h"
 
 #include <libfilezilla/event_loop.hpp>
 
@@ -558,6 +559,9 @@ int CFileZillaEnginePrivate::ContinueConnect()
 	case HTTP:
 	case HTTPS:
 		m_pControlSocket = std::make_unique<CHttpControlSocket>(*this);
+		break;
+	case STORJ:
+		m_pControlSocket = std::make_unique<CStorjControlSocket>(*this);
 		break;
 	default:
 		m_pLogging->LogMessage(MessageType::Debug_Warning, L"Not a valid protocol: %d", server.GetProtocol());

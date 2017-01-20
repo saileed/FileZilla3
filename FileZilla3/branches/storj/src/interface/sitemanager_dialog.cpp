@@ -503,6 +503,7 @@ void CSiteManagerDialog::CreateControls(wxWindow* parent)
 	wxChoice *pProtocol = XRCCTRL(*this, "ID_PROTOCOL", wxChoice);
 	pProtocol->Append(_("FTP - File Transfer Protocol"));
 	pProtocol->Append(CServer::GetProtocolName(SFTP));
+	pProtocol->Append(CServer::GetProtocolName(STORJ));
 
 	wxChoice *pChoice = XRCCTRL(*this, "ID_SERVERTYPE", wxChoice);
 	wxASSERT(pChoice);
@@ -1806,13 +1807,13 @@ void CSiteManagerDialog::OnProtocolSelChanged(wxCommandEvent&)
 
 void CSiteManagerDialog::SetControlVisibility(ServerProtocol protocol, LogonType type)
 {
-	xrc_call(*this, "ID_ENCRYPTION_DESC", &wxStaticText::Show, protocol != SFTP);
-	xrc_call(*this, "ID_ENCRYPTION", &wxChoice::Show, protocol != SFTP);
+	xrc_call(*this, "ID_ENCRYPTION_DESC", &wxStaticText::Show, protocol != SFTP && protocol != STORJ);
+	xrc_call(*this, "ID_ENCRYPTION", &wxChoice::Show, protocol != SFTP && protocol != STORJ);
 
 	auto choice = XRCCTRL(*this, "ID_LOGONTYPE", wxChoice);
 
 	// Disallow invalid combinations
-	if (protocol == SFTP && type == ACCOUNT) {
+	if ((protocol == SFTP || protocol == STORJ) && type == ACCOUNT) {
 		type = NORMAL;
 		choice->Select(choice->FindString(CServer::GetNameFromLogonType(type)));
 	}
@@ -2396,6 +2397,11 @@ void CSiteManagerDialog::SetProtocol(ServerProtocol protocol)
 		pEncryptionDesc->Hide();
 		pProtocol->SetSelection(1);
 	}
+	else if (protocol == STORJ) {
+		pEncryption->Hide();
+		pEncryptionDesc->Hide();
+		pProtocol->SetSelection(2);
+	}
 	else {
 		switch (protocol) {
 		default:
@@ -2424,8 +2430,12 @@ ServerProtocol CSiteManagerDialog::GetProtocol() const
 	wxChoice* pProtocol = XRCCTRL(*this, "ID_PROTOCOL", wxChoice);
 	wxChoice* pEncryption = XRCCTRL(*this, "ID_ENCRYPTION", wxChoice);
 
-	if (pProtocol->GetSelection() == 1)
+	if (pProtocol->GetSelection() == 1) {
 		return SFTP;
+	}
+	else if (pProtocol->GetSelection() == 2) {
+		return STORJ;
+	}
 
 	switch (pEncryption->GetSelection())
 	{

@@ -1,0 +1,24 @@
+#ifndef FILEZILLA_STORJ_EVENTS_HEADER
+#define FILEZILLA_STORJ_EVENTS_HEADER
+
+enum class storjEvent {
+	Unknown = -1,
+	Reply = 0,
+	Done,
+	Error,
+	Verbose,
+	Info,
+	Status,
+	Recv,
+	Send,
+	Listentry,
+	UsedQuotaRecv,
+	UsedQuotaSend,
+
+	count
+};
+
+#define FZSTORJ_PROTOCOL_VERSION 1
+
+#endif
+
