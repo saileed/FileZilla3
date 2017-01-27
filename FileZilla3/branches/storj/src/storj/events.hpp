@@ -12,6 +12,7 @@ enum class storjEvent {
 	Recv,
 	Send,
 	Listentry,
+	Transfer,
 	UsedQuotaRecv,
 	UsedQuotaSend,
 

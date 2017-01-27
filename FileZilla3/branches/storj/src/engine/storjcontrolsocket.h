@@ -33,6 +33,9 @@ public:
 	virtual bool SetAsyncRequestReply(CAsyncRequestNotification *pNotification);
 
 protected:
+	// Replaces filename"with"quotes with
+	// "filename""with""quotes"
+	std::wstring QuoteFilename(std::wstring const& filename);
 
 	virtual int DoClose(int nErrorCode = FZ_REPLY_DISCONNECTED);
 
@@ -45,14 +48,13 @@ protected:
 	int ConnectParseResponse(bool successful, std::wstring const& reply);
 	int ConnectSend();
 
-	/*
 	virtual int FileTransfer(std::wstring const& localFile, CServerPath const& remotePath,
 							 std::wstring const& remoteFile, bool download,
 							 CFileTransferCommand::t_transferSettings const& transferSettings);
 	int FileTransferSubcommandResult(int prevResult);
 	int FileTransferSend();
 	int FileTransferParseResponse(int result, std::wstring const& reply);
-*/
+
 	int ListSend();
 	int ListParseResponse(bool successful, std::wstring const& reply);
 	int ListParseEntry(std::wstring && name, std::wstring const& size, std::wstring && id);
