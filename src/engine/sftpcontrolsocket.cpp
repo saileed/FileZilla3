@@ -1077,8 +1077,8 @@ int CSftpControlSocket::ListSend()
 		CDirectoryListing listing;
 		bool is_outdated = false;
 		assert(pData->subDir.empty()); // Did do ChangeDir before trying to lock
-		bool found = engine_.GetDirectoryCache().Lookup(listing, *m_pCurrentServer, pData->path, true, is_outdated);
-		if (found && !is_outdated && !listing.get_unsure_flags() &&
+		bool found = engine_.GetDirectoryCache().Lookup(listing, *m_pCurrentServer, pData->path, false, is_outdated);
+		if (found && !is_outdated &&
 			listing.m_firstListTime >= pData->m_time_before_locking)
 		{
 			engine_.SendDirectoryListingNotification(listing.path, !pData->pNextOpData, false, false);
@@ -1525,8 +1525,9 @@ int CSftpControlSocket::FileTransferSubcommandResult(int prevResult)
 				else {
 					if (matchedCase) {
 						pData->remoteFileSize = entry.size;
-						if (entry.has_date())
+						if (entry.has_date()) {
 							pData->fileTime = entry.time;
+						}
 
 						if (pData->download && !entry.has_time() &&
 							engine_.GetOptions().GetOptionVal(OPTION_PRESERVE_TIMESTAMPS))
@@ -1578,8 +1579,9 @@ int CSftpControlSocket::FileTransferSubcommandResult(int prevResult)
 			else {
 				if (matchedCase && !entry.is_unsure()) {
 					pData->remoteFileSize = entry.size;
-					if (!entry.has_date())
+					if (entry.has_date()) {
 						pData->fileTime = entry.time;
+					}
 
 					if (pData->download && !entry.has_time() &&
 						engine_.GetOptions().GetOptionVal(OPTION_PRESERVE_TIMESTAMPS))

@@ -153,6 +153,32 @@ static void list_files_callback(uv_work_t *work_req, int status)
 	free(work_req);
 }
 
+static void download_file_progress(double progress,
+								   uint64_t downloaded_bytes,
+								   uint64_t total_bytes,
+								   void *handle)
+{
+	fzprintf(storjEvent::Transfer, "%u", downloaded_bytes);
+}
+
+static void download_file_complete(int status, FILE *fd, void *handle)
+{
+	if (status) {
+		fzprintf(storjEvent::Error, "Download failed with error %s (%d)", storj_strerror(status), status);
+	}
+	else {
+		fzprintf(storjEvent::Done, "1");
+	}
+}
+
+void log(const char *format, ...)
+{
+	std::string s = format;
+	s.pop_back();
+	//fprintf(stderr, "%s\n", format);
+	fzprintf(storjEvent::Verbose, "%s", s);
+}
+
 int main()
 {
 	fzprintf(storjEvent::Reply, "fzStorj started, protocol_version=%d", FZSTORJ_PROTOCOL_VERSION);
@@ -183,7 +209,7 @@ int main()
 		http_options.user_agent = "FileZilla";
 
 		static storj_log_options_t log_options{};
-		log_options.logger = (storj_logger_fn)printf;
+		log_options.logger = log;
 		log_options.level = 4;
 		env = storj_init_env(&options, &encrypt_options, &http_options, &log_options);
 	};
@@ -247,6 +273,59 @@ int main()
 				exit(1);
 			}
 			fzprintf(storjEvent::Done, "1");
+		}
+		else if (command == "get") {
+			size_t pos = arg.find(' ');
+			std::string bucket = arg.substr(0, pos);
+			if (pos == std::string::npos) {
+				fzprintf(storjEvent::Error, "Bad arguments");
+				continue;
+			}
+			size_t pos2 = arg.find(' ', pos + 1);
+			if (pos == std::string::npos) {
+				fzprintf(storjEvent::Error, "Bad arguments");
+				continue;
+			}
+			auto id = arg.substr(pos + 1, pos2 - pos - 1);
+			auto file = arg.substr(pos2 + 1);
+
+			if (file.size() >= 3 && file.front() == '"' && file.back() == '"') {
+				file = fz::replaced_substrings(file.substr(1, file.size() -2), "\"\"", "\"");
+			}
+
+			init_env();
+			assert(env);
+
+			FILE *fd = fopen(file.c_str(), "w+");
+
+			if (fd == NULL) {
+				int err = errno;
+				fzprintf(storjEvent::Error, "Could not open local file %s for writing: %d", file, err);
+				continue;
+			}
+
+			storj_download_state_t *state = static_cast<storj_download_state_t*>(malloc(sizeof(storj_download_state_t)));
+
+			/*uv_signal_t sig;
+			uv_signal_init(env->loop, &sig);
+			uv_signal_start(&sig, signal_handler, SIGINT);
+			sig.data = state;*/
+
+			// FIXME: C-style casts
+			int status = storj_bridge_resolve_file(env, state, (char*)bucket.c_str(),
+												   (char*)id.c_str(), fd, NULL,
+												   download_file_progress,
+												   download_file_complete);
+			if (status) {
+				fclose(fd);
+				fzprintf(storjEvent::Error, "Could not download file, storj_bridge_resolve_file failed: %d", status);
+				continue;
+			}
+			if (uv_run(env->loop, UV_RUN_DEFAULT)) {
+				fzprintf(storjEvent::Error, "uv_run failed.");
+				exit(1);
+			}
+			fclose(fd);
 		}
 		else {
 			fzprintf(storjEvent::Error, "No such command: %s", command);
