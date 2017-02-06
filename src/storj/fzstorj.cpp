@@ -171,11 +171,21 @@ static void download_file_complete(int status, FILE *fd, void *handle)
 	}
 }
 
-void log(const char *format, ...)
+static void upload_file_complete(int status, void *handle)
 {
-	std::string s = format;
-	s.pop_back();
-	//fprintf(stderr, "%s\n", format);
+	if (status) {
+		fzprintf(storjEvent::Error, "Download failed with error %s (%d)", storj_strerror(status), status);
+	}
+	else {
+		fzprintf(storjEvent::Done, "1");
+	}
+}
+
+extern "C" void log(char const* msg, int level, void*)
+{
+	std::string s(msg);
+	fz::replace_substrings(s, "\n", " ");
+	fz::trim(s);
 	fzprintf(storjEvent::Verbose, "%s", s);
 }
 
@@ -312,8 +322,8 @@ int main()
 			sig.data = state;*/
 
 			// FIXME: C-style casts
-			int status = storj_bridge_resolve_file(env, state, (char*)bucket.c_str(),
-												   (char*)id.c_str(), fd, NULL,
+			int status = storj_bridge_resolve_file(env, state, bucket.c_str(),
+												   id.c_str(), fd, NULL,
 												   download_file_progress,
 												   download_file_complete);
 			if (status) {
@@ -322,10 +332,64 @@ int main()
 				continue;
 			}
 			if (uv_run(env->loop, UV_RUN_DEFAULT)) {
+				fclose(fd);
 				fzprintf(storjEvent::Error, "uv_run failed.");
 				exit(1);
 			}
 			fclose(fd);
+		}
+		else if (command == "put") {
+			size_t pos = arg.find(' ');
+			std::string bucket = arg.substr(0, pos);
+			if (pos == std::string::npos) {
+				fzprintf(storjEvent::Error, "Bad arguments");
+				continue;
+			}
+			auto file = arg.substr(pos + 1);
+
+			if (file.size() >= 3 && file.front() == '"' && file.back() == '"') {
+				file = fz::replaced_substrings(file.substr(1, file.size() -2), "\"\"", "\"");
+			}
+
+			init_env();
+			assert(env);
+
+			FILE *fd = fopen(file.c_str(), "r");
+
+			if (fd == NULL) {
+				int err = errno;
+				fzprintf(storjEvent::Error, "Could not open local file %s for reading: %d", file, err);
+				continue;
+			}
+
+			storj_upload_opts_t upload_opts;
+			upload_opts.file_concurrency = 1;
+			upload_opts.shard_concurrency = 3;
+			upload_opts.bucket_id = bucket.c_str();
+
+			// FIXME: pass filename separately
+			pos = file.rfind('/');
+			assert(pos != std::string::npos);
+			upload_opts.file_name = file.substr(pos + 1).c_str();
+			upload_opts.fd = fd;
+
+			storj_upload_state_t *state = static_cast<storj_upload_state_t*>(malloc(sizeof(storj_upload_state_t)));
+
+			int status = storj_bridge_store_file(env,
+												 state,
+												 &upload_opts,
+												 NULL,
+												 download_file_progress,
+												 upload_file_complete);
+
+			if (status) {
+				fzprintf(storjEvent::Error, "Could not upload file, storj_bridge_store_file failed: %d", status);
+				continue;
+			}
+			if (uv_run(env->loop, UV_RUN_DEFAULT)) {
+				fzprintf(storjEvent::Error, "uv_run failed.");
+				exit(1);
+			}
 		}
 		else {
 			fzprintf(storjEvent::Error, "No such command: %s", command);
