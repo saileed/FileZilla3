@@ -667,11 +667,6 @@ int CStorjControlSocket::FileTransfer(std::wstring const& localFile, CServerPath
 		return FZ_REPLY_ERROR;
 	}
 
-	if (!download) {
-		ResetOperation(FZ_REPLY_CRITICALERROR | FZ_REPLY_NOTSUPPORTED);
-		return FZ_REPLY_ERROR;
-	}
-
 	if (remotePath.SegmentCount() < 1) {
 		ResetOperation(FZ_REPLY_CRITICALERROR | FZ_REPLY_NOTSUPPORTED);
 		return FZ_REPLY_ERROR;
@@ -737,7 +732,7 @@ int CStorjControlSocket::FileTransfer(std::wstring const& localFile, CServerPath
 		}
 	}
 
-	if (pData->fileId.empty() && dirToList != pData->remotePath) {
+	if (pData->download && pData->fileId.empty() && dirToList != pData->remotePath) {
 		LogMessage(MessageType::Error, _("File not found"));
 		ResetOperation(FZ_REPLY_ERROR);
 		return FZ_REPLY_ERROR;
@@ -819,7 +814,7 @@ int CStorjControlSocket::FileTransferSubcommandResult(int prevResult)
 				LogMessage(MessageType::Debug_Info, L"File %s has id %s", pData->remotePath.FormatFilename(pData->remoteFile), pData->fileId);
 			}
 
-			if (pData->fileId.empty()) {
+			if (pData->download && pData->fileId.empty()) {
 				LogMessage(MessageType::Error, _("File id not found for file %s"), pData->remotePath.FormatFilename(pData->remoteFile));
 				ResetOperation(FZ_REPLY_ERROR);
 				return FZ_REPLY_ERROR;
@@ -861,8 +856,15 @@ int CStorjControlSocket::FileTransferSend()
 		}
 
 		engine_.transfer_status_.Init(pData->remoteFileSize, 0, false);
-		if (!SendCommand(L"get " + pData->bucket + L" " + pData->fileId + L" " + QuoteFilename(pData->localFile))) {
-			return FZ_REPLY_ERROR;
+		if (pData->download) {
+			if (!SendCommand(L"get " + pData->bucket + L" " + pData->fileId + L" " + QuoteFilename(pData->localFile))) {
+				return FZ_REPLY_ERROR;
+			}
+		}
+		else {
+			if (!SendCommand(L"put " + pData->bucket + L" " + QuoteFilename(pData->localFile))) {
+				return FZ_REPLY_ERROR;
+			}
 		}
 
 		engine_.transfer_status_.SetStartTime();
@@ -890,7 +892,6 @@ int CStorjControlSocket::FileTransferParseResponse(int result, std::wstring cons
 	LogMessage(MessageType::Debug_Debug, _T("  state = %d"), pData->opState);
 
 	if (pData->opState == filetransfer_transfer) {
-
 		ResetOperation(result);
 		return result;
 	}
