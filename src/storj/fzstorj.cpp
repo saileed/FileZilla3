@@ -286,11 +286,11 @@ int main()
 		}
 		else if (command == "get") {
 			size_t pos = arg.find(' ');
-			std::string bucket = arg.substr(0, pos);
 			if (pos == std::string::npos) {
 				fzprintf(storjEvent::Error, "Bad arguments");
 				continue;
 			}
+			std::string bucket = arg.substr(0, pos);
 			size_t pos2 = arg.find(' ', pos + 1);
 			if (pos == std::string::npos) {
 				fzprintf(storjEvent::Error, "Bad arguments");
@@ -340,16 +340,49 @@ int main()
 		}
 		else if (command == "put") {
 			size_t pos = arg.find(' ');
-			std::string bucket = arg.substr(0, pos);
 			if (pos == std::string::npos) {
 				fzprintf(storjEvent::Error, "Bad arguments");
 				continue;
 			}
-			auto file = arg.substr(pos + 1);
+			std::string bucket = arg.substr(0, pos);
+			arg = arg.substr(pos + 1);
 
-			if (file.size() >= 3 && file.front() == '"' && file.back() == '"') {
-				file = fz::replaced_substrings(file.substr(1, file.size() -2), "\"\"", "\"");
+			if (arg[0] != '"') {
+				fzprintf(storjEvent::Error, "Bad arguments");
+				continue;
 			}
+
+			std::string file;
+			pos = 1;
+			size_t pos2;
+			while ((pos2 = arg.find('"', pos)) != std::string::npos && arg[pos2 + 1] == '"') {
+				file += arg.substr(pos, pos2 - pos + 1);
+				pos = pos2 + 2;
+			}
+			if (pos2 == std::string::npos || arg[pos2 + 1] != ' ') {
+				fzprintf(storjEvent::Error, "Bad arguments");
+				continue;
+			}
+			file += arg.substr(pos, pos2 - pos);
+			arg = arg.substr(pos2 + 2);
+
+			if (arg[0] != '"') {
+				fzprintf(storjEvent::Error, "Bad arguments");
+				continue;
+			}
+
+			std::string remote_name;
+			pos = 1;
+			while ((pos2 = arg.find('"', pos)) != std::string::npos && arg[pos2 + 1] == '"') {
+				remote_name += arg.substr(pos, pos2 - pos + 1);
+				pos = pos2 + 2;
+			}
+			if (pos2 == std::string::npos || arg[pos2 + 1] != '\0') {
+				fzprintf(storjEvent::Error, "Bad arguments");
+				continue;
+			}
+			remote_name += arg.substr(pos, pos2 - pos);
+
 
 			init_env();
 			assert(env);
@@ -367,10 +400,7 @@ int main()
 			upload_opts.shard_concurrency = 3;
 			upload_opts.bucket_id = bucket.c_str();
 
-			// FIXME: pass filename separately
-			pos = file.rfind('/');
-			assert(pos != std::string::npos);
-			upload_opts.file_name = file.substr(pos + 1).c_str();
+			upload_opts.file_name = remote_name.c_str();
 			upload_opts.fd = fd;
 
 			storj_upload_state_t *state = static_cast<storj_upload_state_t*>(malloc(sizeof(storj_upload_state_t)));

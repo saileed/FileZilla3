@@ -862,7 +862,7 @@ int CStorjControlSocket::FileTransferSend()
 			}
 		}
 		else {
-			if (!SendCommand(L"put " + pData->bucket + L" " + QuoteFilename(pData->localFile))) {
+			if (!SendCommand(L"put " + pData->bucket + L" " + QuoteFilename(pData->localFile) + L" " + QuoteFilename(pData->remoteFile))) {
 				return FZ_REPLY_ERROR;
 			}
 		}
