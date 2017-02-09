@@ -41,7 +41,8 @@ bool getLine(std::string & line)
 	}
 }
 
-static void get_buckets_callback(uv_work_t *work_req, int status)
+namespace {
+extern "C" void get_buckets_callback(uv_work_t *work_req, int status)
 {
 	if (status != 0) {
 		fzprintf(storjEvent::Error, "Request failed with outer status code %d", status);
@@ -94,7 +95,7 @@ static void get_buckets_callback(uv_work_t *work_req, int status)
 	free(work_req);
 }
 
-static void list_files_callback(uv_work_t *work_req, int status)
+extern "C" void list_files_callback(uv_work_t *work_req, int status)
 {
 	if (status != 0) {
 		fzprintf(storjEvent::Error, "Request failed with outer status code %d", status);
@@ -153,7 +154,8 @@ static void list_files_callback(uv_work_t *work_req, int status)
 	free(work_req);
 }
 
-static void download_file_progress(double progress,
+
+extern "C" void download_file_progress(double progress,
 								   uint64_t downloaded_bytes,
 								   uint64_t total_bytes,
 								   void *handle)
@@ -161,7 +163,7 @@ static void download_file_progress(double progress,
 	fzprintf(storjEvent::Transfer, "%u", downloaded_bytes);
 }
 
-static void download_file_complete(int status, FILE *fd, void *handle)
+extern "C" void download_file_complete(int status, FILE *fd, void *)
 {
 	if (status) {
 		fzprintf(storjEvent::Error, "Download failed with error %s (%d)", storj_strerror(status), status);
@@ -171,7 +173,7 @@ static void download_file_complete(int status, FILE *fd, void *handle)
 	}
 }
 
-static void upload_file_complete(int status, void *handle)
+extern "C" void upload_file_complete(int status, void *)
 {
 	if (status) {
 		fzprintf(storjEvent::Error, "Download failed with error %s (%d)", storj_strerror(status), status);
@@ -187,6 +189,24 @@ extern "C" void log(char const* msg, int level, void*)
 	fz::replace_substrings(s, "\n", " ");
 	fz::trim(s);
 	fzprintf(storjEvent::Verbose, "%s", s);
+}
+
+extern "C" void generic_done(uv_work_t *work_req, int status)
+{
+	if (status) {
+		fzprintf(storjEvent::Error, "Command failed with error %s (%d)", storj_strerror(status), status);
+		exit(1);
+	}
+
+	json_request_t *req = static_cast<json_request_t *>(work_req->data);
+
+	if (req->status_code != 200) {
+		fzprintf(storjEvent::Error, "Request failed with status code %d", req->status_code);
+		return;
+	}
+
+	fzprintf(storjEvent::Done, "1");
+}
 }
 
 int main()
@@ -396,7 +416,6 @@ int main()
 			}
 
 			storj_upload_opts_t upload_opts;
-			upload_opts.file_concurrency = 1;
 			upload_opts.shard_concurrency = 3;
 			upload_opts.bucket_id = bucket.c_str();
 
@@ -408,12 +427,33 @@ int main()
 			int status = storj_bridge_store_file(env,
 												 state,
 												 &upload_opts,
-												 NULL,
+												 nullptr,
 												 download_file_progress,
 												 upload_file_complete);
 
 			if (status) {
 				fzprintf(storjEvent::Error, "Could not upload file, storj_bridge_store_file failed: %d", status);
+				continue;
+			}
+			if (uv_run(env->loop, UV_RUN_DEFAULT)) {
+				fzprintf(storjEvent::Error, "uv_run failed.");
+				exit(1);
+			}
+		}
+		else if (command == "rm") {
+
+			auto args = fz::strtok(arg, ' ');
+			if (args.size() != 2) {
+				fzprintf(storjEvent::Error, "Bad arguments");
+				continue;
+			}
+			init_env();
+			assert(env);
+
+			int status = storj_bridge_delete_file(env, args[0].c_str(), args[1].c_str(), nullptr, generic_done);
+
+			if (status) {
+				fzprintf(storjEvent::Error, "Could not delete file, storj_bridge_delete_file failed: %d", status);
 				continue;
 			}
 			if (uv_run(env->loop, UV_RUN_DEFAULT)) {
