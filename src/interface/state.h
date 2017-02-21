@@ -81,8 +81,6 @@ public:
 
 	void SetCurrentContext(CState* pState);
 
-	void ProcessDirectoryListing(CServer const& server, std::shared_ptr<CDirectoryListing> const& listing, CState const* exempt);
-
 protected:
 	CContextManager();
 

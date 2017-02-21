@@ -1,5 +1,5 @@
-#ifndef FILEZILLA_ENGINE_RATELIMITER_HEADER
-#define FILEZILLA_ENGINE_RATELIMITER_HEADER
+#ifndef __RATELIMITER_H__
+#define __RATELIMITER_H__
 
 #include <option_change_event_handler.h>
 
@@ -57,7 +57,7 @@ class CRateLimiterObject
 
 public:
 	CRateLimiterObject();
-	virtual ~CRateLimiterObject() = default;
+	virtual ~CRateLimiterObject() {}
 	int64_t GetAvailableBytes(CRateLimiter::rate_direction direction) const { return m_bytesAvailable[direction]; }
 
 	bool IsWaiting(CRateLimiter::rate_direction direction) const;
@@ -73,4 +73,4 @@ private:
 	int64_t m_bytesAvailable[2];
 };
 
-#endif
+#endif //__RATELIMITER_H__

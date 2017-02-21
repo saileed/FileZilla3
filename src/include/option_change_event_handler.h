@@ -1,5 +1,5 @@
-#ifndef FILEZILLA_ENGINE_OPTION_CHANGE_EVENT_HANDLER_HEADER
-#define FILEZILLA_ENGINE_OPTION_CHANGE_EVENT_HANDLER_HEADER
+#ifndef __OPTION_CHANGE_EVENT_HANDLER_H__
+#define __OPTION_CHANGE_EVENT_HANDLER_H__
 
 #include <bitset>
 #include <set>
@@ -18,7 +18,7 @@ class COptionChangeEventHandler
 	friend class COptions;
 
 public:
-	COptionChangeEventHandler() = default;
+	COptionChangeEventHandler();
 	virtual ~COptionChangeEventHandler();
 
 	void RegisterOption(int option);
@@ -40,4 +40,4 @@ private:
 	static std::vector<COptionChangeEventHandler*> m_handlers;
 };
 
-#endif
+#endif //__OPTION_CHANGE_EVENT_HANDLER_H__

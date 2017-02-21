@@ -1,5 +1,5 @@
-#ifndef FILEZILLA_ENGINE_PROXY_HEADER
-#define FILEZILLA_ENGINE_PROXY_HEADER
+#ifndef __PROXY_H__
+#define __PROXY_H__
 
 #include "backend.h"
 #include "socket.h"
@@ -77,4 +77,4 @@ protected:
 	bool m_can_read{};
 };
 
-#endif
+#endif //__PROXY_H__

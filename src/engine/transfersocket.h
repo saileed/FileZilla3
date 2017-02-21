@@ -1,5 +1,5 @@
-#ifndef FILEZILLA_ENGINE_FTP_TRANSFERSOCKET_HEADER
-#define FILEZILLA_ENGINE_FTP_TRANSFERSOCKET_HEADER
+#ifndef __TRANSFERSOCKET_H__
+#define __TRANSFERSOCKET_H__
 
 #include "iothread.h"
 #include "backend.h"
@@ -59,18 +59,18 @@ protected:
 	void OnTimer(fz::timer_id);
 
 	// Create a socket server
-	std::unique_ptr<CSocket> CreateSocketServer();
-	std::unique_ptr<CSocket> CreateSocketServer(int port);
+	CSocket* CreateSocketServer();
+	CSocket* CreateSocketServer(int port);
 
-	void SetSocketBufferSizes(CSocket & socket);
+	void SetSocketBufferSizes(CSocket* pSocket);
 
 	virtual void operator()(fz::event_base const& ev);
 	void OnIOThreadEvent();
 
-	std::unique_ptr<CSocket> socket_{};
+	CSocket *m_pSocket{};
 
 	// Will be set only while creating active mode connections
-	std::unique_ptr<CSocket> socketServer_;
+	CSocket* m_pSocketServer{};
 
 	CFileZillaEnginePrivate & engine_;
 	CFtpControlSocket & controlSocket_;

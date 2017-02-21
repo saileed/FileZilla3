@@ -1,5 +1,5 @@
-#ifndef FILEZILLA_ENGINE_SERVERCAPABILITIES_HEADER
-#define FILEZILLA_ENGINE_SERVERCAPABILITIES_HEADER
+#ifndef __SERVERCAPABILITIES_H__
+#define __SERVERCAPABILITIES_H__
 
 enum capabilities
 {
@@ -76,4 +76,4 @@ protected:
 	static std::map<CServer, CCapabilities> m_serverMap;
 };
 
-#endif
+#endif //__SERVERCAPABILITIES_H__

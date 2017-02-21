@@ -1,5 +1,3 @@
-AUTOMAKE_OPTIONS = subdir-objects
-
 noinst_LIBRARIES = libengine.a
 
 libengine_a_CPPFLAGS = -I$(srcdir)/../include
@@ -19,23 +17,8 @@ libengine_a_SOURCES = \
 		engineprivate.cpp \
 		externalipresolver.cpp \
 		FileZillaEngine.cpp \
-		ftp/chmod.cpp \
-		ftp/cwd.cpp \
-		ftp/delete.cpp \
-		ftp/filetransfer.cpp \
-		ftp/ftpcontrolsocket.cpp \
-		ftp/list.cpp \
-		ftp/logon.cpp \
-		ftp/mkd.cpp \
-		ftp/rawcommand.cpp \
-		ftp/rawtransfer.cpp \
-		ftp/rename.cpp \
-		ftp/rmd.cpp \
-		ftp/transfersocket.cpp \
-		http/filetransfer.cpp \
-		http/httpcontrolsocket.cpp \
-		http/internalconnect.cpp \
-		http/request.cpp \
+		ftpcontrolsocket.cpp \
+		httpcontrolsocket.cpp \
 		iothread.cpp \
 		local_path.cpp \
 		logging.cpp \
@@ -46,23 +29,13 @@ libengine_a_SOURCES = \
 		proxy.cpp \
 		ratelimiter.cpp \
 		rtt.cpp \
-		server.cpp \
-		serverpath.cpp\
+		server.cpp serverpath.cpp\
 		servercapabilities.cpp \
-		sftp/chmod.cpp \
-		sftp/connect.cpp \
-		sftp/cwd.cpp \
-		sftp/delete.cpp \
-		sftp/filetransfer.cpp \
-		sftp/input_thread.cpp \
-		sftp/list.cpp \
-		sftp/mkd.cpp \
-		sftp/rename.cpp \
-		sftp/rmd.cpp \
-		sftp/sftpcontrolsocket.cpp \
+		sftpcontrolsocket.cpp \
 		sizeformatting_base.cpp \
 		socket.cpp \
 		tlssocket.cpp \
+		transfersocket.cpp \
 		uri.cpp
 
 noinst_HEADERS = backend.h \
@@ -71,24 +44,8 @@ noinst_HEADERS = backend.h \
 		directorylistingparser.h \
 		engineprivate.h \
 		filezilla.h \
-		ftp/chmod.h \
-		ftp/cwd.h \
-		ftp/delete.h \
-		ftp/filetransfer.h \
-		ftp/ftpcontrolsocket.h \
-		ftp/list.h \
-		ftp/logon.h \
-		ftp/mkd.h \
-		ftp/rename.h \
-		ftp/rawcommand.h \
-		ftp/rawtransfer.h \
-		ftp/rmd.h \
-		ftp/transfersocket.h \
-		http/connect.h \
-		http/filetransfer.h \
-		http/httpcontrolsocket.h \
-		http/internalconnect.h \
-		http/request.h \
+		ftpcontrolsocket.h \
+		httpcontrolsocket.h \
 		iothread.h \
 		logging_private.h \
 		pathcache.h \
@@ -96,19 +53,9 @@ noinst_HEADERS = backend.h \
 		ratelimiter.h \
 		rtt.h \
 		servercapabilities.h \
-		sftp/chmod.h \
-		sftp/connect.h \
-		sftp/cwd.h \
-		sftp/delete.h \
-		sftp/event.h \
-		sftp/filetransfer.h \
-		sftp/input_thread.h \
-		sftp/list.h \
-		sftp/mkd.h \
-		sftp/rename.h \
-		sftp/rmd.h \
-		sftp/sftpcontrolsocket.h \
-		tlssocket.h
+		sftpcontrolsocket.h \
+		tlssocket.h \
+		transfersocket.h
 
 dist_noinst_DATA = engine.vcxproj
 

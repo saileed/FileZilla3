@@ -1,5 +1,5 @@
-#ifndef FILEZILLA_ENGINE_SOCKET_HEADER
-#define FILEZILLA_ENGINE_SOCKET_HEADER
+#ifndef __SOCKET_H__
+#define __SOCKET_H__
 
 #include <libfilezilla/event_handler.hpp>
 
@@ -28,7 +28,7 @@ enum class SocketEventType
 class CSocketEventSource
 {
 public:
-	virtual ~CSocketEventSource() = default;
+	virtual ~CSocketEventSource() {}
 };
 
 struct socket_event_type;
@@ -240,4 +240,4 @@ protected:
 // Handle ERROR_NETNAME_DELETED=64
 #endif //FZ_WINDOWS
 
-#endif
+#endif //__SOCKET_H__

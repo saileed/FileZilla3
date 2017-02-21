@@ -92,6 +92,8 @@ public:
 	CPathCache& GetPathCache() { return path_cache_; }
 	fz::thread_pool& GetThreadPool() { return thread_pool_; }
 
+	void SendDirectoryListingNotification(const CServerPath& path, bool onList, bool modified, bool failed);
+
 	// If deleting or renaming a directory, it could be possible that another
 	// engine's CControlSocket instance still has that directory as
 	// current working directory (m_CurrentPath)
@@ -155,6 +157,10 @@ protected:
 	// Indicicates if data has been received/sent and whether to send any notifications
 	static std::atomic_int m_activeStatus[2];
 
+	// Remember last path used in a dirlisting.
+	CServerPath m_lastListDir;
+	fz::monotonic_clock m_lastListTime;
+
 	std::unique_ptr<CControlSocket> m_pControlSocket;
 
 	std::unique_ptr<CCommand> m_pCurrentCommand;
@@ -176,13 +182,13 @@ protected:
 
 	void RegisterFailedLoginAttempt(const CServer& server, bool critical);
 
-	// Get the amount of time to wait till next reconnection attempt
-	fz::duration GetRemainingReconnectDelay(CServer const& server);
+	// Get the amount of time to wait till next reconnection attempt in milliseconds
+	unsigned int GetRemainingReconnectDelay(const CServer& server);
 
 	struct t_failedLogins final
 	{
 		CServer server;
-		fz::monotonic_clock time;
+		fz::datetime time;
 		bool critical{};
 	};
 	static std::list<t_failedLogins> m_failedLogins;

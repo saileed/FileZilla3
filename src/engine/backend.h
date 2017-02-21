@@ -1,5 +1,5 @@
-#ifndef FILEZILLA_ENGINE_BACKEND_HEADER
-#define FILEZILLA_ENGINE_BACKEND_HEADER
+#ifndef __BACKEND_H__
+#define __BACKEND_H__
 
 #include "ratelimiter.h"
 #include "socket.h"
@@ -7,7 +7,7 @@
 class CBackend : public CRateLimiterObject, public CSocketEventSource
 {
 public:
-	explicit CBackend(fz::event_handler* pEvtHandler);
+	CBackend(fz::event_handler* pEvtHandler);
 	virtual ~CBackend();
 
 	CBackend(CBackend const&) = delete;
@@ -41,4 +41,4 @@ protected:
 	CRateLimiter& m_rateLimiter;
 };
 
-#endif
+#endif //__BACKEND_H__
