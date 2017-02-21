@@ -537,9 +537,7 @@ static int ssh_sftp_do_select(int include_stdin, int no_fds_ok)
                     now = GETTICKCOUNT();
             } while (ret < 0 && errno == EINTR);
         } else {
-            do {
-                ret = select(maxfd, &rset, &wset, &xset, NULL);
-            } while (ret < 0 && errno == EINTR);
+            ret = select(maxfd, &rset, &wset, &xset, NULL);
         }
     } while (ret == 0);
 
@@ -619,7 +617,7 @@ char *ssh_sftp_get_cmdline(const char *prompt, int no_fds_ok)
 
 void frontend_net_error_pending(void) {}
 
-void platform_psftp_pre_conn_setup(void) {}
+void platform_psftp_post_option_setup(void) {}
 
 /*
  * Main program: do platform-specific initialisation and then call

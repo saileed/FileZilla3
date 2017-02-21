@@ -10,8 +10,6 @@ struct tm ltime(void)
     SYSTEMTIME st;
     struct tm tm;
 
-    memset(&tm, 0, sizeof(tm));        /* in case there are any other fields */
-
     GetLocalTime(&st);
     tm.tm_sec=st.wSecond;
     tm.tm_min=st.wMinute;

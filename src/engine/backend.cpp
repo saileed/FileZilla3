@@ -36,9 +36,8 @@ int CSocketBackend::Write(const void *buffer, unsigned int len, int& error)
 		error = EAGAIN;
 		return -1;
 	}
-	else if (max > 0 && max < len) {
-		len = static_cast<unsigned int>(max);
-	}
+	else if (max > 0 && max < len)
+		len = max;
 
 	int written = socket_.Write(buffer, len, error);
 
@@ -56,9 +55,8 @@ int CSocketBackend::Read(void *buffer, unsigned int len, int& error)
 		error = EAGAIN;
 		return -1;
 	}
-	else if (max > 0 && max < len) {
-		len = static_cast<unsigned int>(max);
-	}
+	else if (max > 0 && max < len)
+		len = max;
 
 	int read = socket_.Read(buffer, len, error);
 

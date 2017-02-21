@@ -10,7 +10,6 @@
 #include <signal.h>
 
 #include "putty.h"
-#include "pageant.h" /* for AGENT_MAX_MSGLEN */
 #include "tree234.h"
 #include "storage.h"
 #include "ssh.h"
@@ -576,8 +575,10 @@ struct ssh_channel {
     } v;
     union {
 	struct ssh_agent_channel {
-            bufchain inbuffer;
-            agent_pending_query *pending;
+	    unsigned char *message;
+	    unsigned char msglen[4];
+	    unsigned lensofar, totallen;
+            int outstanding_requests;
 	} a;
 	struct ssh_x11_channel {
 	    struct X11Connection *xconn;
@@ -986,13 +987,6 @@ struct ssh_tag {
      * with a newly cross-certified host key.
      */
     int cross_certifying;
-
-    /*
-     * Any asynchronous query to our SSH agent that we might have in
-     * flight from the main authentication loop. (Queries from
-     * agent-forwarding channels live in their channel structure.)
-     */
-    agent_pending_query *auth_agent_query;
 };
 
 static const char *ssh_pkt_type(Ssh ssh, int type)
@@ -3959,8 +3953,6 @@ static void ssh_throttle_conn(Ssh ssh, int adjust)
     }
 }
 
-static void ssh_agentf_try_forward(struct ssh_channel *c);
-
 /*
  * Throttle or unthrottle _all_ local data streams (for when sends
  * on the SSH connection itself back up).
@@ -3987,12 +3979,7 @@ static void ssh_throttle_all(Ssh ssh, int enable, int bufsize)
 	    x11_override_throttle(c->u.x11.xconn, enable);
 	    break;
 	  case CHAN_AGENT:
-	    /* Agent forwarding channels are buffer-managed by
-             * checking ssh->throttled_all in ssh_agentf_try_forward.
-             * So at the moment we _un_throttle again, we must make an
-             * attempt to do something. */
-            if (!enable)
-                ssh_agentf_try_forward(c);
+	    /* Agent channels require no buffer management. */
 	    break;
 	  case CHAN_SOCKDATA:
 	    pfd_override_throttle(c->u.pfd.pf, enable);
@@ -4004,8 +3991,6 @@ static void ssh_throttle_all(Ssh ssh, int enable, int bufsize)
 static void ssh_agent_callback(void *sshv, void *reply, int replylen)
 {
     Ssh ssh = (Ssh) sshv;
-
-    ssh->auth_agent_query = NULL;
 
     ssh->agent_response = reply;
     ssh->agent_response_len = replylen;
@@ -4034,138 +4019,26 @@ static void ssh_dialog_callback(void *sshv, int ret)
     ssh_process_queued_incoming_data(ssh);
 }
 
-static void ssh_agentf_got_response(struct ssh_channel *c,
-                                    void *reply, int replylen)
-{
-    c->u.a.pending = NULL;
-
-    assert(!(c->closes & CLOSES_SENT_EOF));
-
-    if (!reply) {
-	/* The real agent didn't send any kind of reply at all for
-         * some reason, so fake an SSH_AGENT_FAILURE. */
-	reply = "\0\0\0\1\5";
-	replylen = 5;
-    }
-
-    ssh_send_channel_data(c, reply, replylen);
-}
-
-static void ssh_agentf_callback(void *cv, void *reply, int replylen);
-
-static void ssh_agentf_try_forward(struct ssh_channel *c)
-{
-    unsigned datalen, lengthfield, messagelen;
-    unsigned char *message;
-    unsigned char msglen[4];
-    void *reply;
-    int replylen;
-
-    /*
-     * Don't try to parallelise agent requests. Wait for each one to
-     * return before attempting the next.
-     */
-    if (c->u.a.pending)
-        return;
-
-    /*
-     * If the outgoing side of the channel connection is currently
-     * throttled (for any reason, either that channel's window size or
-     * the entire SSH connection being throttled), don't submit any
-     * new forwarded requests to the real agent. This causes the input
-     * side of the agent forwarding not to be emptied, exerting the
-     * required back-pressure on the remote client, and encouraging it
-     * to read our responses before sending too many more requests.
-     */
-    if (c->ssh->throttled_all ||
-        (c->ssh->version == 2 && c->v.v2.remwindow == 0))
-        return;
-
-    if (c->closes & CLOSES_SENT_EOF) {
-        /*
-         * If we've already sent outgoing EOF, there's nothing we can
-         * do with incoming data except consume it and throw it away.
-         */
-        bufchain_clear(&c->u.a.inbuffer);
-        return;
-    }
-
-    while (1) {
-        /*
-         * Try to extract a complete message from the input buffer.
-         */
-        datalen = bufchain_size(&c->u.a.inbuffer);
-        if (datalen < 4)
-            break;         /* not even a length field available yet */
-
-        bufchain_fetch(&c->u.a.inbuffer, msglen, 4);
-        lengthfield = GET_32BIT(msglen);
-
-        if (lengthfield > AGENT_MAX_MSGLEN) {
-            /*
-             * If the remote has sent a message that's just _too_
-             * long, we should reject it in advance of seeing the rest
-             * of the incoming message, and also close the connection
-             * for good measure (which avoids us having to faff about
-             * with carefully ignoring just the right number of bytes
-             * from the overlong message).
-             */
-            ssh_agentf_got_response(c, NULL, 0);
-            sshfwd_write_eof(c);
-            return;
-        }
-
-        if (lengthfield > datalen - 4)
-            break;          /* a whole message is not yet available */
-
-        messagelen = lengthfield + 4;
-
-        message = snewn(messagelen, unsigned char);
-        bufchain_fetch(&c->u.a.inbuffer, message, messagelen);
-        bufchain_consume(&c->u.a.inbuffer, messagelen);
-        c->u.a.pending = agent_query(
-            message, messagelen, &reply, &replylen, ssh_agentf_callback, c);
-        sfree(message);
-
-        if (c->u.a.pending)
-            return;   /* agent_query promised to reply in due course */
-
-        /*
-         * If the agent gave us an answer immediately, pass it
-         * straight on and go round this loop again.
-         */
-        ssh_agentf_got_response(c, reply, replylen);
-        sfree(reply);
-    }
-
-    /*
-     * If we get here (i.e. we left the above while loop via 'break'
-     * rather than 'return'), that means we've determined that the
-     * input buffer for the agent forwarding connection doesn't
-     * contain a complete request.
-     *
-     * So if there's potentially more data to come, we can return now,
-     * and wait for the remote client to send it. But if the remote
-     * has sent EOF, it would be a mistake to do that, because we'd be
-     * waiting a long time. So this is the moment to check for EOF,
-     * and respond appropriately.
-     */
-    if (c->closes & CLOSES_RCVD_EOF)
-        sshfwd_write_eof(c);
-}
-
 static void ssh_agentf_callback(void *cv, void *reply, int replylen)
 {
     struct ssh_channel *c = (struct ssh_channel *)cv;
+    const void *sentreply = reply;
 
-    ssh_agentf_got_response(c, reply, replylen);
-    sfree(reply);
-
+    c->u.a.outstanding_requests--;
+    if (!sentreply) {
+	/* Fake SSH_AGENT_FAILURE. */
+	sentreply = "\0\0\0\1\5";
+	replylen = 5;
+    }
+    ssh_send_channel_data(c, sentreply, replylen);
+    if (reply)
+	sfree(reply);
     /*
-     * Now try to extract and send further messages from the channel's
-     * input-side buffer.
+     * If we've already seen an incoming EOF but haven't sent an
+     * outgoing one, this may be the moment to send it.
      */
-    ssh_agentf_try_forward(c);
+    if (c->u.a.outstanding_requests == 0 && (c->closes & CLOSES_RCVD_EOF))
+        sshfwd_write_eof(c);
 }
 
 /*
@@ -4670,9 +4543,8 @@ static int do_ssh1_login(Ssh ssh, const unsigned char *in, int inlen,
 	    /* Request the keys held by the agent. */
 	    PUT_32BIT(s->request, 1);
 	    s->request[4] = SSH1_AGENTC_REQUEST_RSA_IDENTITIES;
-            ssh->auth_agent_query = agent_query(
-                s->request, 5, &r, &s->responselen, ssh_agent_callback, ssh);
-	    if (ssh->auth_agent_query) {
+	    if (!agent_query(s->request, 5, &r, &s->responselen,
+			     ssh_agent_callback, ssh)) {
 		do {
 		    crReturn(0);
 		    if (pktin) {
@@ -4777,10 +4649,8 @@ static int do_ssh1_login(Ssh ssh, const unsigned char *in, int inlen,
 			memcpy(q, s->session_id, 16);
 			q += 16;
 			PUT_32BIT(q, 1);	/* response format */
-                        ssh->auth_agent_query = agent_query(
-                            agentreq, len + 4, &vret, &retlen,
-                            ssh_agent_callback, ssh);
-			if (ssh->auth_agent_query) {
+			if (!agent_query(agentreq, len + 4, &vret, &retlen,
+					 ssh_agent_callback, ssh)) {
 			    sfree(agentreq);
 			    do {
 				crReturn(0);
@@ -5850,8 +5720,9 @@ static void ssh1_smsg_agent_open(Ssh ssh, struct Packet *pktin)
 	c->remoteid = remoteid;
 	c->halfopen = FALSE;
 	c->type = CHAN_AGENT;	/* identify channel type */
-	c->u.a.pending = NULL;
-        bufchain_init(&c->u.a.inbuffer);
+	c->u.a.lensofar = 0;
+	c->u.a.message = NULL;
+	c->u.a.outstanding_requests = 0;
 	send_packet(ssh, SSH1_MSG_CHANNEL_OPEN_CONFIRMATION,
 		    PKT_INT, c->remoteid, PKT_INT, c->localid,
 		    PKT_END);
@@ -5992,18 +5863,40 @@ static void ssh1_msg_channel_close(Ssh ssh, struct Packet *pktin)
 static int ssh_agent_channel_data(struct ssh_channel *c, char *data,
 				  int length)
 {
-    bufchain_add(&c->u.a.inbuffer, data, length);
-    ssh_agentf_try_forward(c);
-
-    /*
-     * We exert back-pressure on an agent forwarding client if and
-     * only if we're waiting for the response to an asynchronous agent
-     * request. This prevents the client running out of window while
-     * receiving the _first_ message, but means that if any message
-     * takes time to process, the client will be discouraged from
-     * sending an endless stream of further ones after it.
-     */
-    return (c->u.a.pending ? bufchain_size(&c->u.a.inbuffer) : 0);
+    while (length > 0) {
+	if (c->u.a.lensofar < 4) {
+	    unsigned int l = min(4 - c->u.a.lensofar, (unsigned)length);
+	    memcpy(c->u.a.msglen + c->u.a.lensofar, data, l);
+	    data += l;
+	    length -= l;
+	    c->u.a.lensofar += l;
+	}
+	if (c->u.a.lensofar == 4) {
+	    c->u.a.totallen = 4 + GET_32BIT(c->u.a.msglen);
+	    c->u.a.message = snewn(c->u.a.totallen, unsigned char);
+	    memcpy(c->u.a.message, c->u.a.msglen, 4);
+	}
+	if (c->u.a.lensofar >= 4 && length > 0) {
+	    unsigned int l = min(c->u.a.totallen - c->u.a.lensofar,
+				 (unsigned)length);
+	    memcpy(c->u.a.message + c->u.a.lensofar, data, l);
+	    data += l;
+	    length -= l;
+	    c->u.a.lensofar += l;
+	}
+	if (c->u.a.lensofar == c->u.a.totallen) {
+	    void *reply;
+	    int replylen;
+            c->u.a.outstanding_requests++;
+	    if (agent_query(c->u.a.message, c->u.a.totallen, &reply, &replylen,
+			    ssh_agentf_callback, c))
+		ssh_agentf_callback(c, reply, replylen);
+	    sfree(c->u.a.message);
+            c->u.a.message = NULL;
+	    c->u.a.lensofar = 0;
+	}
+    }
+    return 0;   /* agent channels never back up */
 }
 
 static int ssh_channel_data(struct ssh_channel *c, int is_stderr,
@@ -8023,9 +7916,8 @@ static void ssh2_try_send_and_unthrottle(Ssh ssh, struct ssh_channel *c)
 	    x11_unthrottle(c->u.x11.xconn);
 	    break;
 	  case CHAN_AGENT:
-            /* Now that we've successfully sent all the outgoing
-             * replies we had, try to process more incoming data. */
-            ssh_agentf_try_forward(c);
+	    /* agent sockets are request/response and need no
+	     * buffer management */
 	    break;
 	  case CHAN_SOCKDATA:
 	    pfd_unthrottle(c->u.pfd.pf);
@@ -8449,10 +8341,7 @@ static void ssh_channel_close_local(struct ssh_channel *c, char const *reason)
         msg = "Forwarded X11 connection terminated";
         break;
       case CHAN_AGENT:
-        if (c->u.a.pending)
-            agent_cancel_query(c->u.a.pending);
-        bufchain_clear(&c->u.a.inbuffer);
-	msg = "Agent-forwarding connection closed";
+        sfree(c->u.a.message);
         break;
       case CHAN_SOCKDATA:
         assert(c->u.pfd.pf != NULL);
@@ -8540,10 +8429,10 @@ static void ssh_channel_got_eof(struct ssh_channel *c)
 	assert(c->u.x11.xconn != NULL);
 	x11_send_eof(c->u.x11.xconn);
     } else if (c->type == CHAN_AGENT) {
-        /* Just call try_forward, which will respond to the EOF now if
-         * appropriate, or wait until the queue of outstanding
-         * requests is dealt with if not */
-        ssh_agentf_try_forward(c);
+        if (c->u.a.outstanding_requests == 0) {
+            /* Manufacture an outgoing EOF in response to the incoming one. */
+            sshfwd_write_eof(c);
+        }
     } else if (c->type == CHAN_SOCKDATA) {
 	assert(c->u.pfd.pf != NULL);
 	pfd_send_eof(c->u.pfd.pf);
@@ -9097,8 +8986,9 @@ static void ssh2_msg_channel_open(Ssh ssh, struct Packet *pktin)
 	    error = "Agent forwarding is not enabled";
 	else {
 	    c->type = CHAN_AGENT;	/* identify channel type */
-            bufchain_init(&c->u.a.inbuffer);
-            c->u.a.pending = NULL;
+	    c->u.a.lensofar = 0;
+            c->u.a.message = NULL;
+            c->u.a.outstanding_requests = 0;
 	}
     } else {
 	error = "Unsupported channel type requested";
@@ -9602,10 +9492,8 @@ static void do_ssh2_authconn(Ssh ssh, const unsigned char *in, int inlen,
 	    /* Request the keys held by the agent. */
 	    PUT_32BIT(s->agent_request, 1);
 	    s->agent_request[4] = SSH2_AGENTC_REQUEST_IDENTITIES;
-            ssh->auth_agent_query = agent_query(
-                s->agent_request, 5, &r, &s->agent_responselen,
-                ssh_agent_callback, ssh);
-	    if (ssh->auth_agent_query) {
+	    if (!agent_query(s->agent_request, 5, &r, &s->agent_responselen,
+			     ssh_agent_callback, ssh)) {
 		do {
 		    crReturnV;
 		    if (pktin) {
@@ -9646,25 +9534,21 @@ static void do_ssh2_authconn(Ssh ssh, const unsigned char *in, int inlen,
                             goto done_agent_query;
                         }
                         bloblen = toint(GET_32BIT(q));
-                        lenleft -= 4;
-                        q += 4;
                         if (bloblen < 0 || bloblen > lenleft) {
                             logeventf(ssh, "Pageant response was truncated");
                             s->nkeys = 0;
                             goto done_agent_query;
                         }
-                        lenleft -= bloblen;
-                        q += bloblen;
+                        lenleft -= 4 + bloblen;
+                        q += 4 + bloblen;
                         commentlen = toint(GET_32BIT(q));
-                        lenleft -= 4;
-                        q += 4;
                         if (commentlen < 0 || commentlen > lenleft) {
                             logeventf(ssh, "Pageant response was truncated");
                             s->nkeys = 0;
                             goto done_agent_query;
                         }
-                        lenleft -= commentlen;
-                        q += commentlen;
+                        lenleft -= 4 + commentlen;
+                        q += 4 + commentlen;
                     }
                 }
 
@@ -10052,10 +9936,9 @@ static void do_ssh2_authconn(Ssh ssh, const unsigned char *in, int inlen,
 		    s->q += s->pktout->length - 5;
 		    /* And finally the (zero) flags word. */
 		    PUT_32BIT(s->q, 0);
-                    ssh->auth_agent_query = agent_query(
-                        s->agentreq, s->len + 4, &vret, &s->retlen,
-                        ssh_agent_callback, ssh);
-                    if (ssh->auth_agent_query) {
+		    if (!agent_query(s->agentreq, s->len + 4,
+				     &vret, &s->retlen,
+				     ssh_agent_callback, ssh)) {
 			do {
 			    crReturnV;
 			    if (pktin) {
@@ -11673,8 +11556,6 @@ static const char *ssh_init(void *frontend_handle, void **backend_handle,
 						      CONF_ssh_rekey_data));
     ssh->kex_in_progress = FALSE;
 
-    ssh->auth_agent_query = NULL;
-
 #ifndef NO_GSSAPI
     ssh->gsslibs = NULL;
 #endif
@@ -11791,10 +11672,6 @@ static void ssh_free(void *handle)
     bufchain_clear(&ssh->queued_incoming_data);
     sfree(ssh->username);
     conf_free(ssh->conf);
-
-    if (ssh->auth_agent_query)
-        agent_cancel_query(ssh->auth_agent_query);
-
 #ifndef NO_GSSAPI
     if (ssh->gsslibs)
 	ssh_gss_cleanup(ssh->gsslibs);

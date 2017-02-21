@@ -57,15 +57,11 @@ fzsftp_SOURCES = \
 		settings.c
 
 fzputtygen_SOURCES = cmdgen.c \
-		     notiming.c \
-		     version.c
-
+		     notiming.c
 
 noinst_HEADERS = fzprintf.h \
 		 fzsftp.h \
-		 int64.h misc.h network.h \
-		 pageant.h \
-		 proxy.h psftp.h putty.h \
+		 int64.h misc.h network.h proxy.h psftp.h putty.h \
 		 puttymem.h puttyps.h sftp.h ssh.h \
 		 sshblowf.h \
 		 sshbn.h \

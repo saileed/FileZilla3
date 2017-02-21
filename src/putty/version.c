@@ -35,8 +35,6 @@ const char sshver[] = "PuTTY-Local: " __DATE__ " " __TIME__;
 
 #endif
 
-const char commitid[] = "unavailable";
-
 /*
  * SSH local version string MUST be under 40 characters. Here's a
  * compile time assertion to verify this.

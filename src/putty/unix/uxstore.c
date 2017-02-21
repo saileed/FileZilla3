@@ -140,11 +140,11 @@ static char *make_filename(int index, const char *subname)
         }
         old_dir3 = dupstr("/.putty");
 
-        if (old_dir && access(old_dir, F_OK) == 0) {
+        if (access(old_dir, F_OK) == 0) {
             ret = old_dir;
             goto out;
         }
-        if (old_dir2 && access(old_dir2, F_OK) == 0) {
+        if (access(old_dir2, F_OK) == 0) {
             ret = old_dir2;
             goto out;
         }

@@ -23,8 +23,8 @@ int agent_exists(void)
     return FALSE;
 }
 
-static tree234 *agent_pending_queries;
-struct agent_pending_query {
+static tree234 *agent_connections;
+struct agent_connection {
     int fd;
     char *retbuf;
     char sizebuf[4];
@@ -34,8 +34,8 @@ struct agent_pending_query {
 };
 static int agent_conncmp(void *av, void *bv)
 {
-    agent_pending_query *a = (agent_pending_query *) av;
-    agent_pending_query *b = (agent_pending_query *) bv;
+    struct agent_connection *a = (struct agent_connection *) av;
+    struct agent_connection *b = (struct agent_connection *) bv;
     if (a->fd < b->fd)
 	return -1;
     if (a->fd > b->fd)
@@ -45,7 +45,7 @@ static int agent_conncmp(void *av, void *bv)
 static int agent_connfind(void *av, void *bv)
 {
     int afd = *(int *) av;
-    agent_pending_query *b = (agent_pending_query *) bv;
+    struct agent_connection *b = (struct agent_connection *) bv;
     if (afd < b->fd)
 	return -1;
     if (afd > b->fd)
@@ -59,7 +59,7 @@ static int agent_connfind(void *av, void *bv)
  * (conn->retbuf non-NULL and filled with something useful) or has
  * failed totally (conn->retbuf is NULL).
  */
-static int agent_try_read(agent_pending_query *conn)
+static int agent_try_read(struct agent_connection *conn)
 {
     int ret;
 
@@ -90,21 +90,13 @@ static int agent_try_read(agent_pending_query *conn)
     return 1;
 }
 
-void agent_cancel_query(agent_pending_query *conn)
-{
-    uxsel_del(conn->fd);
-    close(conn->fd);
-    del234(agent_pending_queries, conn);
-    sfree(conn);
-}
-
 static int agent_select_result(int fd, int event)
 {
-    agent_pending_query *conn;
+    struct agent_connection *conn;
 
     assert(event == 1);		       /* not selecting for anything but R */
 
-    conn = find234(agent_pending_queries, &fd, agent_connfind);
+    conn = find234(agent_connections, &fd, agent_connfind);
     if (!conn) {
 	uxsel_del(fd);
 	return 1;
@@ -119,22 +111,24 @@ static int agent_select_result(int fd, int event)
      * of that passes to the callback.)
      */
     conn->callback(conn->callback_ctx, conn->retbuf, conn->retlen);
-    agent_cancel_query(conn);
+    uxsel_del(fd);
+    close(fd);
+    del234(agent_connections, conn);
+    sfree(conn);
     return 0;
 }
 
-agent_pending_query *agent_query(
-    void *in, int inlen, void **out, int *outlen,
-    void (*callback)(void *, void *, int), void *callback_ctx)
+int agent_query(void *in, int inlen, void **out, int *outlen,
+		void (*callback)(void *, void *, int), void *callback_ctx)
 {
     char *name;
     int sock;
     struct sockaddr_un addr;
     int done;
-    agent_pending_query *conn;
+    struct agent_connection *conn;
 
     name = getenv("SSH_AUTH_SOCK");
-    if (!name || strlen(name) >= sizeof(addr.sun_path))
+    if (!name)
 	goto failure;
 
     sock = socket(PF_UNIX, SOCK_STREAM, 0);
@@ -146,7 +140,7 @@ agent_pending_query *agent_query(
     cloexec(sock);
 
     addr.sun_family = AF_UNIX;
-    strcpy(addr.sun_path, name);
+    strncpy(addr.sun_path, name, sizeof(addr.sun_path));
     if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 	close(sock);
 	goto failure;
@@ -161,7 +155,7 @@ agent_pending_query *agent_query(
 	done += ret;
     }
 
-    conn = snew(agent_pending_query);
+    conn = snew(struct agent_connection);
     conn->fd = sock;
     conn->retbuf = conn->sizebuf;
     conn->retsize = 4;
@@ -185,7 +179,7 @@ agent_pending_query *agent_query(
         *out = conn->retbuf;
         *outlen = conn->retlen;
         sfree(conn);
-        return NULL;
+        return 1;
     }
 
     /*
@@ -194,15 +188,15 @@ agent_pending_query *agent_query(
      * response hasn't been received yet, and call the callback when
      * select_result comes back to us.
      */
-    if (!agent_pending_queries)
-	agent_pending_queries = newtree234(agent_conncmp);
-    add234(agent_pending_queries, conn);
+    if (!agent_connections)
+	agent_connections = newtree234(agent_conncmp);
+    add234(agent_connections, conn);
 
     uxsel_set(sock, 1, agent_select_result);
-    return conn;
+    return 0;
 
     failure:
     *out = NULL;
     *outlen = 0;
-    return NULL;
+    return 1;
 }
