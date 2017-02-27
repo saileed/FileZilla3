@@ -3,7 +3,7 @@
 
 #include "ControlSocket.h"
 
-#include "../storj/events.hpp"
+#include "backend.h"
 
 namespace fz {
 class process;
@@ -31,7 +31,7 @@ public:
 	virtual void Rename(const CRenameCommand& command) override;*/
 	virtual void Cancel() override;
 
-	virtual bool Connected() const override { return m_pInputThread != 0; }
+	virtual bool Connected() const override { return input_thread_.operator bool(); }
 
 	virtual bool SetAsyncRequestReply(CAsyncRequestNotification *pNotification) override;
 
@@ -43,21 +43,9 @@ protected:
 	virtual int DoClose(int nErrorCode = FZ_REPLY_DISCONNECTED);
 
 	virtual int ResetOperation(int nErrorCode);
-	virtual int ParseSubcommandResult(int prevResult);
 
 	void ProcessReply(int result, std::wstring const& reply);
 
-	int ConnectParseResponse(bool successful, std::wstring const& reply);
-	int ConnectSend();
-
-	int FileTransferSubcommandResult(int prevResult);
-	int FileTransferSend();
-	int FileTransferParseResponse(int result, std::wstring const& reply);
-
-	int ListSend();
-	int ListParseResponse(bool successful, std::wstring const& reply);
-	int ListParseEntry(std::wstring && name, std::wstring const& size, std::wstring && id);
-	int ListSubcommandResult(int prevResult);
 /*
 	int ChangeDir(CServerPath path = CServerPath(), std::wstring subDir = std::wstring(), bool link_discovery = false);
 	int ChangeDirParseResponse(bool successful, std::wstring const& reply);
@@ -76,18 +64,28 @@ protected:
 	int RenameSubcommandResult(int prevResult);
 	int RenameSend();*/
 
-	bool SendCommand(std::wstring const& cmd, std::wstring const& show = std::wstring());
-	bool AddToStream(std::wstring const& cmd);
+	int SendCommand(std::wstring const& cmd, std::wstring const& show = std::wstring());
+	int AddToStream(std::wstring const& cmd);
 
 	virtual void OnRateAvailable(CRateLimiter::rate_direction direction);
 	void OnQuotaRequest(CRateLimiter::rate_direction direction);
 
-	fz::process* m_pProcess{};
-	CStorjInputThread* m_pInputThread{};
+	std::unique_ptr<fz::process> process_;
+	std::unique_ptr<CStorjInputThread> input_thread_;
 
 	virtual void operator()(fz::event_base const& ev);
 	void OnStorjEvent(storj_message const& message);
 	void OnTerminate(std::wstring const& error);
+
+	int result_{};
+	std::wstring response_;
+
+	friend class CProtocolOpData<CStorjControlSocket>;
+	friend class CStorjConnectOpData;
+	friend class CStorjFileTransferOpData;
+	friend class CStorjListOpData;
 };
+
+typedef CProtocolOpData<CStorjControlSocket> CStorjOpData;
 
 #endif
