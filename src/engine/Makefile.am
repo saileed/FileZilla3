@@ -60,7 +60,10 @@ libengine_a_SOURCES = \
 		sftp/sftpcontrolsocket.cpp \
 		sizeformatting_base.cpp \
 		socket.cpp \
-		storjcontrolsocket.cpp \
+		storj/connect.cpp \
+		storj/input_thread.cpp \
+		storj/list.cpp \
+		storj/storjcontrolsocket.cpp \
 		tlssocket.cpp \
 		tlssocket_impl.cpp \
 		uri.cpp
@@ -108,7 +111,11 @@ noinst_HEADERS = backend.h \
 		sftp/rename.h \
 		sftp/rmd.h \
 		sftp/sftpcontrolsocket.h \
-		storjcontrolsocket.h \
+		storj/connect.h \
+		storj/event.h \
+		storj/input_thread.h \
+		storj/list.h \
+		storj/storj/controlsocket.h \
 		tlssocket.h \
 		tlssocket_impl.h
 

@@ -8,7 +8,7 @@
 #include "pathcache.h"
 #include "ratelimiter.h"
 #include "sftp/sftpcontrolsocket.h"
-#include "storjcontrolsocket.h"
+#include "storj/storjcontrolsocket.h"
 
 #include <libfilezilla/event_loop.hpp>
 
