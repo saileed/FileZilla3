@@ -1,13 +1,11 @@
-#ifndef __MISC_H__
-#define __MISC_H__
+#ifndef FILEZILLA_ENGINE_MISC_HEADER
+#define FILEZILLA_ENGINE_MISC_HEADER
 
-#include "socket.h"
+#include <libfilezilla/event_handler.hpp>
 
 enum class lib_dependency
 {
-	wxwidgets,
 	gnutls,
-	sqlite,
 	count
 };
 
@@ -15,13 +13,6 @@ std::wstring GetDependencyName(lib_dependency d);
 std::wstring GetDependencyVersion(lib_dependency d);
 
 std::string ListTlsCiphers(std::string const& priority);
-
-// Microsoft, in its insane stupidity, has decided to make GetVersion(Ex) useless, starting with Windows 8.1,
-// this function no longer returns the operating system version but instead some arbitrary and random value depending
-// on the phase of the moon.
-// This function instead returns the actual Windows version. On non-Windows systems, it's equivalent to
-// wxGetOsVersion
-bool GetRealOsVersion(int& major, int& minor);
 
 template<typename Derived, typename Base>
 std::unique_ptr<Derived>

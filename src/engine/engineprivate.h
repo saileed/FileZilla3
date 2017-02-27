@@ -19,7 +19,6 @@ class CRateLimiter;
 enum EngineNotificationType
 {
 	engineCancel,
-	engineTransferEnd
 };
 
 struct filezilla_engine_event_type;
@@ -92,8 +91,6 @@ public:
 	CPathCache& GetPathCache() { return path_cache_; }
 	fz::thread_pool& GetThreadPool() { return thread_pool_; }
 
-	void SendDirectoryListingNotification(const CServerPath& path, bool onList, bool modified, bool failed);
-
 	// If deleting or renaming a directory, it could be possible that another
 	// engine's CControlSocket instance still has that directory as
 	// current working directory (m_CurrentPath)
@@ -106,6 +103,8 @@ public:
 	unsigned int GetEngineId() const {return m_engine_id; }
 
 	CTransferStatusManager transfer_status_;
+
+	CustomEncodingConverterBase const& GetEncodingConverter() const { return encoding_converter_; }
 protected:
 	virtual void OnOptionsChanged(changed_options_t const& options);
 
@@ -157,10 +156,6 @@ protected:
 	// Indicicates if data has been received/sent and whether to send any notifications
 	static std::atomic_int m_activeStatus[2];
 
-	// Remember last path used in a dirlisting.
-	CServerPath m_lastListDir;
-	fz::monotonic_clock m_lastListTime;
-
 	std::unique_ptr<CControlSocket> m_pControlSocket;
 
 	std::unique_ptr<CCommand> m_pCurrentCommand;
@@ -182,13 +177,13 @@ protected:
 
 	void RegisterFailedLoginAttempt(const CServer& server, bool critical);
 
-	// Get the amount of time to wait till next reconnection attempt in milliseconds
-	unsigned int GetRemainingReconnectDelay(const CServer& server);
+	// Get the amount of time to wait till next reconnection attempt
+	fz::duration GetRemainingReconnectDelay(CServer const& server);
 
 	struct t_failedLogins final
 	{
 		CServer server;
-		fz::datetime time;
+		fz::monotonic_clock time;
 		bool critical{};
 	};
 	static std::list<t_failedLogins> m_failedLogins;
@@ -205,6 +200,8 @@ protected:
 	std::deque<CLogmsgNotification*> queued_logs_;
 
 	fz::thread_pool & thread_pool_;
+
+	CustomEncodingConverterBase const& encoding_converter_;
 };
 
 struct command_event_type{};

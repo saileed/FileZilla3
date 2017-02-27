@@ -18,19 +18,22 @@ public:
 	CStorjControlSocket(CFileZillaEnginePrivate & engine);
 	virtual ~CStorjControlSocket();
 
-	virtual int Connect(const CServer &server);
+	virtual void Connect(const CServer &server) override;
 
-	virtual int List(CServerPath path = CServerPath(), std::wstring const& subDir = std::wstring(), int flags = 0);
-/*	virtual int Delete(const CServerPath& path, std::deque<std::wstring>&& files);
-	virtual int RemoveDir(CServerPath const& path = CServerPath(), std::wstring const& subDir = std::wstring());
-	virtual int Mkdir(const CServerPath& path);
-	virtual int Rename(const CRenameCommand& command);
-	virtual int Chmod(const CChmodCommand& command);*/
-	virtual void Cancel();
+	virtual void List(CServerPath const& path = CServerPath(), std::wstring const& subDir = std::wstring(), int flags = 0) override;
+	virtual void FileTransfer(std::wstring const& localFile, CServerPath const& remotePath,
+							 std::wstring const& remoteFile, bool download,
+							 CFileTransferCommand::t_transferSettings const& transferSettings) override;
+	/*
+	virtual void Delete(const CServerPath& path, std::deque<std::wstring>&& files) override;
+	virtual void RemoveDir(CServerPath const& path = CServerPath(), std::wstring const& subDir = std::wstring()) override;
+	virtual void Mkdir(const CServerPath& path) override;
+	virtual void Rename(const CRenameCommand& command) override;*/
+	virtual void Cancel() override;
 
-	virtual bool Connected() { return m_pInputThread != 0; }
+	virtual bool Connected() const override { return m_pInputThread != 0; }
 
-	virtual bool SetAsyncRequestReply(CAsyncRequestNotification *pNotification);
+	virtual bool SetAsyncRequestReply(CAsyncRequestNotification *pNotification) override;
 
 protected:
 	// Replaces filename"with"quotes with
@@ -40,7 +43,6 @@ protected:
 	virtual int DoClose(int nErrorCode = FZ_REPLY_DISCONNECTED);
 
 	virtual int ResetOperation(int nErrorCode);
-	virtual int SendNextCommand();
 	virtual int ParseSubcommandResult(int prevResult);
 
 	void ProcessReply(int result, std::wstring const& reply);
@@ -48,9 +50,6 @@ protected:
 	int ConnectParseResponse(bool successful, std::wstring const& reply);
 	int ConnectSend();
 
-	virtual int FileTransfer(std::wstring const& localFile, CServerPath const& remotePath,
-							 std::wstring const& remoteFile, bool download,
-							 CFileTransferCommand::t_transferSettings const& transferSettings);
 	int FileTransferSubcommandResult(int prevResult);
 	int FileTransferSend();
 	int FileTransferParseResponse(int result, std::wstring const& reply);
@@ -72,10 +71,6 @@ protected:
 	int DeleteSend();
 
 	int RemoveDirParseResponse(bool successful, std::wstring const& reply);
-
-	int ChmodParseResponse(bool successful, std::wstring const& reply);
-	int ChmodSubcommandResult(int prevResult);
-	int ChmodSend();
 
 	int RenameParseResponse(bool successful, std::wstring const& reply);
 	int RenameSubcommandResult(int prevResult);
