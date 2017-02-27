@@ -1,68 +1,119 @@
-#ifndef __CONTROLSOCKET_H__
-#define __CONTROLSOCKET_H__
+#ifndef FILEZILLA_ENGINE_CONTROLSOCKET_HEADER
+#define FILEZILLA_ENGINE_CONTROLSOCKET_HEADER
 
 #include "socket.h"
 #include "logging_private.h"
-#include "backend.h"
 
 class COpData
 {
 public:
-	COpData(Command op_Id);
-	virtual ~COpData();
+	explicit COpData(Command op_Id)
+		: opId(op_Id)
+	{}
+
+	virtual ~COpData() = default;
 
 	COpData(COpData const&) = delete;
 	COpData& operator=(COpData const&) = delete;
+
+	// Functions here must return one of '4' values:
+	// - FZ_REPLY_OK, operation succeeded
+	// - FZ_REPLY_ERROR (possibly with flags)
+	// - FZ_REPLY_WOULDBLOCK, waiting on some exvent
+	// - FZ_REPLY_CONTINUE, caller should issue the next command
+
+	virtual int Send() = 0;
+	virtual int ParseResponse() = 0;
+
+	virtual int SubcommandResult(int prevResult, COpData const& previousOperation) { return FZ_REPLY_INTERNALERROR; }
 
 	int opState{};
 	Command const opId;
 
 	bool waitForAsyncRequest{};
-	bool holdsLock{};
+	bool holdsLock_{};
+};
 
-	COpData *pNextOpData{};
+template<typename T>
+class CProtocolOpData
+{
+public:
+	CProtocolOpData(T & controlSocket)
+		: controlSocket_(controlSocket)
+		, engine_(controlSocket.engine_)
+		, currentServer_(controlSocket.currentServer_)
+		, currentPath_(controlSocket.currentPath_)
+	{
+	}
+
+	virtual ~CProtocolOpData() = default;
+
+	template<typename...Args>
+	void LogMessage(Args&& ...args) const {
+		controlSocket_.LogMessage(std::forward<Args>(args)...);
+	}
+
+	T & controlSocket_;
+	CFileZillaEnginePrivate & engine_;
+	CServer & currentServer_;
+	CServerPath& currentPath_;
+};
+
+class CNotSupportedOpData : public COpData
+{
+public:
+	CNotSupportedOpData()
+		: COpData(Command::none)
+	{}
+
+	virtual int Send() { return FZ_REPLY_NOTSUPPORTED; }
+	virtual int ParseResponse() { return FZ_REPLY_INTERNALERROR; }
 };
 
 class CConnectOpData : public COpData
 {
 public:
-	CConnectOpData()
+	CConnectOpData(CServer const& server)
 		: COpData(Command::connect)
+		, server_(server)
 	{
 	}
 
-	std::wstring host;
-	unsigned int port{};
-};
+	// What to connect the socket to,
+	// can be different from server_ if using
+	// a proxy
+	std::wstring host_;
+	unsigned int port_{};
 
-class wxMBConv;
-class wxCSConv;
+	// Target server
+	CServer server_;
+};
 
 class CFileTransferOpData : public COpData
 {
 public:
 	CFileTransferOpData(bool is_download, std::wstring const& local_file, std::wstring const& remote_file, CServerPath const& remote_path);
-	virtual ~CFileTransferOpData() = default;
+
 	// Transfer data
-	std::wstring localFile, remoteFile;
-	CServerPath remotePath;
-	const bool download;
+	std::wstring localFile_, remoteFile_;
+	CServerPath remotePath_;
+	bool const download_;
 
-	fz::datetime fileTime;
-	int64_t localFileSize{-1};
-	int64_t remoteFileSize{-1};
+	fz::datetime fileTime_;
+	int64_t localFileSize_{-1};
+	int64_t remoteFileSize_{-1};
 
-	bool tryAbsolutePath{};
-	bool resume{};
+	bool tryAbsolutePath_{};
+	bool resume_{};
 
-	CFileTransferCommand::t_transferSettings transferSettings;
+	CFileTransferCommand::t_transferSettings transferSettings_;
 
 	// Set to true when sending the command which
 	// starts the actual transfer
-	bool transferInitiated{};
+	bool transferInitiated_{};
 };
 
-class CMkdirOpData final : public COpData
+class CMkdirOpData : public COpData
 {
 public:
 	CMkdirOpData()
@@ -70,10 +121,10 @@ public:
 	{
 	}
 
-	CServerPath path;
-	CServerPath currentPath;
-	CServerPath commonParent;
-	std::vector<std::wstring> segments;
+	CServerPath path_;
+	CServerPath currentMkdPath_;
+	CServerPath commonParent_;
+	std::vector<std::wstring> segments_;
 };
 
 class CChangeDirOpData : public COpData
@@ -84,16 +135,12 @@ public:
 	{
 	}
 
-	virtual ~CChangeDirOpData()
-	{
-	}
+	CServerPath path_;
+	std::wstring subDir_;
+	bool tryMkdOnFail_{};
+	CServerPath target_;
 
-	CServerPath path;
-	std::wstring subDir;
-	bool tryMkdOnFail{};
-	CServerPath target;
-
-	bool link_discovery{};
+	bool link_discovery_{};
 };
 
 enum class TransferEndReason
@@ -110,6 +157,7 @@ enum class TransferEndReason
 	failed_resumetest
 };
 
+class CBackend;
 class CTransferStatus;
 class CControlSocket: public CLogging, public fz::event_handler
 {
@@ -120,37 +168,38 @@ public:
 	CControlSocket(CControlSocket const&) = delete;
 	CControlSocket& operator=(CControlSocket const&) = delete;
 
-	virtual int Connect(const CServer &server) = 0;
 	virtual int Disconnect();
+
 	virtual void Cancel();
-	virtual int List(CServerPath path = CServerPath(), std::wstring const& subDir = std::wstring(), int flags = 0);
-	virtual int FileTransfer(std::wstring const& localFile, CServerPath const& remotePath,
+
+	// Implicit FZ_REPLY_CONTINUE
+	virtual void Connect(CServer const& server) = 0;
+	virtual void List(CServerPath const& path = CServerPath(), std::wstring const& subDir = std::wstring(), int flags = 0);
+
+	virtual void FileTransfer(std::wstring const& localFile, CServerPath const& remotePath,
 							 std::wstring const& remoteFile, bool download,
-							 CFileTransferCommand::t_transferSettings const& transferSettings);
-	virtual int RawCommand(std::wstring const& command = std::wstring());
-	virtual int Delete(const CServerPath& path, std::deque<std::wstring>&& files);
-	virtual int RemoveDir(CServerPath const& path = CServerPath(), std::wstring const& subDir = std::wstring());
-	virtual int Mkdir(const CServerPath& path);
-	virtual int Rename(const CRenameCommand& command);
-	virtual int Chmod(const CChmodCommand& command);
-	virtual bool Connected() = 0;
+							 CFileTransferCommand::t_transferSettings const& transferSettings) = 0;
+	virtual void RawCommand(std::wstring const& command = std::wstring());
+	virtual void Delete(CServerPath const& path, std::deque<std::wstring>&& files);
+	virtual void RemoveDir(CServerPath const& path = CServerPath(), std::wstring const& subDir = std::wstring());
+	virtual void Mkdir(CServerPath const& path);
+	virtual void Rename(CRenameCommand const& command);
+	virtual void Chmod(CChmodCommand const& command);
+
+	virtual bool Connected() const = 0;
 
 	// If m_pCurrentOpData is zero, this function returns the current command
 	// from the engine.
 	Command GetCurrentCommandId() const;
 
-	virtual void TransferEnd() {}
-
 	void SendAsyncRequest(CAsyncRequestNotification* pNotification);
 	virtual bool SetAsyncRequestReply(CAsyncRequestNotification *pNotification) = 0;
 	bool SetFileExistsAction(CFileExistsNotification *pFileExistsNotification);
 
-	const CServer* GetCurrentServer() const;
+	CServer const& GetCurrentServer() const;
 
 	// Conversion function which convert between local and server charset.
-	std::wstring ConvToLocal(const char* buffer, size_t len);
-	wchar_t* ConvToLocalBuffer(const char* buffer, size_t len, size_t& outlen);
-	wchar_t* ConvToLocalBuffer(const char* buffer, wxMBConv& conv, size_t len, size_t& outlen);
+	std::wstring ConvToLocal(char const* buffer, size_t len);
 	std::string ConvToServer(std::wstring const&, bool force_utf8 = false);
 
 	void SetActive(CFileZillaEngine::_direction direction);
@@ -170,20 +219,23 @@ public:
 	// Only called from the engine, see there for description
 	void InvalidateCurrentWorkingDir(const CServerPath& path);
 
+	virtual bool CanSendNextCommand() const { return true; }
+	int SendNextCommand();
+
 protected:
+	void SendDirectoryListingNotification(CServerPath const& path, bool onList, bool failed);
+
 	fz::duration GetTimezoneOffset() const;
 
-	virtual int DoClose(int nErrorCode = FZ_REPLY_DISCONNECTED);
+	virtual int DoClose(int nErrorCode = FZ_REPLY_DISCONNECTED | FZ_REPLY_ERROR);
 	bool m_closed{};
 
 	virtual int ResetOperation(int nErrorCode);
 
-	virtual int SendNextCommand();
-
 	void LogTransferResultMessage(int nErrorCode, CFileTransferOpData *pData);
 
 	// Called by ResetOperation if there's a queued operation
-	virtual int ParseSubcommandResult(int prevResult);
+	int ParseSubcommandResult(int prevResult, COpData const& previousOperation);
 
 	std::wstring ConvertDomainName(std::wstring const& domain);
 
@@ -193,13 +245,14 @@ protected:
 
 	bool ParsePwdReply(std::wstring reply, bool unquoted = false, const CServerPath& defaultPath = CServerPath());
 
-	COpData *m_pCurOpData{};
+	void Push(std::unique_ptr<COpData> && pNewOpData);
+
+	std::vector<std::unique_ptr<COpData>> operations_;
 	CFileZillaEnginePrivate & engine_;
-	CServer *m_pCurrentServer{};
+	CServer currentServer_;
 
-	CServerPath m_CurrentPath;
+	CServerPath currentPath_;
 
-	wxCSConv *m_pCSConv{};
 	bool m_useUTF8{};
 
 	// Timeout data
@@ -222,8 +275,8 @@ protected:
 	// SendNextCommand will be called once the lock gets available
 	// and engine could obtain it.
 	// Lock is recursive. Lock counter increases on suboperations.
-	bool TryLockCache(locking_reason reason, const CServerPath& directory);
-	bool IsLocked(locking_reason reason, const CServerPath& directory);
+	bool TryLockCache(locking_reason reason, CServerPath const& directory);
+	bool IsLocked(locking_reason reason, CServerPath const& directory);
 
 	// Unlocks the cache. Can be called if not holding the lock
 	// Doesn't need reason as one engine can at most hold one lock
@@ -268,33 +321,40 @@ public:
 	CRealControlSocket(CFileZillaEnginePrivate & engine);
 	virtual ~CRealControlSocket();
 
-	virtual int Connect(const CServer &server);
+	int DoConnect(CServer const& server);
 	virtual int ContinueConnect();
 
-	virtual bool Connected() { return m_pSocket->GetState() == CSocket::connected; }
+	virtual bool Connected() const override;
 
 protected:
-	virtual int DoClose(int nErrorCode = FZ_REPLY_DISCONNECTED);
+	virtual int DoClose(int nErrorCode = FZ_REPLY_DISCONNECTED | FZ_REPLY_ERROR) override;
 	virtual void ResetSocket();
 
-	virtual void operator()(fz::event_base const& ev);
+	virtual void operator()(fz::event_base const& ev) override;
 	void OnSocketEvent(CSocketEventSource* source, SocketEventType t, int error);
 	void OnHostAddress(CSocketEventSource* source, std::string const& address);
 
 	virtual void OnConnect();
 	virtual void OnReceive();
-	void OnSend();
+	virtual int OnSend();
 	virtual void OnClose(int error);
 
-	bool Send(const char *buffer, int len);
+	int Send(unsigned char const* buffer, unsigned int len);
+	int Send(char const* buffer, unsigned int len) {
+		return Send(reinterpret_cast<unsigned char const*>(buffer), len);
+	}
 
 	CSocket* m_pSocket;
 
 	CBackend* m_pBackend;
-	CProxySocket* m_pProxyBackend;
+	CProxySocket* m_pProxyBackend{};
 
-	char *m_pSendBuffer;
-	int m_nSendBufferLen;
+	void SendBufferReserve(unsigned int len);
+	void AppendToSendBuffer(unsigned char const* data, unsigned int len);
+	unsigned char* sendBuffer_{};
+	unsigned int sendBufferCapacity_{};
+	unsigned int sendBufferPos_{};
+	unsigned int sendBufferSize_{};
 };
 
 #endif

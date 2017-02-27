@@ -188,7 +188,7 @@ void CCommandQueue::ProcessReply(int nReplyCode, Command commandId)
 	auto const& commandInfo = m_CommandList.front();
 
 	if (commandInfo.command->GetId() == Command::list && nReplyCode != FZ_REPLY_OK) {
-		if (nReplyCode & FZ_REPLY_LINKNOTDIR) {
+		if ((nReplyCode & FZ_REPLY_LINKNOTDIR) == FZ_REPLY_LINKNOTDIR) {
 			// Symbolic link does not point to a directory. Either points to file
 			// or is completely invalid
 			CListCommand* pListCommand = static_cast<CListCommand*>(commandInfo.command.get());
@@ -321,5 +321,9 @@ void CCommandQueue::ProcessDirectoryListing(CDirectoryListingNotification const&
 	}
 	else {
 		m_state.SetRemoteDir(pListing, listingNotification.Modified());
+	}
+
+	if (pListing && !listingNotification.Failed() && m_state.GetServer()) {
+		CContextManager::Get()->ProcessDirectoryListing(*m_state.GetServer(), pListing, listingIsRecursive ? 0 : &m_state);
 	}
 }

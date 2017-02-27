@@ -14,6 +14,7 @@
 #include "context_control.h"
 #include "defaultfileexistsdlg.h"
 #include "edithandler.h"
+#include "encoding_converter.h"
 #include "export.h"
 #include "filelist_statusbar.h"
 #include "filezillaapp.h"
@@ -249,7 +250,7 @@ protected:
 };
 
 CMainFrame::CMainFrame()
-	: m_engineContext(*COptions::Get())
+	: m_engineContext(*COptions::Get(), CustomEncodingConverter::Get())
 	, m_comparisonToggleAcceleratorId(wxNewId())
 {
 	m_pActivityLed[0] = m_pActivityLed[1] = 0;
@@ -338,10 +339,12 @@ CMainFrame::CMainFrame()
 	m_pQueueLogSplitter->SetSashGravity(0.5);
 	m_pQueuePane = new CQueue(m_pQueueLogSplitter, this, m_pAsyncRequestQueue);
 
-	if (message_log_position == 1)
+	if (message_log_position == 1) {
 		m_pStatusView = new CStatusView(m_pQueueLogSplitter, -1);
-	else
+	}
+	else {
 		m_pStatusView = new CStatusView(m_pTopSplitter, -1);
+	}
 
 	m_pQueueView = m_pQueuePane->GetQueueView();
 
@@ -887,14 +890,16 @@ void CMainFrame::DoOnEngineEvent(CFileZillaEngine* engine)
 	const std::vector<CState*> *pStates = CContextManager::Get()->GetAllStates();
 	CState* pState = 0;
 	for (std::vector<CState*>::const_iterator iter = pStates->begin(); iter != pStates->end(); ++iter) {
-		if ((*iter)->m_pEngine != engine)
+		if ((*iter)->m_pEngine != engine) {
 			continue;
+		}
 
 		pState = *iter;
 		break;
 	}
-	if (!pState)
+	if (!pState) {
 		return;
+	}
 
 	std::unique_ptr<CNotification> pNotification = pState->m_pEngine->GetNextNotification();
 	while (pNotification) {

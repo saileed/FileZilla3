@@ -599,7 +599,7 @@
               </object>
               <object class="sizeritem">
                 <object class="wxStaticText" name="ID_COPYRIGHT">
-                  <label>&lt;Copyright 2004-2016&gt;</label>
+                  <label>&lt;Copyright 2004-2017&gt;</label>
                 </object>
                 <flag>wxTOP|wxBOTTOM</flag>
                 <border>5</border>
@@ -1925,7 +1925,7 @@
         <object class="wxFlexGridSizer">
           <object class="sizeritem">
             <object class="wxStaticText">
-              <label>The following files are currently being edited:</label>
+              <label>The &amp;following files are currently being edited:</label>
             </object>
           </object>
           <object class="sizeritem">
@@ -1967,7 +1967,7 @@
               <hgap>5</hgap>
               <object class="sizeritem">
                 <object class="wxButton" name="ID_EDIT">
-                  <label>O&amp;pen file</label>
+                  <label>Op&amp;en file</label>
                 </object>
                 <flag>wxGROW</flag>
               </object>

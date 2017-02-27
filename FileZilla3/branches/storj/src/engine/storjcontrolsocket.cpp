@@ -13,8 +13,6 @@
 #include <libfilezilla/process.hpp>
 #include <libfilezilla/thread_pool.hpp>
 
-#include <wx/string.h>
-
 #include <algorithm>
 #include <cwchar>
 
@@ -209,13 +207,12 @@ public:
 	std::vector<std::wstring>::const_iterator keyfile_;
 };
 
-int CStorjControlSocket::Connect(const CServer &server)
+void CStorjControlSocket::Connect(const CServer &server)
 {
 	LogMessage(MessageType::Status, _("Connecting to %s..."), server.Format(ServerFormat::with_optional_port));
 	SetWait(true);
 
-	delete m_pCurrentServer;
-	m_pCurrentServer = new CServer(server);
+	currentServer_ = server;
 
 	CStorjConnectOpData* pData = new CStorjConnectOpData;
 	m_pCurOpData = pData;
@@ -230,25 +227,25 @@ int CStorjControlSocket::Connect(const CServer &server)
 	if (executable.empty()) {
 		executable = fzT("fzstorj");
 	}
-	LogMessage(MessageType::Debug_Verbose, _T("Going to execute %s"), executable);
+	LogMessage(MessageType::Debug_Verbose, L"Going to execute %s", executable);
 
 	std::vector<fz::native_string> args;
 	if (!m_pProcess->spawn(executable, args)) {
-		LogMessage(MessageType::Debug_Warning, _T("Could not create process"));
+		LogMessage(MessageType::Debug_Warning, L"Could not create process");
 		DoClose();
-		return FZ_REPLY_ERROR;
+		//return FZ_REPLY_ERROR;
 	}
 
 	m_pInputThread = new CStorjInputThread(this, *m_pProcess);
 	if (!m_pInputThread->spawn(engine_.GetThreadPool())) {
-		LogMessage(MessageType::Debug_Warning, _T("Thread creation failed"));
+		LogMessage(MessageType::Debug_Warning, L"Thread creation failed");
 		delete m_pInputThread;
 		m_pInputThread = 0;
 		DoClose();
-		return FZ_REPLY_ERROR;
+		//return FZ_REPLY_ERROR;
 	}
 
-	return FZ_REPLY_WOULDBLOCK;
+	//return FZ_REPLY_WOULDBLOCK;
 }
 
 int CStorjControlSocket::ConnectParseResponse(bool successful, std::wstring const& reply)
@@ -260,15 +257,8 @@ int CStorjControlSocket::ConnectParseResponse(bool successful, std::wstring cons
 		return FZ_REPLY_ERROR;
 	}
 
-	if (!m_pCurOpData) {
-		LogMessage(__TFILE__, __LINE__, this, MessageType::Debug_Info, _T("Empty m_pCurOpData"));
-		DoClose(FZ_REPLY_INTERNALERROR);
-		return FZ_REPLY_ERROR;
-	}
-
 	CStorjConnectOpData *pData = static_cast<CStorjConnectOpData *>(m_pCurOpData);
 	if (!pData) {
-		LogMessage(__TFILE__, __LINE__, this, MessageType::Debug_Warning, _T("m_pCurOpData of wrong type"));
 		DoClose(FZ_REPLY_INTERNALERROR);
 		return FZ_REPLY_ERROR;
 	}
@@ -366,7 +356,7 @@ enum listStates
 	list_list
 };
 
-int CStorjControlSocket::List(CServerPath path, std::wstring const& subDir, int flags)
+void CStorjControlSocket::List(CServerPath const& path, std::wstring const& subDir, int flags)
 {
 	if (!path.empty()) {
 		m_CurrentPath = path;
@@ -379,9 +369,6 @@ int CStorjControlSocket::List(CServerPath path, std::wstring const& subDir, int 
 	}
 	LogMessage(MessageType::Status, _("Retrieving directory listing of \"%s\"..."), m_CurrentPath.GetPath());
 
-	if (m_pCurOpData) {
-		LogMessage(MessageType::Debug_Info, _T("CStorjControlSocket::List called from other command %d in state %d"), m_pCurOpData->opId, m_pCurOpData->opState);
-	}
 	CStorjListOpData *pData = new CStorjListOpData;
 	pData->pNextOpData = m_pCurOpData;
 	m_pCurOpData = pData;
@@ -390,19 +377,19 @@ int CStorjControlSocket::List(CServerPath path, std::wstring const& subDir, int 
 	if (!m_pCurrentServer) {
 		LogMessage(MessageType::Debug_Warning, _T("CStorjControlSocket::List called with m_pCurrenServer == 0"));
 		ResetOperation(FZ_REPLY_INTERNALERROR);
-		return FZ_REPLY_ERROR;
+		//return FZ_REPLY_ERROR;
 	}
 
 	if (m_CurrentPath.GetType() != ServerType::UNIX) {
 		LogMessage(MessageType::Debug_Warning, L"CStorControlSocket::List called with incompatible server type %d in path", m_CurrentPath.GetType());
 		ResetOperation(FZ_REPLY_INTERNALERROR);
-		return FZ_REPLY_ERROR;
+		//return FZ_REPLY_ERROR;
 	}
 
 	if (pData->directoryListing.path.SegmentCount() > 1) {
 		LogMessage(MessageType::Error, L"Invalid path");
 		ResetOperation(FZ_REPLY_INTERNALERROR);
-		return FZ_REPLY_ERROR;
+		//return FZ_REPLY_ERROR;
 	}
 
 	if (pData->directoryListing.path.SegmentCount() == 1) {
@@ -419,7 +406,7 @@ int CStorjControlSocket::List(CServerPath path, std::wstring const& subDir, int 
 			else {
 				LogMessage(MessageType::Error, _("Bucket not found"));
 				ResetOperation(FZ_REPLY_ERROR);
-				return FZ_REPLY_ERROR;
+				//return FZ_REPLY_ERROR;
 			}
 		}
 		else {
@@ -430,19 +417,19 @@ int CStorjControlSocket::List(CServerPath path, std::wstring const& subDir, int 
 			}
 			LogMessage(MessageType::Debug_Warning, L"Subcommand unexpectedly completed early");
 			ResetOperation(FZ_REPLY_INTERNALERROR);
-			return FZ_REPLY_ERROR;
+			//return FZ_REPLY_ERROR;
 		}
 	}
 
 	pData->opState = list_waitlock;
 	if (!TryLockCache(lock_list, m_CurrentPath)) {
 		pData->m_time_before_locking = fz::monotonic_clock::now();
-		return FZ_REPLY_WOULDBLOCK;
+		//return FZ_REPLY_WOULDBLOCK;
 	}
 
 	++pData->opState;
 
-	return SendNextCommand();
+	//return SendNextCommand();
 }
 
 int CStorjControlSocket::ListSend()
@@ -651,7 +638,7 @@ enum filetransferStates
 };
 
 
-int CStorjControlSocket::FileTransfer(std::wstring const& localFile, CServerPath const& remotePath,
+void CStorjControlSocket::FileTransfer(std::wstring const& localFile, CServerPath const& remotePath,
 						 std::wstring const& remoteFile, bool download,
 						 CFileTransferCommand::t_transferSettings const& transferSettings)
 {
@@ -664,12 +651,12 @@ int CStorjControlSocket::FileTransfer(std::wstring const& localFile, CServerPath
 		else {
 			ResetOperation(FZ_REPLY_SYNTAXERROR);
 		}
-		return FZ_REPLY_ERROR;
+		//return FZ_REPLY_ERROR;
 	}
 
 	if (remotePath.SegmentCount() < 1) {
 		ResetOperation(FZ_REPLY_CRITICALERROR | FZ_REPLY_NOTSUPPORTED);
-		return FZ_REPLY_ERROR;
+		//return FZ_REPLY_ERROR;
 	}
 
 	CStorjFileTransferOpData *pData = new CStorjFileTransferOpData(download, localFile, remoteFile, remotePath);
@@ -700,7 +687,7 @@ int CStorjControlSocket::FileTransfer(std::wstring const& localFile, CServerPath
 			LogMessage(MessageType::Error, _("Bucket not found"));
 			ResetOperation(FZ_REPLY_ERROR);
 			return FZ_REPLY_ERROR;
-		}
+		}//
 	}
 	else {
 		dirToList = CServerPath(L"/");
@@ -735,28 +722,28 @@ int CStorjControlSocket::FileTransfer(std::wstring const& localFile, CServerPath
 	if (pData->download && pData->fileId.empty() && dirToList != pData->remotePath) {
 		LogMessage(MessageType::Error, _("File not found"));
 		ResetOperation(FZ_REPLY_ERROR);
-		return FZ_REPLY_ERROR;
+		//return FZ_REPLY_ERROR;
 	}
 
 	if (dirToList.empty()) {
 		pData->opState = filetransfer_transfer;
 		int res = CheckOverwriteFile();
 		if (res != FZ_REPLY_OK) {
-			return res;
+			//return res;
 		}
 	}
 	else {
 		pData->opState = filetransfer_waitlist;
 		int res = List(dirToList, std::wstring(), 0);
 		if (res != FZ_REPLY_OK) {
-			return res;
+			//return res;
 		}
 		LogMessage(MessageType::Debug_Warning, L"Subcommand unexpectedly completed early");
 		ResetOperation(FZ_REPLY_INTERNALERROR);
-		return FZ_REPLY_ERROR;
+		//return FZ_REPLY_ERROR;
 	}
 
-	return SendNextCommand();
+	//return SendNextCommand();
 }
 
 int CStorjControlSocket::FileTransferSubcommandResult(int prevResult)
@@ -1141,9 +1128,6 @@ void CStorjControlSocket::ProcessReply(int result, std::wstring const& reply)
 	case Command::removedir:
 		RemoveDirParseResponse(result == FZ_REPLY_OK, reply);
 		break;
-	case Command::chmod:
-		ChmodParseResponse(result == FZ_REPLY_OK, reply);
-		break;
 	case Command::rename:
 		RenameParseResponse(result == FZ_REPLY_OK, reply);
 		break;*/
@@ -1175,49 +1159,6 @@ int CStorjControlSocket::ResetOperation(int nErrorCode)
 	}*/
 
 	return CControlSocket::ResetOperation(nErrorCode);
-}
-
-int CStorjControlSocket::SendNextCommand()
-{
-	LogMessage(MessageType::Debug_Verbose, _T("CStorjControlSocket::SendNextCommand()"));
-	if (!m_pCurOpData)
-	{
-		LogMessage(__TFILE__, __LINE__, this, MessageType::Debug_Warning, _T("SendNextCommand called without active operation"));
-		ResetOperation(FZ_REPLY_ERROR);
-		return FZ_REPLY_ERROR;
-	}
-
-	if (m_pCurOpData->waitForAsyncRequest)
-	{
-		LogMessage(__TFILE__, __LINE__, this, MessageType::Debug_Info, _T("Waiting for async request, ignoring SendNextCommand"));
-		return FZ_REPLY_WOULDBLOCK;
-	}
-
-	switch (m_pCurOpData->opId)
-	{
-	case Command::connect:
-		return ConnectSend();
-	case Command::list:
-		return ListSend();
-	case Command::transfer:
-		return FileTransferSend();
-/*	case Command::cwd:
-		return ChangeDirSend();
-	case Command::mkdir:
-		return MkdirSend();
-	case Command::rename:
-		return RenameSend();
-	case Command::chmod:
-		return ChmodSend();
-	case Command::del:
-		return DeleteSend();*/
-	default:
-		LogMessage(__TFILE__, __LINE__, this, MessageType::Debug_Warning, _T("Unknown opID (%d) in SendNextCommand"), m_pCurOpData->opId);
-		ResetOperation(FZ_REPLY_INTERNALERROR);
-		break;
-	}
-
-	return FZ_REPLY_ERROR;
 }
 
 int CStorjControlSocket::DoClose(int nErrorCode)
@@ -1283,31 +1224,6 @@ void CStorjControlSocket::OnQuotaRequest(CRateLimiter::rate_direction direction)
 	else if (bytes < 0) {
 		AddToStream(fz::sprintf(L"-%d-\n", direction));
 	}*/
-}
-
-
-int CStorjControlSocket::ParseSubcommandResult(int prevResult)
-{
-	LogMessage(MessageType::Debug_Verbose, _T("CStorjControlSocket::ParseSubcommandResult(%d)"), prevResult);
-	if (!m_pCurOpData) {
-		LogMessage(__TFILE__, __LINE__, this, MessageType::Debug_Warning, _T("ParseSubcommandResult called without active operation"));
-		ResetOperation(FZ_REPLY_ERROR);
-		return FZ_REPLY_ERROR;
-	}
-
-	switch (m_pCurOpData->opId)
-	{
-	case Command::list:
-		return ListSubcommandResult(prevResult);
-	case Command::transfer:
-		return FileTransferSubcommandResult(prevResult);
-	default:
-		LogMessage(__TFILE__, __LINE__, this, MessageType::Debug_Warning, _T("Unknown opID (%d) in ParseSubcommandResult"), m_pCurOpData->opId);
-		ResetOperation(FZ_REPLY_INTERNALERROR);
-		break;
-	}
-
-	return FZ_REPLY_ERROR;
 }
 
 void CStorjControlSocket::operator()(fz::event_base const& ev)

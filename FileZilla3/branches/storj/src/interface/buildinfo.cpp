@@ -3,6 +3,33 @@
 
 #include <libfilezilla/format.hpp>
 
+#include <sqlite3.h>
+
+std::wstring GetDependencyName(gui_lib_dependency d)
+{
+	switch (d) {
+	case gui_lib_dependency::wxwidgets:
+		return wxVERSION_NUM_DOT_STRING_T;
+	case gui_lib_dependency::sqlite:
+		return fz::to_wstring_from_utf8(sqlite3_libversion());
+	default:
+		return std::wstring();
+	}
+}
+
+std::wstring GetDependencyVersion(gui_lib_dependency d)
+{
+	switch (d) {
+	case gui_lib_dependency::wxwidgets:
+		return L"wxWidgets";
+	case gui_lib_dependency::sqlite:
+		return L"SQLite";
+	default:
+		return std::wstring();
+	}
+}
+
+
 std::wstring CBuildInfo::GetVersion()
 {
 	return fz::to_wstring(PACKAGE_VERSION);
@@ -256,4 +283,43 @@ std::wstring CBuildInfo::GetCPUCaps(char separator)
 #endif
 
 	return ret;
+}
+
+#ifdef FZ_WINDOWS
+namespace {
+bool IsAtLeast(int major, int minor = 0)
+{
+	OSVERSIONINFOEX vi = { 0 };
+	vi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
+	vi.dwMajorVersion = major;
+	vi.dwMinorVersion = minor;
+	vi.dwPlatformId = VER_PLATFORM_WIN32_NT;
+
+	DWORDLONG mask = 0;
+	VER_SET_CONDITION(mask, VER_MAJORVERSION, VER_GREATER_EQUAL);
+	VER_SET_CONDITION(mask, VER_MINORVERSION, VER_GREATER_EQUAL);
+	VER_SET_CONDITION(mask, VER_PLATFORMID, VER_EQUAL);
+	return VerifyVersionInfo(&vi, VER_MAJORVERSION | VER_MINORVERSION | VER_PLATFORMID, mask) != 0;
+}
+}
+#endif
+
+bool GetRealOsVersion(int& major, int& minor)
+{
+#ifndef FZ_WINDOWS
+	return wxGetOsVersion(&major, &minor) != wxOS_UNKNOWN;
+#else
+	major = 4;
+	minor = 0;
+	while (IsAtLeast(++major, minor))
+	{
+	}
+	--major;
+	while (IsAtLeast(major, ++minor))
+	{
+	}
+	--minor;
+
+	return true;
+#endif
 }

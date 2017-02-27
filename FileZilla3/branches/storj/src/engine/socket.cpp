@@ -857,8 +857,9 @@ CSocket::CSocket(fz::thread_pool & pool, fz::event_handler* pEvtHandler)
 
 CSocket::~CSocket()
 {
-	if (m_state != none)
+	if (m_state != none) {
 		Close();
+	}
 
 	if (m_pSocketThread) {
 		fz::scoped_lock l(m_pSocketThread->m_sync);
@@ -868,8 +869,9 @@ CSocket::~CSocket()
 
 void CSocket::DetachThread(fz::scoped_lock & l)
 {
-	if (!m_pSocketThread)
+	if (!m_pSocketThread) {
 		return;
+	}
 
 	m_pSocketThread->SetSocket(0, l);
 	if (m_pSocketThread->m_finished) {
@@ -1565,7 +1567,7 @@ int CSocket::DoSetFlags(int fd, int flags, int flags_mask, fz::duration const& k
 #if FZ_WINDOWS
 		tcp_keepalive v{};
 		v.onoff = (flags & flag_keepalive) ? 1 : 0;
-		v.keepalivetime = keepalive_interval.get_milliseconds();
+		v.keepalivetime = static_cast<ULONG>(keepalive_interval.get_milliseconds());
 		v.keepaliveinterval = 1000;
 		DWORD tmp{};
 		int res = WSAIoctl(fd, SIO_KEEPALIVE_VALS, &v, sizeof(v), 0, 0, &tmp, 0, 0);
