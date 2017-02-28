@@ -6,6 +6,7 @@
 #include "directorycache.h"
 #include "directorylistingparser.h"
 #include "engineprivate.h"
+#include "file_transfer.h"
 #include "list.h"
 #include "pathcache.h"
 #include "proxy.h"
@@ -45,29 +46,7 @@ void CStorjControlSocket::Connect(CServer const& server)
 	engine_.GetRateLimiter().AddObject(this);
 	Push(std::make_unique<CStorjConnectOpData>(*this));
 }
-/*
-class CStorjListOpData final : public COpData
-{
-public:
-	CStorjListOpData()
-		: COpData(Command::list)
-	{
-	}
 
-	CDirectoryListing directoryListing;
-	std::wstring bucket;
-
-	fz::monotonic_clock m_time_before_locking;
-};
-
-enum listStates
-{
-	list_init = 0,
-	list_waitlist,
-	list_waitlock,
-	list_list
-};
-*/
 void CStorjControlSocket::List(CServerPath const& path, std::wstring const& subDir, int flags)
 {
 	CServerPath newPath = currentPath_;
@@ -88,271 +67,18 @@ void CStorjControlSocket::List(CServerPath const& path, std::wstring const& subD
 	Push(std::make_unique<CStorjListOpData>(*this, newPath, std::wstring(), flags, operations_.empty()));
 }
 
-/*
-class CStorjFileTransferOpData : public CFileTransferOpData
-{
-public:
-	CStorjFileTransferOpData(bool is_download, std::wstring const& local_file, std::wstring const& remote_file, CServerPath const& remote_path)
-		: CFileTransferOpData(is_download, local_file, remote_file, remote_path)
-	{
-	}
-
-	std::wstring bucket;
-	std::wstring fileId;
-};
-
-enum filetransferStates
-{
-	filetransfer_init = 0,
-	filetransfer_waitlist,
-	filetransfer_transfer
-};
-*/
-
 void CStorjControlSocket::FileTransfer(std::wstring const& localFile, CServerPath const& remotePath,
 						 std::wstring const& remoteFile, bool download,
 						 CFileTransferCommand::t_transferSettings const& transferSettings)
 {
+	auto pData = std::make_unique<CStorjFileTransferOpData>(*this, download, localFile, remoteFile, remotePath);
+	pData->transferSettings_ = transferSettings;
+	Push(std::move(pData));
 }
 
-/*
-	LogMessage(MessageType::Debug_Verbose, L"CStorjControlSocket::FileTransfer(...)");
-
-	if (localFile.empty()) {
-		if (!download) {
-			ResetOperation(FZ_REPLY_CRITICALERROR | FZ_REPLY_NOTSUPPORTED);
-		}
-		else {
-			ResetOperation(FZ_REPLY_SYNTAXERROR);
-		}
-		//return FZ_REPLY_ERROR;
-	}
-
-	if (remotePath.SegmentCount() < 1) {
-		ResetOperation(FZ_REPLY_CRITICALERROR | FZ_REPLY_NOTSUPPORTED);
-		//return FZ_REPLY_ERROR;
-	}
-
-	CStorjFileTransferOpData *pData = new CStorjFileTransferOpData(download, localFile, remoteFile, remotePath);
-	m_pCurOpData = pData;
-
-	pData->transferSettings = transferSettings;
-
-	// Get local file info
-	int64_t size;
-	bool isLink;
-	if (fz::local_filesys::get_file_info(fz::to_native(pData->localFile), isLink, &size, 0, 0) == fz::local_filesys::file) {
-		pData->localFileSize = size;
-	}
-
-	CServerPath dirToList;
-
-	// Get bucket
-	CDirectoryListing buckets;
-	bool outdated{};
-	bool found = engine_.GetDirectoryCache().Lookup(buckets, currentServer_, CServerPath(L"/"), false, outdated);
-	if (found && !outdated) {
-		int pos = buckets.FindFile_CmpCase(pData->remotePath.GetLastSegment());
-		if (pos != -1) {
-			pData->bucket = *buckets[pos].ownerGroup;
-			LogMessage(MessageType::Debug_Info, L"File %s is in bucket %s", pData->remotePath.FormatFilename(pData->remoteFile), pData->bucket);
-		}
-		else {
-			LogMessage(MessageType::Error, _("Bucket not found"));
-			ResetOperation(FZ_REPLY_ERROR);
-			return FZ_REPLY_ERROR;
-		}//
-	}
-	else {
-		dirToList = CServerPath(L"/");
-	}
-
-	// Get remote file info
-	CDirentry entry;
-	bool dirDidExist;
-	bool matchedCase;
-	found = engine_.GetDirectoryCache().LookupFile(entry, currentServer_, pData->remotePath, pData->remoteFile, dirDidExist, matchedCase);
-	if (!found) {
-		if (!dirDidExist) {
-			dirToList = pData->remotePath;
-		}
-	}
-	else {
-		if (entry.is_unsure()) {
-			dirToList = pData->remotePath;
-		}
-		else {
-			if (matchedCase) {
-				pData->remoteFileSize = entry.size;
-				if (entry.has_date()) {
-					pData->fileTime = entry.time;
-				}
-				pData->fileId = *entry.ownerGroup;
-				LogMessage(MessageType::Debug_Info, L"File %s has id %s", pData->remotePath.FormatFilename(pData->remoteFile), pData->fileId);
-			}
-		}
-	}
-
-	if (pData->download && pData->fileId.empty() && dirToList != pData->remotePath) {
-		LogMessage(MessageType::Error, _("File not found"));
-		ResetOperation(FZ_REPLY_ERROR);
-		//return FZ_REPLY_ERROR;
-	}
-
-	if (dirToList.empty()) {
-		pData->opState = filetransfer_transfer;
-		int res = CheckOverwriteFile();
-		if (res != FZ_REPLY_OK) {
-			//return res;
-		}
-	}
-	else {
-		pData->opState = filetransfer_waitlist;
-		int res = List(dirToList, std::wstring(), 0);
-		if (res != FZ_REPLY_OK) {
-			//return res;
-		}
-		LogMessage(MessageType::Debug_Warning, L"Subcommand unexpectedly completed early");
-		ResetOperation(FZ_REPLY_INTERNALERROR);
-		//return FZ_REPLY_ERROR;
-	}
-
-	//return SendNextCommand();
-}
-
-int CStorjControlSocket::FileTransferSubcommandResult(int prevResult)
+void CStorjControlSocket::Resolve(CServerPath const& path, std::wstring const& file, std::wstring & bucket, std::wstring * fileId, bool ignore_missing_file)
 {
-	LogMessage(MessageType::Debug_Verbose, L"CStorjControlSocket::FileTransferSubcommandResult()");
-
-	CStorjFileTransferOpData *pData = static_cast<CStorjFileTransferOpData *>(m_pCurOpData);
-
-	if (pData->opState == filetransfer_waitlist) {
-
-		if (prevResult != FZ_REPLY_OK) {
-			ResetOperation(FZ_REPLY_ERROR);
-			return FZ_REPLY_ERROR;
-		}
-
-		if (pData->bucket.empty()) {
-			// Get bucket
-			CDirectoryListing buckets;
-			bool outdated{};
-			bool found = engine_.GetDirectoryCache().Lookup(buckets, currentServer_, CServerPath(L"/"), false, outdated);
-			if (found && !outdated) {
-				int pos = buckets.FindFile_CmpCase(pData->remotePath.GetLastSegment());
-				if (pos != -1) {
-					pData->bucket = *buckets[pos].ownerGroup;
-					LogMessage(MessageType::Debug_Info, L"File %s is in bucket %s", pData->remotePath.FormatFilename(pData->remoteFile), pData->bucket);
-				}
-			}
-
-			if (pData->bucket.empty()) {
-				LogMessage(MessageType::Error, _("Bucket not found for file %s"), pData->remotePath.FormatFilename(pData->remoteFile));
-				ResetOperation(FZ_REPLY_ERROR);
-				return FZ_REPLY_ERROR;
-			}
-		}
-
-		if (pData->fileId.empty()) {
-			// Get remote file info
-			CDirentry entry;
-			bool dirDidExist;
-			bool matchedCase;
-			bool found = engine_.GetDirectoryCache().LookupFile(entry, currentServer_, pData->remotePath, pData->remoteFile, dirDidExist, matchedCase);
-			if (found && !entry.is_unsure() && matchedCase) {
-				pData->remoteFileSize = entry.size;
-				if (entry.has_date()) {
-					pData->fileTime = entry.time;
-				}
-				pData->fileId = *entry.ownerGroup;
-				LogMessage(MessageType::Debug_Info, L"File %s has id %s", pData->remotePath.FormatFilename(pData->remoteFile), pData->fileId);
-			}
-
-			if (pData->download && pData->fileId.empty()) {
-				LogMessage(MessageType::Error, _("File id not found for file %s"), pData->remotePath.FormatFilename(pData->remoteFile));
-				ResetOperation(FZ_REPLY_ERROR);
-				return FZ_REPLY_ERROR;
-			}
-		}
-
-		pData->opState = filetransfer_transfer;
-
-		int res = CheckOverwriteFile();
-		if (res != FZ_REPLY_OK) {
-			return res;
-		}
-	}
-	else {
-		LogMessage(MessageType::Debug_Warning, L"Unknown opState in CStorjControlSocket::FileTransferSubcommandResult");
-		ResetOperation(FZ_REPLY_INTERNALERROR);
-		return FZ_REPLY_ERROR;
-	}
-
-	return SendNextCommand();
-}
-
-int CStorjControlSocket::FileTransferSend()
-{
-	LogMessage(MessageType::Debug_Verbose, L"CStorjControlSocket::FileTransferSend()");
-
-
-	CStorjFileTransferOpData *pData = static_cast<CStorjFileTransferOpData *>(m_pCurOpData);
-
-	if (pData->opState == filetransfer_transfer) {
-		if (!pData->resume) {
-			CreateLocalDir(pData->localFile);
-		}
-
-		engine_.transfer_status_.Init(pData->remoteFileSize, 0, false);
-		if (pData->download) {
-			if (!SendCommand(L"get " + pData->bucket + L" " + pData->fileId + L" " + QuoteFilename(pData->localFile))) {
-				return FZ_REPLY_ERROR;
-			}
-		}
-		else {
-			if (!SendCommand(L"put " + pData->bucket + L" " + QuoteFilename(pData->localFile) + L" " + QuoteFilename(pData->remoteFile))) {
-				return FZ_REPLY_ERROR;
-			}
-		}
-
-		engine_.transfer_status_.SetStartTime();
-		pData->transferInitiated = true;
-
-		return FZ_REPLY_WOULDBLOCK;
-	}
-
-	LogMessage(MessageType::Debug_Warning, L"Unknown opState in CStorjControlSocket::ListSend");
-	ResetOperation(FZ_REPLY_INTERNALERROR);
-	return FZ_REPLY_ERROR;
-}
-
-int CStorjControlSocket::FileTransferParseResponse(int result, std::wstring const& reply)
-{
-	LogMessage(MessageType::Debug_Verbose, L"CStorjControlSocket::FileTransferParseResponse(%d)", result);
-
-	if (!m_pCurOpData) {
-		LogMessage(MessageType::Debug_Info, L"Empty m_pCurOpData");
-		ResetOperation(FZ_REPLY_INTERNALERROR);
-		return FZ_REPLY_ERROR;
-	}
-
-	CStorjFileTransferOpData *pData = static_cast<CStorjFileTransferOpData *>(m_pCurOpData);
-	LogMessage(MessageType::Debug_Debug, L"  state = %d", pData->opState);
-
-	if (pData->opState == filetransfer_transfer) {
-		ResetOperation(result);
-		return result;
-	}
-
-	LogMessage(MessageType::Debug_Warning, L"Unknown opState in CStorjControlSocket::ListSend");
-	ResetOperation(FZ_REPLY_INTERNALERROR);
-	return FZ_REPLY_ERROR;
-}
-*/
-
-void CStorjControlSocket::Resolve(CServerPath const& path, std::wstring const& file, std::wstring & bucket, std::wstring * fileId)
-{
-	Push(std::make_unique<CStorjResolveOpData>(*this, path, file, bucket, fileId));
+	Push(std::make_unique<CStorjResolveOpData>(*this, path, file, bucket, fileId, ignore_missing_file));
 }
 
 void CStorjControlSocket::OnStorjEvent(storj_message const& message)
@@ -425,7 +151,7 @@ void CStorjControlSocket::OnStorjEvent(storj_message const& message)
 	case storjEvent::Transfer:
 		{
 			auto value = fz::to_integral<int64_t>(message.text[0]);
-/*
+
 			bool tmp;
 			CTransferStatus status = engine_.transfer_status_.Get(tmp);
 			if (!status.empty() && !status.madeProgress) {
@@ -443,7 +169,7 @@ void CStorjControlSocket::OnStorjEvent(storj_message const& message)
 					}
 				}
 			}
-*/
+
 			engine_.transfer_status_.Update(value);
 		}
 		break;
@@ -516,12 +242,12 @@ bool CStorjControlSocket::SetAsyncRequestReply(CAsyncRequestNotification *pNotif
 	RequestId const requestId = pNotification->GetRequestID();
 	switch(requestId)
 	{
-/*	case reqId_fileexists:
+	case reqId_fileexists:
 		{
 			CFileExistsNotification *pFileExistsNotification = static_cast<CFileExistsNotification *>(pNotification);
 			return SetFileExistsAction(pFileExistsNotification);
 		}
-	case reqId_hostkey:
+/*	case reqId_hostkey:
 	case reqId_hostkeyChanged:
 		{
 			if (GetCurrentCommandId() != Command::connect ||

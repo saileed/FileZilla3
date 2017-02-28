@@ -847,8 +847,9 @@ void CTransferStatusManager::Reset()
 void CTransferStatusManager::Init(int64_t totalSize, int64_t startOffset, bool list)
 {
 	fz::scoped_lock lock(mutex_);
-	if (startOffset < 0)
+	if (startOffset < 0) {
 		startOffset = 0;
+	}
 
 	status_ = CTransferStatus(totalSize, startOffset, list);
 	currentOffset_ = 0;
@@ -857,8 +858,9 @@ void CTransferStatusManager::Init(int64_t totalSize, int64_t startOffset, bool l
 void CTransferStatusManager::SetStartTime()
 {
 	fz::scoped_lock lock(mutex_);
-	if (!status_)
+	if (!status_) {
 		return;
+	}
 
 	status_.started = fz::datetime::now();
 }
@@ -866,8 +868,9 @@ void CTransferStatusManager::SetStartTime()
 void CTransferStatusManager::SetMadeProgress()
 {
 	fz::scoped_lock lock(mutex_);
-	if (!status_)
+	if (!status_) {
 		return;
+	}
 
 	status_.madeProgress = true;
 }

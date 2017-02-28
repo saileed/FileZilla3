@@ -6,13 +6,14 @@
 class CStorjResolveOpData final : public COpData, public CStorjOpData
 {
 public:
-	CStorjResolveOpData(CStorjControlSocket & controlSocket, CServerPath const& path, std::wstring const& file, std::wstring & bucket, std::wstring * fileId = 0)
+	CStorjResolveOpData(CStorjControlSocket & controlSocket, CServerPath const& path, std::wstring const& file, std::wstring & bucket, std::wstring * fileId, bool ignore_missing_file)
 		: COpData(PrivCommand::resolve)
 		, CStorjOpData(controlSocket)
 		, path_(path)
 		, file_(file)
 		, bucket_(bucket)
 		, fileId_(fileId)
+		, ignore_missing_file_(ignore_missing_file)
 	{
 	}
 
@@ -26,5 +27,6 @@ private:
 
 	std::wstring & bucket_;
 	std::wstring * const fileId_;
+	bool ignore_missing_file_{};
 };
 #endif

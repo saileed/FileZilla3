@@ -28,7 +28,7 @@ int CStorjResolveOpData::Send()
 		else if (!path_.SegmentCount()) {
 			// It's the root, nothing to resolve here.
 
-			if (fileId_) {
+			if (fileId_ || !file_.empty()) {
 				return FZ_REPLY_INTERNALERROR;
 			}
 
@@ -66,7 +66,34 @@ int CStorjResolveOpData::Send()
 		if (!fileId_) {
 			return FZ_REPLY_OK;
 		}
-		// FIXME
+		else {
+			if (file_.empty()) {
+				return FZ_REPLY_INTERNALERROR;
+			}
+			CDirectoryListing listing;
+
+			bool outdated{};
+			bool found = engine_.GetDirectoryCache().Lookup(listing, currentServer_, path_, false, outdated);
+			if (found && !outdated) {
+				int pos = listing.FindFile_CmpCase(file_);
+				if (pos != -1) {
+					*fileId_ = *listing[pos].ownerGroup;
+					LogMessage(MessageType::Debug_Info, L"File %s has id %s", path_.FormatFilename(file_), *fileId_);
+					return FZ_REPLY_OK;
+				}
+
+				if (ignore_missing_file_) {
+					return FZ_REPLY_OK;
+				}
+
+				LogMessage(MessageType::Error, _("File not found"));
+				return FZ_REPLY_ERROR;
+			}
+
+			opState = resolve_waitlist;
+			controlSocket_.List(path_, std::wstring(), 0);
+			return FZ_REPLY_CONTINUE;
+		}
 		break;
 	}
 
@@ -80,7 +107,7 @@ int CStorjResolveOpData::ParseResponse()
 	return FZ_REPLY_INTERNALERROR;
 }
 
-int CStorjResolveOpData::SubcommandResult(int prevResult, COpData const& previousOperation)
+int CStorjResolveOpData::SubcommandResult(int prevResult, COpData const&)
 {
 	LogMessage(MessageType::Debug_Verbose, L"CStorjResolveOpData::SubcommandResult() in state %d", opState);
 
@@ -106,6 +133,26 @@ int CStorjResolveOpData::SubcommandResult(int prevResult, COpData const& previou
 			}
 		}
 		LogMessage(MessageType::Error, _("Bucket not found"));
+		return FZ_REPLY_ERROR;
+	case resolve_waitlist:
+		{
+			CDirectoryListing listing;
+
+			bool outdated{};
+			bool found = engine_.GetDirectoryCache().Lookup(listing, currentServer_, path_, false, outdated);
+			if (found && !outdated) {
+				int pos = listing.FindFile_CmpCase(file_);
+				if (pos != -1) {
+					*fileId_ = *listing[pos].ownerGroup;
+					LogMessage(MessageType::Debug_Info, L"File %s has id %s", path_.FormatFilename(file_), *fileId_);
+					return FZ_REPLY_OK;
+				}
+				if (ignore_missing_file_) {
+					return FZ_REPLY_OK;
+				}
+			}
+		}
+		LogMessage(MessageType::Error, _("File not found"));
 		return FZ_REPLY_ERROR;
 	}
 
