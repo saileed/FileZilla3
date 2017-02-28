@@ -61,6 +61,7 @@ libengine_a_SOURCES = \
 		sizeformatting_base.cpp \
 		socket.cpp \
 		storj/connect.cpp \
+		storj/file_transfer.cpp \
 		storj/input_thread.cpp \
 		storj/list.cpp \
 		storj/resolve.cpp \
@@ -114,6 +115,7 @@ noinst_HEADERS = backend.h \
 		sftp/sftpcontrolsocket.h \
 		storj/connect.h \
 		storj/event.h \
+		storj/file_transfer.h \
 		storj/input_thread.h \
 		storj/list.h \
 		storj/resolve.h \

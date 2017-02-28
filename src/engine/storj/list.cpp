@@ -102,7 +102,7 @@ int CStorjListOpData::ParseResponse()
 	return FZ_REPLY_INTERNALERROR;
 }
 
-int CStorjListOpData::SubcommandResult(int prevResult, COpData const& previousOperation)
+int CStorjListOpData::SubcommandResult(int prevResult, COpData const&)
 {
 	LogMessage(MessageType::Debug_Verbose, L"CStorjListOpData::SubcommandResult() in state %d", opState);
 

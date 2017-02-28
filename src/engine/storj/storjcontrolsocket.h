@@ -28,7 +28,7 @@ public:
 	virtual void FileTransfer(std::wstring const& localFile, CServerPath const& remotePath,
 							 std::wstring const& remoteFile, bool download,
 							 CFileTransferCommand::t_transferSettings const& transferSettings) override;
-	void Resolve(CServerPath const& path, std::wstring const& file, std::wstring & bucket, std::wstring * fileId = 0);
+	void Resolve(CServerPath const& path, std::wstring const& file, std::wstring & bucket, std::wstring * fileId = 0, bool ignore_missing_file = false);
 	/*
 	virtual void Delete(const CServerPath& path, std::deque<std::wstring>&& files) override;
 	virtual void RemoveDir(CServerPath const& path = CServerPath(), std::wstring const& subDir = std::wstring()) override;
