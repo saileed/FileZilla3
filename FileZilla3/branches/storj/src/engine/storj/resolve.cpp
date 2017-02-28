@@ -17,8 +17,22 @@ int CStorjResolveOpData::Send()
 
 	switch (opState) {
 	case resolve_init:
+		bucket_.clear();
+		if (fileId_) {
+			fileId_->clear();
+		}
+
 		if (path_.empty()) {
 			return FZ_REPLY_INTERNALERROR;
+		}
+		else if (!path_.SegmentCount()) {
+			// It's the root, nothing to resolve here.
+
+			if (fileId_) {
+				return FZ_REPLY_INTERNALERROR;
+			}
+
+			return FZ_REPLY_OK;
 		}
 		else if (path_.SegmentCount() != 1) {
 			return FZ_REPLY_INTERNALERROR;
