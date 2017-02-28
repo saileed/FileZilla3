@@ -29,8 +29,8 @@ public:
 							 std::wstring const& remoteFile, bool download,
 							 CFileTransferCommand::t_transferSettings const& transferSettings) override;
 	void Resolve(CServerPath const& path, std::wstring const& file, std::wstring & bucket, std::wstring * fileId = 0, bool ignore_missing_file = false);
+	virtual void Delete(CServerPath const& path, std::deque<std::wstring>&& files) override;
 	/*
-	virtual void Delete(const CServerPath& path, std::deque<std::wstring>&& files) override;
 	virtual void RemoveDir(CServerPath const& path = CServerPath(), std::wstring const& subDir = std::wstring()) override;
 	virtual void Mkdir(const CServerPath& path) override;
 	virtual void Rename(const CRenameCommand& command) override;*/
@@ -87,6 +87,7 @@ protected:
 
 	friend class CProtocolOpData<CStorjControlSocket>;
 	friend class CStorjConnectOpData;
+	friend class CStorjDeleteOpData;
 	friend class CStorjFileTransferOpData;
 	friend class CStorjListOpData;
 	friend class CStorjResolveOpData;

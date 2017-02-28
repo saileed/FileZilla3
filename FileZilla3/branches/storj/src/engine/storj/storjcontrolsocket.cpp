@@ -1,6 +1,7 @@
 #include <filezilla.h>
 
 #include "connect.h"
+#include "delete.h"
 #include "event.h"
 #include "input_thread.h"
 #include "directorycache.h"
@@ -74,6 +75,17 @@ void CStorjControlSocket::FileTransfer(std::wstring const& localFile, CServerPat
 	auto pData = std::make_unique<CStorjFileTransferOpData>(*this, download, localFile, remoteFile, remotePath);
 	pData->transferSettings_ = transferSettings;
 	Push(std::move(pData));
+}
+
+
+void CStorjControlSocket::Delete(CServerPath const& path, std::deque<std::wstring>&& files)
+{
+	// CFileZillaEnginePrivate should have checked this already
+	assert(!files.empty());
+
+	LogMessage(MessageType::Debug_Verbose, L"CStorjControlSocket::Delete");
+
+	Push(std::make_unique<CStorjDeleteOpData>(*this, path, std::move(files)));
 }
 
 void CStorjControlSocket::Resolve(CServerPath const& path, std::wstring const& file, std::wstring & bucket, std::wstring * fileId, bool ignore_missing_file)
@@ -345,12 +357,12 @@ int CStorjControlSocket::ResetOperation(int nErrorCode)
 			LogMessage(MessageType::Error, _("fzstorj could not be started"));
 		}
 	}
-/*	if (!operations_.empty() && operations_.back()->opId == Command::del && !(nErrorCode & FZ_REPLY_DISCONNECTED)) {
+	if (!operations_.empty() && operations_.back()->opId == Command::del && !(nErrorCode & FZ_REPLY_DISCONNECTED)) {
 		auto &data = static_cast<CStorjDeleteOpData &>(*operations_.back());
 		if (data.needSendListing_) {
 			SendDirectoryListingNotification(data.path_, false, false);
 		}
-	}*/
+	}
 
 	return CControlSocket::ResetOperation(nErrorCode);
 }
