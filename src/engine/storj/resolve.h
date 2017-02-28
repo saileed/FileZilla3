@@ -29,4 +29,5 @@ private:
 	std::wstring * const fileId_;
 	bool ignore_missing_file_{};
 };
+
 #endif
