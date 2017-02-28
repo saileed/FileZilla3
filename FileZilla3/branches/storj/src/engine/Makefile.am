@@ -63,6 +63,7 @@ libengine_a_SOURCES = \
 		storj/connect.cpp \
 		storj/input_thread.cpp \
 		storj/list.cpp \
+		storj/resolve.cpp \
 		storj/storjcontrolsocket.cpp \
 		tlssocket.cpp \
 		tlssocket_impl.cpp \
@@ -115,7 +116,8 @@ noinst_HEADERS = backend.h \
 		storj/event.h \
 		storj/input_thread.h \
 		storj/list.h \
-		storj/storj/controlsocket.h \
+		storj/resolve.h \
+		storj/storjcontrolsocket.h \
 		tlssocket.h \
 		tlssocket_impl.h
 

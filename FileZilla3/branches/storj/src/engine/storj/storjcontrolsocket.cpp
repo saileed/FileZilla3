@@ -9,6 +9,7 @@
 #include "list.h"
 #include "pathcache.h"
 #include "proxy.h"
+#include "resolve.h"
 #include "servercapabilities.h"
 #include "storjcontrolsocket.h"
 
@@ -69,6 +70,22 @@ enum listStates
 */
 void CStorjControlSocket::List(CServerPath const& path, std::wstring const& subDir, int flags)
 {
+	CServerPath newPath = currentPath_;
+	if (!path.empty()) {
+		newPath = path;
+	}
+	if (!newPath.ChangePath(subDir)) {
+		newPath.clear();
+	}
+
+	if (newPath.empty()) {
+		LogMessage(MessageType::Status, _("Retrieving directory listing..."));
+	}
+	else {
+		LogMessage(MessageType::Status, _("Retrieving directory listing of \"%s\"..."), newPath.GetPath());
+	}
+
+	Push(std::make_unique<CStorjListOpData>(*this, path, subDir, flags, operations_.empty()));
 }
 /*
 	if (!path.empty()) {
@@ -547,6 +564,11 @@ int CStorjControlSocket::FileTransferParseResponse(int result, std::wstring cons
 	return FZ_REPLY_ERROR;
 }
 */
+
+void CStorjControlSocket::Resolve(CServerPath const& path, std::wstring const& file, std::wstring & bucket, std::wstring * fileId)
+{
+	Push(std::make_unique<CStorjResolveOpData>(*this, path, file, bucket, fileId));
+}
 
 void CStorjControlSocket::OnStorjEvent(storj_message const& message)
 {

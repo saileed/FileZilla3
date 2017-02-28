@@ -6,9 +6,11 @@
 class CStorjListOpData final : public COpData, public CStorjOpData
 {
 public:
-	CStorjListOpData(CStorjControlSocket & controlSocket, CServerPath const& path, std::wstring const& subDir, bool topLevel)
+	CStorjListOpData(CStorjControlSocket & controlSocket, CServerPath const& path, std::wstring const& subDir, int, bool topLevel)
 		: COpData(Command::list)
 		, CStorjOpData(controlSocket)
+		, path_(path)
+		, subDir_(subDir)
 		, topLevel_(topLevel)
 	{
 	}
@@ -20,6 +22,9 @@ public:
 	int ParseEntry(std::wstring && name, std::wstring const& size, std::wstring && id);
 
 private:
+	CServerPath path_;
+	std::wstring subDir_;
+
 	CDirectoryListing directoryListing_;
 
 	fz::monotonic_clock time_before_locking_;
