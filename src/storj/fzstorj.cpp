@@ -10,7 +10,6 @@ void fzprintf(storjEvent event)
 {
 	fputc('0' + static_cast<int>(event), stdout);
 
-	fputc('\n', stdout);
 	fflush(stdout);
 }
 
@@ -62,7 +61,7 @@ extern "C" void get_buckets_callback(uv_work_t *work_req, int status)
 			fzprintf(storjEvent::Error, "Request failed with status code %d", req->status_code);
 		}
 		else {
-			for (int i = 0; i < req->total_buckets; ++i) {
+			for (unsigned int i = 0; i < req->total_buckets; ++i) {
 				storj_bucket_meta_t &bucket = req->buckets[i];
 
 				std::string id = bucket.id;
@@ -96,8 +95,14 @@ extern "C" void list_files_callback(uv_work_t *work_req, int status)
 			fzprintf(storjEvent::Error, "Request failed with status code %d", req->status_code);
 		}
 		else {
+			bool encrypted = false;
 			for (unsigned int i = 0; i < req->total_files; ++i) {
 				storj_file_meta_t &file = req->files[i];
+
+				if (!file.decrypted) {
+					encrypted = true;
+					break;
+				}
 
 				std::string name = file.filename;
 				std::string id = file.id;
@@ -109,7 +114,13 @@ extern "C" void list_files_callback(uv_work_t *work_req, int status)
 
 				fzprintf(storjEvent::Listentry, "%s\n%d\n%s", name, size, id);
 			}
-			fzprintf(storjEvent::Done);
+
+			if (encrypted) {
+				fzprintf(storjEvent::Error, "Wrong security key for this bucket");
+			}
+			else {
+				fzprintf(storjEvent::Done);
+			}
 		}
 
 		json_object_put(req->response);
@@ -182,6 +193,7 @@ int main()
 	unsigned short port = 443;
 	std::string user;
 	std::string pass;
+	std::string mnemonic;
 
 	storj_env_t *env{};
 
@@ -198,7 +210,7 @@ int main()
 		options.pass = pass.c_str();
 
 		storj_encrypt_options_t encrypt_options{};
-		encrypt_options.mnemonic = "";
+		encrypt_options.mnemonic = mnemonic.c_str();
 
 		storj_http_options_t http_options{};
 		http_options.user_agent = "FileZilla";
@@ -244,6 +256,15 @@ int main()
 		else if (command == "pass") {
 			pass = arg;
 			fzprintf(storjEvent::Done);
+		}
+		else if (command == "key") {
+			mnemonic = arg;
+			if (storj_mnemonic_check(mnemonic.c_str())) {
+				fzprintf(storjEvent::Done);
+			}
+			else {
+				fzprintf(storjEvent::Error, "Invalid security key");
+			}
 		}
 		else if (command == "list-buckets") {
 			init_env();
