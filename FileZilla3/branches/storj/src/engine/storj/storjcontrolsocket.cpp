@@ -115,22 +115,11 @@ void CStorjControlSocket::OnStorjEvent(storj_message const& message)
 		ProcessReply(FZ_REPLY_OK, message.text[0]);
 		break;
 	case storjEvent::Done:
-		{
-			int result;
-			if (message.text[0] == L"1") {
-				result = FZ_REPLY_OK;
-			}
-			else if (message.text[0] == L"2") {
-				result = FZ_REPLY_CRITICALERROR;
-			}
-			else {
-				result = FZ_REPLY_ERROR;
-			}
-			ProcessReply(result, std::wstring());
-		}
+		ProcessReply(FZ_REPLY_OK, std::wstring());
 		break;
 	case storjEvent::Error:
 		LogMessageRaw(MessageType::Error, message.text[0]);
+		ProcessReply(FZ_REPLY_ERROR, message.text[0]);
 		break;
 	case storjEvent::Verbose:
 		LogMessageRaw(MessageType::Debug_Info, message.text[0]);
