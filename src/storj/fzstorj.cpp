@@ -49,47 +49,26 @@ extern "C" void get_buckets_callback(uv_work_t *work_req, int status)
 		exit(1);
 	}
 
-	json_request_t *req = static_cast<json_request_t *>(work_req->data);
+	get_buckets_request_t *req = static_cast<get_buckets_request_t *>(work_req->data);
 
 	if (req->status_code != 200) {
 		fzprintf(storjEvent::Error, "Request failed with status code %d", req->status_code);
 		exit(1);
 	}
 
-	if (req->response == NULL) {
-		free(req);
-		free(work_req);
-		fzprintf(storjEvent::Error, "Failed to list buckets for an unknown reason.");
-		exit(1);
+	for (int i = 0; i < req->total_buckets; ++i) {
+		storj_bucket_meta_t &bucket = req->buckets[i];
+
+		std::string id = bucket.id;
+		std::string name = bucket.name;
+		fz::replace_substrings(name, "\r", "");
+		fz::replace_substrings(id, "\r", "");
+		fz::replace_substrings(name, "\n", "");
+		fz::replace_substrings(id, "\n", "");
+
+		fzprintf(storjEvent::Listentry, "%s\n-1\n%s", name, id);
 	}
 
-	int num_buckets = json_object_array_length(req->response);
-	struct json_object *bucket{};
-
-	for (int i = 0; i < num_buckets; ++i) {
-		bucket = json_object_array_get_idx(req->response, i);
-
-		struct json_object *id_obj{};
-		json_object_object_get_ex(bucket, "id", &id_obj);
-		struct json_object *name_obj{};
-		json_object_object_get_ex(bucket, "name", &name_obj);
-
-		if (id_obj && name_obj) {
-			char const* name = json_object_get_string(name_obj);
-			char const* id = json_object_get_string(id_obj);
-			if (name && *name && id && *id) {
-				std::string sname = name;
-				std::string sid = id;
-				fz::replace_substrings(sname, "\r", "");
-				fz::replace_substrings(sid, "\r", "");
-				fz::replace_substrings(sname, "\n", "");
-				fz::replace_substrings(sid, "\n", "");
-				fzprintf(storjEvent::Listentry, "%s\n-1\n%s", sname, sid);
-			}
-		}
-	}
-
-	// Cleanup
 	json_object_put(req->response);
 	free(req);
 	free(work_req);
@@ -102,54 +81,30 @@ extern "C" void list_files_callback(uv_work_t *work_req, int status)
 		exit(1);
 	}
 
-	json_request_t *req = static_cast<json_request_t *>(work_req->data);
+	list_files_request_t *req = static_cast<list_files_request_t *>(work_req->data);
 
 	if (req->status_code != 200) {
 		fzprintf(storjEvent::Error, "Request failed with status code %d", req->status_code);
 		exit(1);
 	}
 
-	if (req->response == NULL) {
-		free(req);
-		free(work_req);
-		fzprintf(storjEvent::Error, "Failed to list buckets for an unknown reason.");
-		exit(1);
+	for (unsigned int i = 0; i < req->total_files; ++i) {
+		storj_file_meta_t &file = req->files[i];
+
+		std::string name = file.filename;
+		std::string id = file.id;
+		uint64_t size = file.size;
+		fz::replace_substrings(name, "\r", "");
+		fz::replace_substrings(id, "\r", "");
+		fz::replace_substrings(name, "\n", "");
+		fz::replace_substrings(id, "\n", "");
+
+		fzprintf(storjEvent::Listentry, "%s\n%d\n%s", name, size, id);
+
 	}
 
-	int num_files = json_object_array_length(req->response);
-	struct json_object *file{};
-
-	for (int i = 0; i < num_files; ++i) {
-		file = json_object_array_get_idx(req->response, i);
-
-		struct json_object *id_obj{};
-		json_object_object_get_ex(file, "id", &id_obj);
-		struct json_object *name_obj{};
-		json_object_object_get_ex(file, "filename", &name_obj);
-		struct json_object *size_obj{};
-		json_object_object_get_ex(file, "size", &size_obj);
-
-		if (id_obj && name_obj && size_obj) {
-			char const* name = json_object_get_string(name_obj);
-			char const* id = json_object_get_string(id_obj);
-			char const* size = json_object_get_string(size_obj);
-			if (name && *name && id && *id && size && *size) {
-				std::string sname = name;
-				std::string sid = id;
-				std::string ssize = size;
-				fz::replace_substrings(sname, "\r", "");
-				fz::replace_substrings(sid, "\r", "");
-				fz::replace_substrings(sname, "\n", "");
-				fz::replace_substrings(sid, "\n", "");
-				fz::replace_substrings(ssize, "\n", "");
-				fz::replace_substrings(ssize, "\n", "");
-				fzprintf(storjEvent::Listentry, "%s\n%s\n%s", sname, ssize, sid);
-			}
-		}
-	}
-
-	// Cleanup
 	json_object_put(req->response);
+	free(req->path);
 	free(req);
 	free(work_req);
 }
@@ -167,6 +122,7 @@ extern "C" void download_file_complete(int status, FILE *fd, void *)
 {
 	if (status) {
 		fzprintf(storjEvent::Error, "Download failed with error %s (%d)", storj_strerror(status), status);
+		exit(1);
 	}
 	else {
 		fzprintf(storjEvent::Done, "1");
@@ -177,6 +133,7 @@ extern "C" void upload_file_complete(int status, void *)
 {
 	if (status) {
 		fzprintf(storjEvent::Error, "Download failed with error %s (%d)", storj_strerror(status), status);
+		exit(1);
 	}
 	else {
 		fzprintf(storjEvent::Done, "1");
@@ -200,9 +157,9 @@ extern "C" void generic_done(uv_work_t *work_req, int status)
 
 	json_request_t *req = static_cast<json_request_t *>(work_req->data);
 
-	if (req->status_code != 200) {
+	if (req->status_code < 200 || req->status_code > 299) {
 		fzprintf(storjEvent::Error, "Request failed with status code %d", req->status_code);
-		return;
+		exit(1);
 	}
 
 	fzprintf(storjEvent::Done, "1");

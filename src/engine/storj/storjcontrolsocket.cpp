@@ -93,6 +93,11 @@ void CStorjControlSocket::Resolve(CServerPath const& path, std::wstring const& f
 	Push(std::make_unique<CStorjResolveOpData>(*this, path, file, bucket, fileId, ignore_missing_file));
 }
 
+void CStorjControlSocket::Resolve(CServerPath const& path, std::deque<std::wstring> const& files, std::wstring & bucket, std::deque<std::wstring> & fileIds)
+{
+	Push(std::make_unique<CStorjResolveManyOpData>(*this, path, files, bucket, fileIds));
+}
+
 void CStorjControlSocket::OnStorjEvent(storj_message const& message)
 {
 	if (!currentServer_) {
