@@ -94,13 +94,13 @@ void CStorjInputThread::entry()
 		case storjEvent::Unknown:
 			error = fz::sprintf(L"Unknown eventType %d", readType);
 			break;
+		case storjEvent::Done:
 		case storjEvent::Recv:
 		case storjEvent::Send:
 		case storjEvent::UsedQuotaRecv:
 		case storjEvent::UsedQuotaSend:
 			break;
 		case storjEvent::Reply:
-		case storjEvent::Done:
 		case storjEvent::Error:
 		case storjEvent::Verbose:
 		case storjEvent::Info:

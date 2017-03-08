@@ -6,6 +6,14 @@
 
 #include "storj.h"
 
+void fzprintf(storjEvent event)
+{
+	fputc('0' + static_cast<int>(event), stdout);
+
+	fputc('\n', stdout);
+	fflush(stdout);
+}
+
 template<typename ...Args>
 void fzprintf(storjEvent event, Args &&... args)
 {
@@ -46,31 +54,33 @@ extern "C" void get_buckets_callback(uv_work_t *work_req, int status)
 {
 	if (status != 0) {
 		fzprintf(storjEvent::Error, "Request failed with outer status code %d", status);
-		exit(1);
+	}
+	else {
+		get_buckets_request_t *req = static_cast<get_buckets_request_t *>(work_req->data);
+
+		if (req->status_code != 200) {
+			fzprintf(storjEvent::Error, "Request failed with status code %d", req->status_code);
+		}
+		else {
+			for (int i = 0; i < req->total_buckets; ++i) {
+				storj_bucket_meta_t &bucket = req->buckets[i];
+
+				std::string id = bucket.id;
+				std::string name = bucket.name;
+				fz::replace_substrings(name, "\r", "");
+				fz::replace_substrings(id, "\r", "");
+				fz::replace_substrings(name, "\n", "");
+				fz::replace_substrings(id, "\n", "");
+
+				fzprintf(storjEvent::Listentry, "%s\n-1\n%s", name, id);
+			}
+			fzprintf(storjEvent::Done);
+		}
+
+		json_object_put(req->response);
+		free(req);
 	}
 
-	get_buckets_request_t *req = static_cast<get_buckets_request_t *>(work_req->data);
-
-	if (req->status_code != 200) {
-		fzprintf(storjEvent::Error, "Request failed with status code %d", req->status_code);
-		exit(1);
-	}
-
-	for (int i = 0; i < req->total_buckets; ++i) {
-		storj_bucket_meta_t &bucket = req->buckets[i];
-
-		std::string id = bucket.id;
-		std::string name = bucket.name;
-		fz::replace_substrings(name, "\r", "");
-		fz::replace_substrings(id, "\r", "");
-		fz::replace_substrings(name, "\n", "");
-		fz::replace_substrings(id, "\n", "");
-
-		fzprintf(storjEvent::Listentry, "%s\n-1\n%s", name, id);
-	}
-
-	json_object_put(req->response);
-	free(req);
 	free(work_req);
 }
 
@@ -78,34 +88,34 @@ extern "C" void list_files_callback(uv_work_t *work_req, int status)
 {
 	if (status != 0) {
 		fzprintf(storjEvent::Error, "Request failed with outer status code %d", status);
-		exit(1);
 	}
+	else {
+		list_files_request_t *req = static_cast<list_files_request_t *>(work_req->data);
 
-	list_files_request_t *req = static_cast<list_files_request_t *>(work_req->data);
+		if (req->status_code != 200) {
+			fzprintf(storjEvent::Error, "Request failed with status code %d", req->status_code);
+		}
+		else {
+			for (unsigned int i = 0; i < req->total_files; ++i) {
+				storj_file_meta_t &file = req->files[i];
 
-	if (req->status_code != 200) {
-		fzprintf(storjEvent::Error, "Request failed with status code %d", req->status_code);
-		exit(1);
+				std::string name = file.filename;
+				std::string id = file.id;
+				uint64_t size = file.size;
+				fz::replace_substrings(name, "\r", "");
+				fz::replace_substrings(id, "\r", "");
+				fz::replace_substrings(name, "\n", "");
+				fz::replace_substrings(id, "\n", "");
+
+				fzprintf(storjEvent::Listentry, "%s\n%d\n%s", name, size, id);
+			}
+			fzprintf(storjEvent::Done);
+		}
+
+		json_object_put(req->response);
+		free(req->path);
+		free(req);
 	}
-
-	for (unsigned int i = 0; i < req->total_files; ++i) {
-		storj_file_meta_t &file = req->files[i];
-
-		std::string name = file.filename;
-		std::string id = file.id;
-		uint64_t size = file.size;
-		fz::replace_substrings(name, "\r", "");
-		fz::replace_substrings(id, "\r", "");
-		fz::replace_substrings(name, "\n", "");
-		fz::replace_substrings(id, "\n", "");
-
-		fzprintf(storjEvent::Listentry, "%s\n%d\n%s", name, size, id);
-
-	}
-
-	json_object_put(req->response);
-	free(req->path);
-	free(req);
 	free(work_req);
 }
 
@@ -122,10 +132,9 @@ extern "C" void download_file_complete(int status, FILE *fd, void *)
 {
 	if (status) {
 		fzprintf(storjEvent::Error, "Download failed with error %s (%d)", storj_strerror(status), status);
-		exit(1);
 	}
 	else {
-		fzprintf(storjEvent::Done, "1");
+		fzprintf(storjEvent::Done);
 	}
 }
 
@@ -133,10 +142,9 @@ extern "C" void upload_file_complete(int status, void *)
 {
 	if (status) {
 		fzprintf(storjEvent::Error, "Download failed with error %s (%d)", storj_strerror(status), status);
-		exit(1);
 	}
 	else {
-		fzprintf(storjEvent::Done, "1");
+		fzprintf(storjEvent::Done);
 	}
 }
 
@@ -152,17 +160,17 @@ extern "C" void generic_done(uv_work_t *work_req, int status)
 {
 	if (status) {
 		fzprintf(storjEvent::Error, "Command failed with error %s (%d)", storj_strerror(status), status);
-		exit(1);
 	}
+	else {
+		json_request_t *req = static_cast<json_request_t *>(work_req->data);
 
-	json_request_t *req = static_cast<json_request_t *>(work_req->data);
-
-	if (req->status_code < 200 || req->status_code > 299) {
-		fzprintf(storjEvent::Error, "Request failed with status code %d", req->status_code);
-		exit(1);
+		if (req->status_code < 200 || req->status_code > 299) {
+			fzprintf(storjEvent::Error, "Request failed with status code %d", req->status_code);
+		}
+		else {
+			fzprintf(storjEvent::Done);
+		}
 	}
-
-	fzprintf(storjEvent::Done, "1");
 }
 }
 
@@ -227,15 +235,15 @@ int main()
 				port = fz::to_integral<unsigned short>(host.substr(pos + 1));
 				host = host.substr(0, pos);
 			}
-			fzprintf(storjEvent::Done, "1");
+			fzprintf(storjEvent::Done);
 		}
 		else if (command == "user") {
 			user = arg;
-			fzprintf(storjEvent::Done, "1");
+			fzprintf(storjEvent::Done);
 		}
 		else if (command == "pass") {
 			pass = arg;
-			fzprintf(storjEvent::Done, "1");
+			fzprintf(storjEvent::Done);
 		}
 		else if (command == "list-buckets") {
 			init_env();
@@ -243,9 +251,7 @@ int main()
 			storj_bridge_get_buckets(env, 0, get_buckets_callback);
 			if (uv_run(env->loop, UV_RUN_DEFAULT)) {
 				fzprintf(storjEvent::Error, "uv_run failed.");
-				exit(1);
 			}
-			fzprintf(storjEvent::Done, "1");
 		}
 		else if (command == "list") {
 			init_env();
@@ -257,9 +263,7 @@ int main()
 			storj_bridge_list_files(env, arg.c_str(), 0, list_files_callback);
 			if (uv_run(env->loop, UV_RUN_DEFAULT)) {
 				fzprintf(storjEvent::Error, "uv_run failed.");
-				exit(1);
 			}
-			fzprintf(storjEvent::Done, "1");
 		}
 		else if (command == "get") {
 			size_t pos = arg.find(' ');
@@ -311,7 +315,6 @@ int main()
 			if (uv_run(env->loop, UV_RUN_DEFAULT)) {
 				fclose(fd);
 				fzprintf(storjEvent::Error, "uv_run failed.");
-				exit(1);
 			}
 			fclose(fd);
 		}
@@ -394,7 +397,6 @@ int main()
 			}
 			if (uv_run(env->loop, UV_RUN_DEFAULT)) {
 				fzprintf(storjEvent::Error, "uv_run failed.");
-				exit(1);
 			}
 		}
 		else if (command == "rm") {
@@ -415,7 +417,6 @@ int main()
 			}
 			if (uv_run(env->loop, UV_RUN_DEFAULT)) {
 				fzprintf(storjEvent::Error, "uv_run failed.");
-				exit(1);
 			}
 		}
 		else {
