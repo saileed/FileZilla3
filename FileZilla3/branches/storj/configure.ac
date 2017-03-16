@@ -1,4 +1,4 @@
-AC_INIT([FileZilla],[3.25.0-beta1],[tim.kosse@filezilla-project.org],[],[https://filezilla-project.org/])
+AC_INIT([FileZilla],[3.25.0],[tim.kosse@filezilla-project.org],[],[https://filezilla-project.org/])
 AC_CONFIG_HEADERS([src/include/config.h])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR(config)
@@ -12,6 +12,9 @@ AC_PROG_INSTALL
 
 LT_INIT
 LT_LANG([C++])
+
+# Todo: Use sub-configure for OSX specific code
+_AM_DEPENDENCIES(OBJC)
 
 AC_CACHE_SAVE
 
@@ -392,9 +395,12 @@ if test "$buildmain" = "yes"; then
     [use_mac_sandbox="$enableval"], [use_mac_sandbox="no"])
   if test "$use_mac_sandbox" == "yes"; then
     AC_DEFINE([USE_MAC_SANDBOX], [1],
-       [Define to 1 if the App Sandbox on OS X should be used.])]
+       [Define to 1 if the App Sandbox on OS X should be used.])
   fi
 
+  if test "$macappbundle" = "yes"; then
+    AC_PROG_OBJC
+  fi
 
   # Installer creation under Windows
   # --------------------------------

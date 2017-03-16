@@ -26,7 +26,7 @@ bool CAboutDialog::Create(wxWindow* parent)
 	xrc_call(*this, "ID_FILEZILLA_LOGO", &wxStaticBitmap::SetBitmap, bmp);
 
 	xrc_call(*this, "ID_URL", &wxHyperlinkCtrl::SetLabel, _T("https://filezilla-project.org/"));
-	xrc_call(*this, "ID_COPYRIGHT", &wxStaticText::SetLabel, _T("Copyright (C) 2004-2016  Tim Kosse"));
+	xrc_call(*this, "ID_COPYRIGHT", &wxStaticText::SetLabel, _T("Copyright (C) 2004-2017  Tim Kosse"));
 
 	wxString version = CBuildInfo::GetVersion();
 	if (CBuildInfo::GetBuildType() == _T("nightly")) {
@@ -68,7 +68,7 @@ bool CAboutDialog::Create(wxWindow* parent)
 		xrc_call(*this, "ID_CFLAGS_DESC", &wxStaticText::Hide);
 	}
 	else {
-		WrapText(this, compilerFlags, 250);
+		WrapText(this, compilerFlags, 300);
 		xrc_call(*this, "ID_CFLAGS", &wxStaticText::SetLabel, compilerFlags);
 	}
 
@@ -114,7 +114,7 @@ bool CAboutDialog::Create(wxWindow* parent)
 
 	wxString cpuCaps = CBuildInfo::GetCPUCaps(' ');
 	if (!cpuCaps.empty()) {
-		WrapText(this, cpuCaps, 250);
+		WrapText(this, cpuCaps, 300);
 		xrc_call(*this, "ID_SYSTEM_CPU", &wxStaticText::SetLabel, cpuCaps);
 	}
 	else {
