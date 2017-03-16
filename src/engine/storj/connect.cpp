@@ -40,7 +40,28 @@ int CStorjConnectOpData::Send()
 		return controlSocket_.SendCommand(fz::sprintf(L"user %s", currentServer_.GetUser()));
 	case connect_pass:
 		// FIXME: interactive login
-		return controlSocket_.SendCommand(fz::sprintf(L"pass %s", currentServer_.GetPass()), fz::sprintf(L"pass %s", std::wstring(currentServer_.GetPass().size(), '*')));
+		{
+			std::wstring pass = currentServer_.GetPass();
+			size_t pos = pass.rfind('|');
+			if (pos == std::wstring::npos) {
+				LogMessage(MessageType::Error, _("Password or encryption key are not set"));
+				return FZ_REPLY_ERROR | FZ_REPLY_DISCONNECTED;
+			}
+			pass = pass.substr(0, pos);
+			return controlSocket_.SendCommand(fz::sprintf(L"pass %s", pass), fz::sprintf(L"pass %s", std::wstring(pass.size(), '*')));
+		}
+	case connect_key:
+		// FIXME: interactive login
+		{
+			std::wstring key = currentServer_.GetPass();
+			size_t pos = key.rfind('|');
+			if (pos == std::wstring::npos) {
+				LogMessage(MessageType::Error, _("Password or encryption key are not set"));
+				return FZ_REPLY_ERROR | FZ_REPLY_DISCONNECTED;
+			}
+			key = key.substr(pos + 1);
+			return controlSocket_.SendCommand(fz::sprintf(L"key %s", key), fz::sprintf(L"key %s", std::wstring(key.size(), '*')));
+		}
 	default:
 		LogMessage(MessageType::Debug_Warning, L"Unknown op state: %d", opState);
 		break;
@@ -73,6 +94,9 @@ int CStorjConnectOpData::ParseResponse()
 		opState = connect_pass;
 		break;
 	case connect_pass:
+		opState = connect_key;
+		break;
+	case connect_key:
 		return FZ_REPLY_OK;
 	default:
 		LogMessage(MessageType::Debug_Warning, L"Unknown op state: %d", opState);

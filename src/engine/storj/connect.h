@@ -8,7 +8,8 @@ enum connectStates
 	connect_init,
 	connect_host,
 	connect_user,
-	connect_pass
+	connect_pass,
+	connect_key
 };
 
 class CStorjConnectOpData final : public COpData, public CStorjOpData
