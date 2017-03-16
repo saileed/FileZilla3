@@ -187,6 +187,31 @@ extern "C" void generic_done(uv_work_t *work_req, int status)
 		}
 	}
 }
+
+extern "C" void create_bucket_callback(uv_work_t *work_req, int status)
+{
+	if (status) {
+		fzprintf(storjEvent::Error, "Command failed with error %s (%d)", storj_strerror(status), status);
+	}
+	else {
+		create_bucket_request_t *req = static_cast<create_bucket_request_t *>(work_req->data);
+
+		if (req->status_code == 404) {
+			fzprintf(storjEvent::Error, "Cannot create bucket \"%s\": Name already exists", req->bucket->name);
+		}
+		else if (req->status_code != 201) {
+			fzprintf(storjEvent::Error, "Request failed with status code %d", req->status_code);
+		}
+		else {
+			fzprintf(storjEvent::Done);
+		}
+
+		json_object_put(req->response);
+		free(req);
+	}
+
+	free(work_req);
+}
 }
 
 int main()
@@ -223,6 +248,10 @@ int main()
 		log_options.logger = log;
 		log_options.level = 4;
 		env = storj_init_env(&options, &encrypt_options, &http_options, &log_options);
+		if (!env) {
+			fzprintf(storjEvent::Error, "storj_init_env failed");
+			exit(1);
+		}
 	};
 
 	int ret = 0;
@@ -272,7 +301,6 @@ int main()
 		}
 		else if (command == "list-buckets") {
 			init_env();
-			assert(env);
 			storj_bridge_get_buckets(env, 0, get_buckets_callback);
 			if (uv_run(env->loop, UV_RUN_DEFAULT)) {
 				fzprintf(storjEvent::Error, "uv_run failed.");
@@ -280,7 +308,6 @@ int main()
 		}
 		else if (command == "list") {
 			init_env();
-			assert(env);
 			if (arg.empty()) {
 				fzprintf(storjEvent::Error, "No bucket given");
 				continue;
@@ -310,7 +337,6 @@ int main()
 			}
 
 			init_env();
-			assert(env);
 
 			FILE *fd = fopen(file.c_str(), "w+");
 
@@ -390,7 +416,6 @@ int main()
 
 
 			init_env();
-			assert(env);
 
 			FILE *fd = fopen(file.c_str(), "r");
 
@@ -426,19 +451,36 @@ int main()
 			}
 		}
 		else if (command == "rm") {
-
 			auto args = fz::strtok(arg, ' ');
 			if (args.size() != 2) {
 				fzprintf(storjEvent::Error, "Bad arguments");
 				continue;
 			}
 			init_env();
-			assert(env);
 
 			int status = storj_bridge_delete_file(env, args[0].c_str(), args[1].c_str(), nullptr, generic_done);
 
 			if (status) {
 				fzprintf(storjEvent::Error, "Could not delete file, storj_bridge_delete_file failed: %d", status);
+				continue;
+			}
+			if (uv_run(env->loop, UV_RUN_DEFAULT)) {
+				fzprintf(storjEvent::Error, "uv_run failed.");
+			}
+		}
+		else if (command == "mkbucket") {
+			auto args = fz::strtok(arg, ' ');
+			if (args.size() != 1) {
+				fzprintf(storjEvent::Error, "Bad arguments");
+				continue;
+			}
+			init_env();
+
+			int status = storj_bridge_create_bucket(env, args.front().c_str(),
+												   NULL, create_bucket_callback);
+
+			if (status) {
+				fzprintf(storjEvent::Error, "Could not create bucket file, storj_bridge_create_bucket failed: %d", status);
 				continue;
 			}
 			if (uv_run(env->loop, UV_RUN_DEFAULT)) {

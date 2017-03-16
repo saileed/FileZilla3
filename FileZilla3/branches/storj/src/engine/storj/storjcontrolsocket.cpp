@@ -9,6 +9,7 @@
 #include "engineprivate.h"
 #include "file_transfer.h"
 #include "list.h"
+#include "mkd.h"
 #include "pathcache.h"
 #include "proxy.h"
 #include "resolve.h"
@@ -96,6 +97,17 @@ void CStorjControlSocket::Resolve(CServerPath const& path, std::wstring const& f
 void CStorjControlSocket::Resolve(CServerPath const& path, std::deque<std::wstring> const& files, std::wstring & bucket, std::deque<std::wstring> & fileIds)
 {
 	Push(std::make_unique<CStorjResolveManyOpData>(*this, path, files, bucket, fileIds));
+}
+
+void CStorjControlSocket::Mkdir(const CServerPath& path)
+{
+	if (operations_.empty()) {
+		LogMessage(MessageType::Status, _("Creating directory '%s'..."), path.GetPath());
+	}
+
+	auto pData = std::make_unique<CStorjMkdirOpData>(*this);
+	pData->path_ = path;
+	Push(std::move(pData));
 }
 
 void CStorjControlSocket::OnStorjEvent(storj_message const& message)
@@ -253,41 +265,7 @@ bool CStorjControlSocket::SetAsyncRequestReply(CAsyncRequestNotification *pNotif
 			CFileExistsNotification *pFileExistsNotification = static_cast<CFileExistsNotification *>(pNotification);
 			return SetFileExistsAction(pFileExistsNotification);
 		}
-/*	case reqId_hostkey:
-	case reqId_hostkeyChanged:
-		{
-			if (GetCurrentCommandId() != Command::connect ||
-				!m_pCurrentServer)
-			{
-				LogMessage(MessageType::Debug_Info, L"SetAsyncRequestReply called to wrong time");
-				return false;
-			}
-
-			CHostKeyNotification *pHostKeyNotification = static_cast<CHostKeyNotification *>(pNotification);
-			std::wstring show;
-			if (requestId == reqId_hostkey) {
-				show = _("Trust new Hostkey:");
-			}
-			else {
-				show = _("Trust changed Hostkey:");
-			}
-			show += ' ';
-			if (!pHostKeyNotification->m_trust) {
-				SendCommand(std::wstring(), show + _("No"));
-				if (m_pCurOpData && m_pCurOpData->opId == Command::connect) {
-					CStorjConnectOpData *pData = static_cast<CStorjConnectOpData *>(m_pCurOpData);
-					pData->criticalFailure = true;
-				}
-			}
-			else if (pHostKeyNotification->m_alwaysTrust) {
-				SendCommand(L"y", show + _("Yes"));
-			}
-			else {
-				SendCommand(L"n", show + _("Once"));
-			}
-		}
-		break;
-	case reqId_interactiveLogin:
+/*	case reqId_interactiveLogin:
 		{
 			CInteractiveLoginNotification *pInteractiveLoginNotification = static_cast<CInteractiveLoginNotification *>(pNotification);
 

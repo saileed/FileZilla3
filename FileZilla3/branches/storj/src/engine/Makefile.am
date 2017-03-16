@@ -65,6 +65,7 @@ libengine_a_SOURCES = \
 		storj/file_transfer.cpp \
 		storj/input_thread.cpp \
 		storj/list.cpp \
+		storj/mkd.cpp \
 		storj/resolve.cpp \
 		storj/storjcontrolsocket.cpp \
 		tlssocket.cpp \
@@ -120,6 +121,7 @@ noinst_HEADERS = backend.h \
 		storj/file_transfer.h \
 		storj/input_thread.h \
 		storj/list.h \
+		storj/mkd.h \
 		storj/resolve.h \
 		storj/storjcontrolsocket.h \
 		tlssocket.h \
