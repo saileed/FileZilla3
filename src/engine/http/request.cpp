@@ -22,20 +22,23 @@ int CHttpRequestOpData::Send()
 			request_.headers_["Connection"] = "close";
 			request_.headers_["User-Agent"] = fz::replaced_substrings(PACKAGE_STRING, " ", "/");
 
-			auto const cl = response_.get_header("Content-Length");
+			auto const cl = request_.get_header("Content-Length");
 			if (!cl.empty()) {
-				requestContentLength_ = fz::to_integral<int64_t>(cl, -1);
-				if (requestContentLength_ < 0) {
-					LogMessage(MessageType::Error, _("Malformed header: %s"), _("Invalid Content-Length"));
+				int64_t requestContentLength = fz::to_integral<int64_t>(cl, -1);
+				if (requestContentLength < 0) {
+					LogMessage(MessageType::Error, _("Malformed request header: %s"), _("Invalid Content-Length"));
 					return FZ_REPLY_ERROR;
 				}
-				dataToSend_ = static_cast<uint64_t>(requestContentLength_);
+				dataToSend_ = static_cast<uint64_t>(requestContentLength);
 			}
 
-			if ((requestContentLength_ != -1) != (request_._data_request_ != 0)) {
-				LogMessage(MessageType::Debug_Warning, L"requestContentLength_ != -1 does not match request_._data_request_ != 0");
+			if ((dataToSend_ > 0) != (request_.data_request_ != 0)) {
+				LogMessage(MessageType::Debug_Warning, L"dataToSend_ > 0 does not match request_.data_request_ != 0");
 				return FZ_REPLY_INTERNALERROR;
 			}
+
+			response_.code_ = 0;
+			response_.headers_.clear();
 
 			opState = request_wait_connect;
 			controlSocket_.InternalConnect(fz::to_wstring_from_utf8(request_.uri_.host_), request_.uri_.port_, request_.uri_.scheme_ == "https");
@@ -52,7 +55,7 @@ int CHttpRequestOpData::Send()
 
 			command += "\r\n";
 
-			if (request_._data_request_) {
+			if (request_.data_request_) {
 				opState = request_send;
 			}
 			else {
@@ -73,12 +76,12 @@ int CHttpRequestOpData::Send()
 					if (chunkSize > dataToSend_) {
 						len = static_cast<unsigned int>(dataToSend_);
 					}
-					int res = request_._data_request_(controlSocket_.sendBuffer_ + controlSocket_.sendBufferSize_, len);
+					int res = request_.data_request_(controlSocket_.sendBuffer_ + controlSocket_.sendBufferSize_, len);
 					if (res != FZ_REPLY_CONTINUE) {
 						return res;
 					}
 					if (len > dataToSend_) {
-						LogMessage(MessageType::Debug_Warning, L"request_._data_request_ returned too much data");
+						LogMessage(MessageType::Debug_Warning, L"request_.data_request_ returned too much data");
 						return FZ_REPLY_INTERNALERROR;
 					}
 
@@ -212,7 +215,7 @@ int CHttpRequestOpData::ParseHeader()
 		for (i = 0; (i + 1) < m_recvBufferPos; ++i) {
 			if (recv_buffer_[i] == '\r') {
 				if (recv_buffer_[i + 1] != '\n') {
-					LogMessage(MessageType::Error, _("Malformed reply, server not sending proper line endings"));
+					LogMessage(MessageType::Error, _("Malformed response header: %s"), _("Server not sending proper line endings"));
 					return FZ_REPLY_ERROR;
 				}
 				break;
@@ -256,18 +259,22 @@ int CHttpRequestOpData::ParseHeader()
 		}
 		else {
 			if (!i) {
-				// End of header, data from now on
-				got_header_ = true;
+				memmove(recv_buffer_.get(), recv_buffer_.get() + 2, m_recvBufferPos - 2);
+				m_recvBufferPos -= 2;
+
+				// End of header
 				int res = ProcessCompleteHeader();
 				if (res != FZ_REPLY_CONTINUE) {
 					return res;
 				}
 
-				memmove(recv_buffer_.get(), recv_buffer_.get() + 2, m_recvBufferPos - 2);
-				m_recvBufferPos -= 2;
-
 				if (!m_recvBufferPos) {
 					return FZ_REPLY_WOULDBLOCK;
+				}
+
+				if (!got_header_) {
+					// In case we got 100 Continue
+					continue;
 				}
 
 				if (transfer_encoding_ == chunked) {
@@ -287,7 +294,7 @@ int CHttpRequestOpData::ParseHeader()
 
 			auto pos = line.find(": ");
 			if (pos == std::string::npos || !pos) {
-				LogMessage(MessageType::Error, _("Malformed header: %s"), _("Invalid line"));
+				LogMessage(MessageType::Error, _("Malformed response header: %s"), _("Invalid line"));
 				return FZ_REPLY_ERROR;
 			}
 
@@ -309,6 +316,15 @@ int CHttpRequestOpData::ProcessCompleteHeader()
 {
 	LogMessage(MessageType::Debug_Verbose, L"CHttpRequestOpData::ParseHeader()");
 
+	if (response_.code_ == 100) {
+		// 100 Continue header. Ignore it and start over.
+		response_.code_ = 0;
+		response_.headers_.clear();
+		return FZ_REPLY_CONTINUE;
+	}
+
+	got_header_ = true;
+
 	auto const te = fz::str_tolower_ascii(response_.get_header("Transfer-Encoding"));
 	if (te == "chunked") {
 		transfer_encoding_ = chunked;
@@ -317,7 +333,7 @@ int CHttpRequestOpData::ProcessCompleteHeader()
 		transfer_encoding_ = identity;
 	}
 	else if (!te.empty()) {
-		LogMessage(MessageType::Error, _("Malformed header: %s"), _("Unknown transfer encoding"));
+		LogMessage(MessageType::Error, _("Malformed response header: %s"), _("Unknown transfer encoding"));
 		return FZ_REPLY_ERROR;
 	}
 	
@@ -325,7 +341,7 @@ int CHttpRequestOpData::ProcessCompleteHeader()
 	if (!cl.empty()) {
 		responseContentLength_ = fz::to_integral<int64_t>(cl, -1);
 		if (responseContentLength_ < 0) {
-			LogMessage(MessageType::Error, _("Malformed header: %s"), _("Invalid Content-Length"));
+			LogMessage(MessageType::Error, _("Malformed response header: %s"), _("Invalid Content-Length"));
 			return FZ_REPLY_ERROR;
 		}
 	}
@@ -450,7 +466,7 @@ int CHttpRequestOpData::ProcessData(unsigned char* data, unsigned int len)
 {
 	receivedData_ += len;
 	if (responseContentLength_ != -1 && receivedData_ > responseContentLength_) {
-		LogMessage(MessageType::Error, _("Malformed response: Server sent too much data."));
+		LogMessage(MessageType::Error, _("Malformed response body: %s"), _("Server sent too much data."));
 		return FZ_REPLY_ERROR;
 	}
 
