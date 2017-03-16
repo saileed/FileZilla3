@@ -136,7 +136,11 @@ extern "C" void download_file_progress(double progress,
 								   uint64_t total_bytes,
 								   void *handle)
 {
-	fzprintf(storjEvent::Transfer, "%u", downloaded_bytes);
+	uint64_t & lastProgress = *static_cast<uint64_t*>(handle);
+	if (downloaded_bytes > lastProgress) {
+		fzprintf(storjEvent::Transfer, "%u", downloaded_bytes - lastProgress);
+		lastProgress = downloaded_bytes;
+	}
 }
 
 extern "C" void download_file_complete(int status, FILE *fd, void *)
@@ -323,9 +327,9 @@ int main()
 			uv_signal_start(&sig, signal_handler, SIGINT);
 			sig.data = state;*/
 
-			// FIXME: C-style casts
+			uint64_t lastProgress{};
 			int status = storj_bridge_resolve_file(env, state, bucket.c_str(),
-												   id.c_str(), fd, NULL,
+												   id.c_str(), fd, &lastProgress,
 												   download_file_progress,
 												   download_file_complete);
 			if (status) {
@@ -405,10 +409,11 @@ int main()
 
 			storj_upload_state_t *state = static_cast<storj_upload_state_t*>(malloc(sizeof(storj_upload_state_t)));
 
+			uint64_t lastProgress{};
 			int status = storj_bridge_store_file(env,
 												 state,
 												 &upload_opts,
-												 nullptr,
+												 &lastProgress,
 												 download_file_progress,
 												 upload_file_complete);
 
