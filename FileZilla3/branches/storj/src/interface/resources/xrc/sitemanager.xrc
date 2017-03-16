@@ -255,6 +255,36 @@
                               </object>
                               <cellpos>8,1</cellpos>
                             </object>
+                            <object class="sizeritem">
+                              <object class="wxStaticText" name="ID_ENCRYPTIONKEY_DESC">
+                                <label>Encryption &amp;Key:</label>
+                                <hidden>1</hidden>
+                              </object>
+                              <flag>wxALIGN_CENTRE_VERTICAL</flag>
+                              <cellpos>9,0</cellpos>
+                            </object>
+                            <object class="sizeritem">
+                              <flag>wxGROW</flag>
+                              <object class="wxBoxSizer">
+                                <orient>wxHORIZONTAL</orient>
+                                <object class="sizeritem">
+                                  <object class="wxTextCtrl" name="ID_ENCRYPTIONKEY">
+                                    <hidden>1</hidden>
+                                  </object>
+                                  <option>1</option>
+                                  <flag>wxALIGN_CENTRE_VERTICAL</flag>
+                                </object>
+                                <object class="sizeritem">
+                                  <object class="wxButton" name="ID_ENCRYPTIONKEY_GENERATE">
+                                    <label>Generate...</label>
+                                    <hidden>1</hidden>
+                                  </object>
+                                  <border>5</border>
+                                  <flag>wxALIGN_CENTRE_VERTICAL|wxLEFT</flag>
+                                </object>
+                              </object>
+                              <cellpos>9,1</cellpos>
+                            </object>
                           </object>
                           <flag>wxALL|wxGROW</flag>
                           <border>5</border>
