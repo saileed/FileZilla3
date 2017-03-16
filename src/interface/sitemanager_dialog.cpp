@@ -1104,8 +1104,8 @@ bool CSiteManagerDialog::Verify()
 
 		if (protocol == STORJ && logon_type == NORMAL) {
 			std::wstring encryptionKey = xrc_call(*this, "ID_ENCRYPTIONKEY", &wxTextCtrl::GetValue).ToStdWstring();
-			if (encryptionKey.empty()) {
-				wxMessageBox(_("You have to enter an encryption key"), _("Site Manager - Invalid data"), wxICON_EXCLAMATION, this);
+			if (encryptionKey.empty() || encryptionKey.find('|') != std::wstring::npos) {
+				wxMessageBox(_("You have to enter a valid encryption key"), _("Site Manager - Invalid data"), wxICON_EXCLAMATION, this);
 				xrc_call(*this, "ID_ENCRYPTIONKEY", &wxWindow::SetFocus);
 				return false;
 			}
