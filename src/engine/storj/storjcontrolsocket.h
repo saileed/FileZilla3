@@ -32,9 +32,8 @@ public:
 	void Resolve(CServerPath const& path, std::deque<std::wstring> const& files, std::wstring & bucket, std::deque<std::wstring> & fileIds);
 	virtual void Delete(CServerPath const& path, std::deque<std::wstring>&& files) override;
 	virtual void Mkdir(const CServerPath& path) override;
-	/*
 	virtual void RemoveDir(CServerPath const& path = CServerPath(), std::wstring const& subDir = std::wstring()) override;
-	virtual void Rename(const CRenameCommand& command) override;*/
+	/*virtual void Rename(const CRenameCommand& command) override;*/
 	virtual void Cancel() override;
 
 	virtual bool Connected() const override { return input_thread_.operator bool(); }
@@ -51,24 +50,6 @@ protected:
 	virtual int ResetOperation(int nErrorCode);
 
 	void ProcessReply(int result, std::wstring const& reply);
-
-/*
-	int ChangeDir(CServerPath path = CServerPath(), std::wstring subDir = std::wstring(), bool link_discovery = false);
-	int ChangeDirParseResponse(bool successful, std::wstring const& reply);
-	int ChangeDirSubcommandResult(int prevResult);
-	int ChangeDirSend();
-
-	int MkdirParseResponse(bool successful, std::wstring const& reply);
-	int MkdirSend();
-
-	int DeleteParseResponse(bool successful, std::wstring const& reply);
-	int DeleteSend();
-
-	int RemoveDirParseResponse(bool successful, std::wstring const& reply);
-
-	int RenameParseResponse(bool successful, std::wstring const& reply);
-	int RenameSubcommandResult(int prevResult);
-	int RenameSend();*/
 
 	int SendCommand(std::wstring const& cmd, std::wstring const& show = std::wstring());
 	int AddToStream(std::wstring const& cmd);
@@ -92,6 +73,7 @@ protected:
 	friend class CStorjFileTransferOpData;
 	friend class CStorjListOpData;
 	friend class CStorjMkdirOpData;
+	friend class CStorjRemoveDirOpData;
 	friend class CStorjResolveOpData;
 	friend class CStorjResolveManyOpData;
 };

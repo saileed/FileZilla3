@@ -190,11 +190,11 @@ extern "C" void generic_done(uv_work_t *work_req, int status)
 
 extern "C" void create_bucket_callback(uv_work_t *work_req, int status)
 {
+	create_bucket_request_t *req = static_cast<create_bucket_request_t *>(work_req->data);
 	if (status) {
 		fzprintf(storjEvent::Error, "Command failed with error %s (%d)", storj_strerror(status), status);
 	}
 	else {
-		create_bucket_request_t *req = static_cast<create_bucket_request_t *>(work_req->data);
 
 		if (req->status_code == 404) {
 			fzprintf(storjEvent::Error, "Cannot create bucket \"%s\": Name already exists", req->bucket->name);
@@ -206,10 +206,37 @@ extern "C" void create_bucket_callback(uv_work_t *work_req, int status)
 			fzprintf(storjEvent::Done);
 		}
 
+	}
+
+	if (req) {
 		json_object_put(req->response);
 		free(req);
 	}
+	free(work_req);
+}
 
+extern "C" void delete_bucket_callback(uv_work_t *work_req, int status)
+{
+	json_request_t *req = static_cast<json_request_t *>(work_req->data);
+
+	if (status) {
+		fzprintf(storjEvent::Error, "Command failed with error %s (%d)", storj_strerror(status), status);
+	}
+	else {
+		if (req->status_code != 200 && req->status_code != 204) {
+			fzprintf(storjEvent::Error, "Request failed with status code %d", req->status_code);
+		}
+		else {
+			fzprintf(storjEvent::Done);
+		}
+
+	}
+
+	if (req) {
+		json_object_put(req->response);
+		free(req->path);
+		free(req);
+	}
 	free(work_req);
 }
 }
@@ -480,7 +507,26 @@ int main()
 												   NULL, create_bucket_callback);
 
 			if (status) {
-				fzprintf(storjEvent::Error, "Could not create bucket file, storj_bridge_create_bucket failed: %d", status);
+				fzprintf(storjEvent::Error, "Could not create bucket, storj_bridge_create_bucket failed: %d", status);
+				continue;
+			}
+			if (uv_run(env->loop, UV_RUN_DEFAULT)) {
+				fzprintf(storjEvent::Error, "uv_run failed.");
+			}
+		}
+		else if (command == "rmbucket") {
+			auto args = fz::strtok(arg, ' ');
+			if (args.size() != 1) {
+				fzprintf(storjEvent::Error, "Bad arguments");
+				continue;
+			}
+			init_env();
+
+			int status = storj_bridge_delete_bucket(env, args.front().c_str(),
+												   NULL, delete_bucket_callback);
+
+			if (status) {
+				fzprintf(storjEvent::Error, "Could not remove bucket, storj_bridge_delete_bucket failed: %d", status);
 				continue;
 			}
 			if (uv_run(env->loop, UV_RUN_DEFAULT)) {
