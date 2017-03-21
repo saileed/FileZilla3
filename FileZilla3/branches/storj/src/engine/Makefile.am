@@ -67,6 +67,7 @@ libengine_a_SOURCES = \
 		storj/list.cpp \
 		storj/mkd.cpp \
 		storj/resolve.cpp \
+		storj/rmd.cpp \
 		storj/storjcontrolsocket.cpp \
 		tlssocket.cpp \
 		tlssocket_impl.cpp \
@@ -123,6 +124,7 @@ noinst_HEADERS = backend.h \
 		storj/list.h \
 		storj/mkd.h \
 		storj/resolve.h \
+		storj/rmd.h \
 		storj/storjcontrolsocket.h \
 		tlssocket.h \
 		tlssocket_impl.h

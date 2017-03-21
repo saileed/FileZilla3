@@ -13,6 +13,7 @@
 #include "pathcache.h"
 #include "proxy.h"
 #include "resolve.h"
+#include "rmd.h"
 #include "servercapabilities.h"
 #include "storjcontrolsocket.h"
 
@@ -99,7 +100,7 @@ void CStorjControlSocket::Resolve(CServerPath const& path, std::deque<std::wstri
 	Push(std::make_unique<CStorjResolveManyOpData>(*this, path, files, bucket, fileIds));
 }
 
-void CStorjControlSocket::Mkdir(const CServerPath& path)
+void CStorjControlSocket::Mkdir(CServerPath const& path)
 {
 	if (operations_.empty()) {
 		LogMessage(MessageType::Status, _("Creating directory '%s'..."), path.GetPath());
@@ -107,6 +108,18 @@ void CStorjControlSocket::Mkdir(const CServerPath& path)
 
 	auto pData = std::make_unique<CStorjMkdirOpData>(*this);
 	pData->path_ = path;
+	Push(std::move(pData));
+}
+
+void CStorjControlSocket::RemoveDir(CServerPath const& path, std::wstring const& subDir)
+{
+	LogMessage(MessageType::Debug_Verbose, L"CStorjControlSocket::RemoveDir");
+
+	auto pData = std::make_unique<CStorjRemoveDirOpData>(*this);
+	pData->path_ = path;
+	if (!subDir.empty()) {
+		pData->path_.ChangePath(subDir);
+	}
 	Push(std::move(pData));
 }
 
