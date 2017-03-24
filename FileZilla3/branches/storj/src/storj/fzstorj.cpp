@@ -317,6 +317,14 @@ int main()
 			pass = arg;
 			fzprintf(storjEvent::Done);
 		}
+		else if (command == "genkey") {
+			char mnemonic[2048];
+
+			char* buf = mnemonic;
+			storj_mnemonic_generate(128, &buf);
+			fzprintf(storjEvent::Status, "%s", mnemonic);
+			fzprintf(storjEvent::Done);
+		}
 		else if (command == "key") {
 			mnemonic = arg;
 			if (storj_mnemonic_check(mnemonic.c_str())) {
@@ -453,9 +461,10 @@ int main()
 			}
 
 			storj_upload_opts_t upload_opts;
-			upload_opts.shard_concurrency = 3;
+			upload_opts.prepare_frame_limit = 1;
+			upload_opts.push_frame_limit = 64;
+			upload_opts.push_shard_limit = 64;
 			upload_opts.bucket_id = bucket.c_str();
-
 			upload_opts.file_name = remote_name.c_str();
 			upload_opts.fd = fd;
 
