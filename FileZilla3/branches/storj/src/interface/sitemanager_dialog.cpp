@@ -13,6 +13,7 @@
 #include "wrapengine.h"
 #include "xmlfunctions.h"
 #include "fzputtygen_interface.h"
+#include "storj_key_interface.h"
 #include "xrc_helper.h"
 
 #include <wx/dcclient.h>
@@ -1104,7 +1105,9 @@ bool CSiteManagerDialog::Verify()
 
 		if (protocol == STORJ && logon_type == NORMAL) {
 			std::wstring encryptionKey = xrc_call(*this, "ID_ENCRYPTIONKEY", &wxTextCtrl::GetValue).ToStdWstring();
-			if (encryptionKey.empty() || encryptionKey.find('|') != std::wstring::npos) {
+
+			CStorjKeyInterface validator(this);
+			if (!validator.ValidateKey(encryptionKey, false)) {
 				wxMessageBox(_("You have to enter a valid encryption key"), _("Site Manager - Invalid data"), wxICON_EXCLAMATION, this);
 				xrc_call(*this, "ID_ENCRYPTIONKEY", &wxWindow::SetFocus);
 				return false;
