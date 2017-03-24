@@ -106,6 +106,7 @@ filezilla_SOURCES = aboutdialog.cpp \
 		statusbar.cpp \
 		statuslinectrl.cpp \
 		StatusView.cpp \
+		storj_key_interface.cpp \
 		systemimagelist.cpp \
 		textctrlex.cpp \
 		themeprovider.cpp \
@@ -230,6 +231,7 @@ noinst_HEADERS = aboutdialog.h \
 		 statuslinectrl.h \
 		 statusbar.h \
 		 StatusView.h \
+		 storj_key_interface.h \
 		 systemimagelist.h \
 		 textctrlex.h \
 		 themeprovider.h \
