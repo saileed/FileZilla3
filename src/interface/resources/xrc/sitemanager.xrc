@@ -153,6 +153,13 @@
                                   </object>
                                   <option>1</option>
                                 </object>
+                                <object class="sizeritem">
+                                  <object class="wxHyperlinkCtrl" name="ID_SIGNUP">
+                                    <label>Signup</label>
+                                    <url>https://app.storj.io/#/signup</url>
+                                    <hidden>1</hidden>
+                                  </object>
+                                </object>
                                 <object class="spacer">
                                   <size>0,0</size>
                                 </object>
