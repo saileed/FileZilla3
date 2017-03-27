@@ -183,11 +183,14 @@ void CStorjControlSocket::OnStorjEvent(storj_message const& message)
 		{
 			auto value = fz::to_integral<int64_t>(message.text[0]);
 
-			bool tmp;
-			CTransferStatus status = engine_.transfer_status_.Get(tmp);
-			if (!status.empty() && !status.madeProgress) {
-				if (!operations_.empty() && operations_.back()->opId == Command::transfer) {
-					auto & data = static_cast<CStorjFileTransferOpData &>(*operations_.back());
+			if (!operations_.empty() && operations_.back()->opId == Command::transfer) {
+				auto & data = static_cast<CStorjFileTransferOpData &>(*operations_.back());
+
+				SetActive(data.download_ ? CFileZillaEngine::recv : CFileZillaEngine::send);
+
+				bool tmp;
+				CTransferStatus status = engine_.transfer_status_.Get(tmp);
+				if (!status.empty() && !status.madeProgress) {
 					if (data.download_) {
 						if (value > 0) {
 							engine_.transfer_status_.SetMadeProgress();
