@@ -3,11 +3,16 @@
 #include "events.hpp"
 
 #include <libfilezilla/format.hpp>
+#include <libfilezilla/mutex.hpp>
 
 #include "storj.h"
 
+fz::mutex output_mutex;
+
 void fzprintf(storjEvent event)
 {
+	fz::scoped_lock l(output_mutex);
+
 	fputc('0' + static_cast<int>(event), stdout);
 
 	fflush(stdout);
@@ -16,6 +21,8 @@ void fzprintf(storjEvent event)
 template<typename ...Args>
 void fzprintf(storjEvent event, Args &&... args)
 {
+	fz::scoped_lock l(output_mutex);
+
 	fputc('0' + static_cast<int>(event), stdout);
 
 	std::string s = fz::sprintf(std::forward<Args>(args)...);
