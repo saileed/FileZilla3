@@ -89,6 +89,7 @@ protected:
 	void OnNewBookmark(wxCommandEvent&);
 	void OnBookmarkBrowse(wxCommandEvent&);
 	void OnKeyFileBrowse(wxCommandEvent&);
+	void OnGenerateEncryptionKey(wxCommandEvent&);
 
 	void SetControlVisibility(ServerProtocol protocol, LogonType type);
 

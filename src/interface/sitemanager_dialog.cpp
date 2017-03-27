@@ -56,6 +56,7 @@ EVT_TREE_ITEM_MENU(XRCID("ID_SITETREE"), CSiteManagerDialog::OnContextMenu)
 EVT_MENU(XRCID("ID_EXPORT"), CSiteManagerDialog::OnExportSelected)
 EVT_BUTTON(XRCID("ID_NEWBOOKMARK"), CSiteManagerDialog::OnNewBookmark)
 EVT_BUTTON(XRCID("ID_BOOKMARK_BROWSE"), CSiteManagerDialog::OnBookmarkBrowse)
+EVT_BUTTON(XRCID("ID_ENCRYPTIONKEY_GENERATE"), CSiteManagerDialog::OnGenerateEncryptionKey)
 END_EVENT_TABLE()
 
 std::array<ServerProtocol, 4> const ftpSubOptions{ FTP, FTPES, FTPS, INSECURE_FTP };
@@ -2543,4 +2544,15 @@ ServerProtocol CSiteManagerDialog::GetProtocol() const
 LogonType CSiteManagerDialog::GetLogonType() const
 {
 	return CServer::GetLogonTypeFromName(xrc_call(*this, "ID_LOGONTYPE", &wxChoice::GetStringSelection).ToStdWstring());
+}
+
+void CSiteManagerDialog::OnGenerateEncryptionKey(wxCommandEvent& event)
+{
+	CStorjKeyInterface generator(this);
+	std::wstring key = generator.GenerateKey();
+	if (!key.empty()) {
+		xrc_call(*this, "ID_ENCRYPTIONKEY", &wxTextCtrl::ChangeValue, wxString(key));
+		xrc_call(*this, "ID_ENCRYPTIONKEY", &wxWindow::SetFocus);
+		wxMessageBox(_("The generated encryption key is:") + L"\n\n" + key + L"\n\n" + _("Note: Please save this key in a secure location. A lost key cannot be recovered and you won't be able to access your files anymore."), _("Site Manager - Generated key"), wxICON_EXCLAMATION, this);
+	}
 }

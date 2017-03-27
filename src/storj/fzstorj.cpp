@@ -322,13 +322,17 @@ int main()
 
 			char* buf = mnemonic;
 			storj_mnemonic_generate(128, &buf);
-			fzprintf(storjEvent::Status, "%s", mnemonic);
-			fzprintf(storjEvent::Done);
+			fzprintf(storjEvent::Done, "%s", mnemonic);
 		}
-		else if (command == "key") {
+		else if (command == "key" || command == "validatekey") {
 			mnemonic = arg;
 			if (storj_mnemonic_check(mnemonic.c_str())) {
-				fzprintf(storjEvent::Done);
+				if (command == "key") {
+					fzprintf(storjEvent::Done);
+				}
+				else {
+					fzprintf(storjEvent::Done, "");
+				}
 			}
 			else {
 				fzprintf(storjEvent::Error, "Invalid security key");
