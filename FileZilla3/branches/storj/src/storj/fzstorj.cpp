@@ -68,8 +68,16 @@ extern "C" void get_buckets_callback(uv_work_t *work_req, int status)
 			fzprintf(storjEvent::Error, "Request failed with status code %d", req->status_code);
 		}
 		else {
+			bool encrypted = false;
+
 			for (unsigned int i = 0; i < req->total_buckets; ++i) {
 				storj_bucket_meta_t &bucket = req->buckets[i];
+
+
+				if (!bucket.decrypted) {
+					encrypted = true;
+					break;
+				}
 
 				std::string id = bucket.id;
 				std::string name = bucket.name;
@@ -80,7 +88,13 @@ extern "C" void get_buckets_callback(uv_work_t *work_req, int status)
 
 				fzprintf(storjEvent::Listentry, "%s\n-1\n%s", name, id);
 			}
-			fzprintf(storjEvent::Done);
+
+			if (encrypted) {
+				fzprintf(storjEvent::Error, "Wrong security key for this account");
+			}
+			else {
+				fzprintf(storjEvent::Done);
+			}
 		}
 
 		json_object_put(req->response);
