@@ -55,7 +55,12 @@ int CStorjFileTransferOpData::Send()
 			controlSocket_.CreateLocalDir(localFile_);
 		}
 
-		engine_.transfer_status_.Init(remoteFileSize_, 0, false);
+		if (download_) {
+			engine_.transfer_status_.Init(remoteFileSize_, 0, false);
+		}
+		else {
+			engine_.transfer_status_.Init(localFileSize_, 0, false);
+		}
 
 		engine_.transfer_status_.SetStartTime();
 		transferInitiated_ = true;
