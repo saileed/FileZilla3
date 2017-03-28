@@ -9,6 +9,8 @@ enum FileTransferStates
 {
 	filetransfer_init,
 	filetransfer_resolve,
+	filetransfer_waitfileexists,
+	filetransfer_delete,
 	filetransfer_transfer
 };
 
@@ -48,6 +50,15 @@ int CStorjFileTransferOpData::Send()
 		}
 
 		controlSocket_.Resolve(remotePath_, remoteFile_, bucket_, &fileId_, !download_);
+		return FZ_REPLY_CONTINUE;
+	case filetransfer_waitfileexists:
+		if (!download_ && remoteFileSize_ > -1) {
+			controlSocket_.Delete(remotePath_, std::deque<std::wstring>{remoteFile_});
+			opState = filetransfer_delete;
+		}
+		else {
+			opState = filetransfer_transfer;
+		}
 		return FZ_REPLY_CONTINUE;
 	case filetransfer_transfer:
 
@@ -95,33 +106,38 @@ int CStorjFileTransferOpData::SubcommandResult(int prevResult, COpData const&)
 {
 	LogMessage(MessageType::Debug_Verbose, L"CStorjFileTransferOpData::SubcommandResult() in state %d", opState);
 
-	if (prevResult != FZ_REPLY_OK) {
-		return prevResult;
-	}
-
 	switch (opState) {
 	case filetransfer_resolve:
-		opState = filetransfer_transfer;
 
-		// Get remote file info
-		CDirentry entry;
-		bool dirDidExist;
-		bool matchedCase;
-		bool found = engine_.GetDirectoryCache().LookupFile(entry, currentServer_, remotePath_, remoteFile_, dirDidExist, matchedCase);
-		if (found) {
-			if (matchedCase && !entry.is_unsure()) {
-				remoteFileSize_ = entry.size;
-				if (entry.has_date()) {
-					fileTime_ = entry.time;
+		if (prevResult != FZ_REPLY_OK) {
+			return prevResult;
+		}
+		else {
+			// Get remote file info
+			CDirentry entry;
+			bool dirDidExist;
+			bool matchedCase;
+			bool found = engine_.GetDirectoryCache().LookupFile(entry, currentServer_, remotePath_, remoteFile_, dirDidExist, matchedCase);
+			if (found) {
+				if (matchedCase && !entry.is_unsure()) {
+					remoteFileSize_ = entry.size;
+					if (entry.has_date()) {
+						fileTime_ = entry.time;
+					}
 				}
 			}
-		}
 
-		int res = controlSocket_.CheckOverwriteFile();
-		if (res != FZ_REPLY_OK) {
-			return res;
-		}
+			int res = controlSocket_.CheckOverwriteFile();
+			if (res != FZ_REPLY_OK) {
+				opState = filetransfer_waitfileexists;
+				return res;
+			}
 
+			opState = filetransfer_transfer;
+		}
+		return FZ_REPLY_CONTINUE;
+	case filetransfer_delete:
+		opState = filetransfer_transfer;
 		return FZ_REPLY_CONTINUE;
 	}
 
