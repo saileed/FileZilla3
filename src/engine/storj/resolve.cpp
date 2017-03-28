@@ -34,16 +34,13 @@ int CStorjResolveOpData::Send()
 
 			return FZ_REPLY_OK;
 		}
-		else if (path_.SegmentCount() != 1) {
-			return FZ_REPLY_INTERNALERROR;
-		}
 		else {
 			CDirectoryListing buckets;
 
 			bool outdated{};
 			bool found = engine_.GetDirectoryCache().Lookup(buckets, currentServer_, CServerPath(L"/"), false, outdated);
 			if (found && !outdated) {
-				int pos = buckets.FindFile_CmpCase(path_.GetLastSegment());
+				int pos = buckets.FindFile_CmpCase(path_.GetFirstSegment());
 				if (pos != -1) {
 					bucket_ = *buckets[pos].ownerGroup;
 					LogMessage(MessageType::Debug_Info, L"Directory is in bucket %s", bucket_);
@@ -111,19 +108,18 @@ int CStorjResolveOpData::SubcommandResult(int prevResult, COpData const&)
 {
 	LogMessage(MessageType::Debug_Verbose, L"CStorjResolveOpData::SubcommandResult() in state %d", opState);
 
-	if (prevResult != FZ_REPLY_OK) {
-		return prevResult;
-	}
-
 	switch (opState) {
 	case resolve_waitlistbuckets:
-		{
+		if (prevResult != FZ_REPLY_OK) {
+			return prevResult;
+		}
+		else {
 			CDirectoryListing buckets;
 
 			bool outdated{};
 			bool found = engine_.GetDirectoryCache().Lookup(buckets, currentServer_, CServerPath(L"/"), false, outdated);
 			if (found && !outdated) {
-				int pos = buckets.FindFile_CmpCase(path_.GetLastSegment());
+				int pos = buckets.FindFile_CmpCase(path_.GetFirstSegment());
 				if (pos != -1) {
 					bucket_ = *buckets[pos].ownerGroup;
 					LogMessage(MessageType::Debug_Info, L"Directory is in bucket %s", bucket_);
@@ -135,7 +131,13 @@ int CStorjResolveOpData::SubcommandResult(int prevResult, COpData const&)
 		LogMessage(MessageType::Error, _("Bucket not found"));
 		return FZ_REPLY_ERROR;
 	case resolve_waitlist:
-		{
+		if (prevResult != FZ_REPLY_OK) {
+			if (ignore_missing_file_) {
+				return FZ_REPLY_OK;
+			}
+			return prevResult;
+		}
+		else {
 			CDirectoryListing listing;
 
 			bool outdated{};
@@ -180,16 +182,13 @@ int CStorjResolveManyOpData::Send()
 			// It's the root, nothing to resolve here.
 			return FZ_REPLY_INTERNALERROR;
 		}
-		else if (path_.SegmentCount() != 1) {
-			return FZ_REPLY_INTERNALERROR;
-		}
 		else {
 			CDirectoryListing buckets;
 
 			bool outdated{};
 			bool found = engine_.GetDirectoryCache().Lookup(buckets, currentServer_, CServerPath(L"/"), false, outdated);
 			if (found && !outdated) {
-				int pos = buckets.FindFile_CmpCase(path_.GetLastSegment());
+				int pos = buckets.FindFile_CmpCase(path_.GetFirstSegment());
 				if (pos != -1) {
 					bucket_ = *buckets[pos].ownerGroup;
 					LogMessage(MessageType::Debug_Info, L"Directory is in bucket %s", bucket_);
@@ -261,7 +260,7 @@ int CStorjResolveManyOpData::SubcommandResult(int prevResult, COpData const&)
 			bool outdated{};
 			bool found = engine_.GetDirectoryCache().Lookup(buckets, currentServer_, CServerPath(L"/"), false, outdated);
 			if (found && !outdated) {
-				int pos = buckets.FindFile_CmpCase(path_.GetLastSegment());
+				int pos = buckets.FindFile_CmpCase(path_.GetFirstSegment());
 				if (pos != -1) {
 					bucket_ = *buckets[pos].ownerGroup;
 					LogMessage(MessageType::Debug_Info, L"Directory is in bucket %s", bucket_);
