@@ -7,6 +7,8 @@
 
 #include "storj.h"
 
+#include <map>
+
 fz::mutex output_mutex;
 
 void fzprintf(storjEvent event)
@@ -112,10 +114,15 @@ extern "C" void list_files_callback(uv_work_t *work_req, int status)
 	else {
 		list_files_request_t *req = static_cast<list_files_request_t *>(work_req->data);
 
+		std::string const& prefix = *static_cast<std::string const*>(req->handle);
+
 		if (req->status_code != 200) {
 			fzprintf(storjEvent::Error, "Request failed with status code %d", req->status_code);
 		}
 		else {
+			std::map<std::string, std::string> dirs;
+
+			bool prefixIsValid = false;
 			bool encrypted = false;
 			for (unsigned int i = 0; i < req->total_files; ++i) {
 				storj_file_meta_t &file = req->files[i];
@@ -133,6 +140,38 @@ extern "C" void list_files_callback(uv_work_t *work_req, int status)
 				fz::replace_substrings(name, "\n", "");
 				fz::replace_substrings(id, "\n", "");
 
+				if (name.empty() || name == "." || name == "..") {
+					continue;
+				}
+
+				if (!prefix.empty()) {
+					if (name.substr(0, prefix.size()) != prefix) {
+						continue;
+					}
+					name = name.substr(prefix.size());
+					if (name.empty()) {
+						prefixIsValid = true;
+					}
+				}
+
+				auto pos = name.find('/');
+				if (pos != std::string::npos) {
+					bool actualDirEntry = pos + 1 == name.size();
+					name = name.substr(0, pos);
+					if (name.empty()) {
+						continue;
+					}
+
+					if (actualDirEntry) {
+						dirs[name] = id;
+					}
+					else {
+						dirs.insert(std::make_pair(name, std::string()));
+					}
+					continue;
+				}
+
+				prefixIsValid = true;
 				fzprintf(storjEvent::Listentry, "%s\n%d\n%s", name, size, id);
 			}
 
@@ -140,7 +179,19 @@ extern "C" void list_files_callback(uv_work_t *work_req, int status)
 				fzprintf(storjEvent::Error, "Wrong security key for this bucket");
 			}
 			else {
-				fzprintf(storjEvent::Done);
+				if (!dirs.empty()) {
+					prefixIsValid = true;
+				}
+
+				if (!prefixIsValid) {
+					fzprintf(storjEvent::Error, "Directory does not exist");
+				}
+				else {
+					for (auto const& dir : dirs) {
+						fzprintf(storjEvent::Listentry, "%s/\n-1\n%s", dir.first, dir.second);
+					}
+					fzprintf(storjEvent::Done);
+				}
 			}
 		}
 
@@ -368,11 +419,34 @@ int main()
 		}
 		else if (command == "list") {
 			init_env();
+
 			if (arg.empty()) {
-				fzprintf(storjEvent::Error, "No bucket given");
+				fzprintf(storjEvent::Error, "Bad arguments");
 				continue;
 			}
-			storj_bridge_list_files(env, arg.c_str(), 0, list_files_callback);
+
+			std::string bucket, prefix;
+
+			size_t pos = arg.find(' ');
+			if (pos == std::string::npos) {
+				bucket = arg;
+			}
+			else {
+				bucket = arg.substr(0, pos);
+
+				prefix = arg.substr(pos + 1);
+
+				if (prefix.size() >= 2 && prefix.front() == '"' && prefix.back() == '"') {
+					prefix = fz::replaced_substrings(prefix.substr(1, prefix.size() - 2), "\"\"", "\"");
+				}
+
+				if (!prefix.empty() && prefix.back() != '/') {
+					fzprintf(storjEvent::Error, "Bad arguments");
+					continue;
+				}
+			}
+
+			storj_bridge_list_files(env, bucket.c_str(), &prefix, list_files_callback);
 			if (uv_run(env->loop, UV_RUN_DEFAULT)) {
 				fzprintf(storjEvent::Error, "uv_run failed.");
 			}
@@ -393,7 +467,7 @@ int main()
 			auto file = arg.substr(pos2 + 1);
 
 			if (file.size() >= 3 && file.front() == '"' && file.back() == '"') {
-				file = fz::replaced_substrings(file.substr(1, file.size() -2), "\"\"", "\"");
+				file = fz::replaced_substrings(file.substr(1, file.size() - 2), "\"\"", "\"");
 			}
 
 			init_env();

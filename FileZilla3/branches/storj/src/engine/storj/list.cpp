@@ -135,17 +135,30 @@ int CStorjListOpData::ParseEntry(std::wstring && name, std::wstring const& size,
 
 	CDirentry entry;
 	entry.name = name;
-	entry.size = fz::to_integral<int64_t>(size, -1);
 	entry.ownerGroup.get() = id;
 	if (bucket_.empty()) {
 		entry.flags = CDirentry::flag_dir;
+	}
+	else {
+		if (!entry.name.empty() && entry.name.back() == '/') {
+			entry.flags = CDirentry::flag_dir;
+			entry.name.pop_back();
+		}
+		else {
+			entry.flags = 0;
+		}
+	}
+
+	if (entry.is_dir()) {
 		entry.size = -1;
 	}
 	else {
-		entry.flags = 0;
+		entry.size = fz::to_integral<int64_t>(size, -1);
 	}
 
-	directoryListing_.Append(std::move(entry));
+	if (!entry.name.empty()) {
+		directoryListing_.Append(std::move(entry));
+	}
 
 	return FZ_REPLY_WOULDBLOCK;
 }
