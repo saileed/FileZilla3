@@ -52,7 +52,7 @@ int CStorjFileTransferOpData::Send()
 		controlSocket_.Resolve(remotePath_, remoteFile_, bucket_, &fileId_, !download_);
 		return FZ_REPLY_CONTINUE;
 	case filetransfer_waitfileexists:
-		if (!download_ && remoteFileSize_ > -1) {
+		if (!download_ && !fileId_.empty()) {
 			controlSocket_.Delete(remotePath_, std::deque<std::wstring>{remoteFile_});
 			opState = filetransfer_delete;
 		}
@@ -79,7 +79,15 @@ int CStorjFileTransferOpData::Send()
 			return controlSocket_.SendCommand(L"get " + bucket_ + L" " + fileId_ + L" " + controlSocket_.QuoteFilename(localFile_));
 		}
 		else {
-			return controlSocket_.SendCommand(L"put " + bucket_ + L" " + controlSocket_.QuoteFilename(localFile_) + L" " + controlSocket_.QuoteFilename(remoteFile_));
+			std::wstring path = remotePath_.GetPath();
+			auto pos = path.find('/', 1);
+			if (pos == std::string::npos) {
+				path.clear();
+			}
+			else {
+				path = path.substr(pos + 1) + L"/";
+			}
+			return controlSocket_.SendCommand(L"put " + bucket_ + L" " + controlSocket_.QuoteFilename(localFile_) + L" " + controlSocket_.QuoteFilename(path + remoteFile_));
 		}
 
 

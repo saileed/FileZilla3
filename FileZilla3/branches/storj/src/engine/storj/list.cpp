@@ -38,11 +38,6 @@ int CStorjListOpData::Send()
 			return FZ_REPLY_INTERNALERROR;
 		}
 
-		if (path_.SegmentCount() > 1) {
-			LogMessage(MessageType::Error, _("Invalid path"));
-			return FZ_REPLY_ERROR;
-		}
-
 		opState = list_waitresolve;
 		controlSocket_.Resolve(path_, std::wstring(), bucket_);
 		return FZ_REPLY_CONTINUE;
@@ -71,7 +66,16 @@ int CStorjListOpData::Send()
 			return controlSocket_.SendCommand(L"list-buckets");
 		}
 		else {
-			return controlSocket_.SendCommand(L"list " + bucket_);
+			std::wstring path = path_.GetPath();
+			auto pos = path.find('/', 1);
+			if (pos == std::string::npos) {
+				path.clear();
+			}
+			else {
+				path = controlSocket_.QuoteFilename(path.substr(pos + 1) + L"/");
+			}
+
+			return controlSocket_.SendCommand(L"list " + bucket_ + L" " + path);
 		}
 	}
 
