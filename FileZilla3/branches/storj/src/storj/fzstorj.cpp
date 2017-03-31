@@ -563,6 +563,10 @@ int main()
 					ret = GetTempFileName(buf, "fzstorj", 0, buf2);
 					if (ret) {
 						fd = fopen(buf2, "r+D");
+						if (fd) {
+							fwrite(buf2, 1, 1, fd);
+							rewinf(fd);
+						}
 					}
 				}
 #else
