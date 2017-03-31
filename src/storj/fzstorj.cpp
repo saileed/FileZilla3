@@ -151,6 +151,8 @@ extern "C" void list_files_callback(uv_work_t *work_req, int status)
 					name = name.substr(prefix.size());
 					if (name.empty()) {
 						prefixIsValid = true;
+						fzprintf(storjEvent::Listentry, ".\n-1\n%s", size, id);
+						continue;
 					}
 				}
 
@@ -228,7 +230,7 @@ extern "C" void download_file_complete(int status, FILE *fd, void *)
 extern "C" void upload_file_complete(int status, void *)
 {
 	if (status) {
-		fzprintf(storjEvent::Error, "Download failed with error %s (%d)", storj_strerror(status), status);
+		fzprintf(storjEvent::Error, "Upload failed with error %s (%d)", storj_strerror(status), status);
 	}
 	else {
 		fzprintf(storjEvent::Done);
@@ -551,13 +553,41 @@ int main()
 
 			init_env();
 
-			FILE *fd = fopen(file.c_str(), "r");
+			FILE *fd{};
+			if (file == "null") {
+#ifdef FZ_WINDOWS
+				char buf[MAX_PATH + 2];
+				int ret = GetTempPath(MAX_PATH + 1, buf);
+				if (ret && ret <= MAX_PATH + 1) {
+					char buf2[MAX_PATH + 1];
+					ret = GetTempFileName(buf, "fzstorj", 0, buf2);
+					if (ret) {
+						fd = fopen(buf2, "r+D");
+					}
+				}
+#else
+				std::string tmpname = P_tmpdir;
+				tmpname += "/fzstorjXXXXXX";
+				char* buf = &tmpname[0];
+				int f = mkstemp(buf);
+				if (f != -1) {
+					unlink(buf);
+					write(f, buf, 1);
+					lseek(f, 0, SEEK_SET);
+					fd = fdopen(f, "r");
+				}
+#endif
+			}
+			else {
+				fd = fopen(file.c_str(), "r");
+			}
 
 			if (fd == NULL) {
 				int err = errno;
 				fzprintf(storjEvent::Error, "Could not open local file %s for reading: %d", file, err);
 				continue;
 			}
+
 
 			storj_upload_opts_t upload_opts;
 			upload_opts.prepare_frame_limit = 1;
