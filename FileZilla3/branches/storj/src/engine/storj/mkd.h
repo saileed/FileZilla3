@@ -12,7 +12,9 @@ public:
 
 	virtual int Send() override;
 	virtual int ParseResponse() override;
-	//virtual int SubcommandResult(int prevResult, COpData const& previousOperation) override;
+	virtual int SubcommandResult(int prevResult, COpData const& previousOperation) override;
+
+	std::wstring bucket_;
 };
 
 #endif

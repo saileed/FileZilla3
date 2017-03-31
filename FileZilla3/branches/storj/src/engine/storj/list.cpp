@@ -137,6 +137,11 @@ int CStorjListOpData::ParseEntry(std::wstring && name, std::wstring const& size,
 		return FZ_REPLY_INTERNALERROR;
 	}
 
+	if (name == L".") {
+		pathId_ = id;
+		return FZ_REPLY_WOULDBLOCK;
+	}
+
 	CDirentry entry;
 	entry.name = name;
 	entry.ownerGroup.get() = id;

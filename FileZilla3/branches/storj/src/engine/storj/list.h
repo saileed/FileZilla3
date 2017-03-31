@@ -21,6 +21,8 @@ public:
 
 	int ParseEntry(std::wstring && name, std::wstring const& size, std::wstring && id);
 
+	std::wstring GetPathId() const { return pathId_; }
+
 private:
 	CServerPath path_;
 	std::wstring subDir_;
@@ -32,6 +34,7 @@ private:
 	bool topLevel_{};
 
 	std::wstring bucket_;
+	std::wstring pathId_;
 };
 
 #endif
