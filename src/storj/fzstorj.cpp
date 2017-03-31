@@ -122,7 +122,7 @@ extern "C" void list_files_callback(uv_work_t *work_req, int status)
 		else {
 			std::map<std::string, std::string> dirs;
 
-			bool prefixIsValid = false;
+			bool prefixIsValid = prefix.empty();
 			bool encrypted = false;
 			for (unsigned int i = 0; i < req->total_files; ++i) {
 				storj_file_meta_t &file = req->files[i];
@@ -151,7 +151,7 @@ extern "C" void list_files_callback(uv_work_t *work_req, int status)
 					name = name.substr(prefix.size());
 					if (name.empty()) {
 						prefixIsValid = true;
-						fzprintf(storjEvent::Listentry, ".\n-1\n%s", size, id);
+						fzprintf(storjEvent::Listentry, ".\n-1\n%s", id);
 						continue;
 					}
 				}

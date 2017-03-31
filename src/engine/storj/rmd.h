@@ -18,6 +18,7 @@ public:
 	CServerPath path_;
 
 	std::wstring bucket_;
+	std::wstring pathId_;
 };
 
 #endif
