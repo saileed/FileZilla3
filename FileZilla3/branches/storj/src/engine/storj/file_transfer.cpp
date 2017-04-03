@@ -29,6 +29,13 @@ int CStorjFileTransferOpData::Send()
 			}
 		}
 
+		if (!remotePath_.SegmentCount()) {
+			if (!download_) {
+				LogMessage(MessageType::Error, _("You cannot upload files into the root directory."));
+			}
+			return FZ_REPLY_CRITICALERROR | FZ_REPLY_NOTSUPPORTED;
+		}
+
 		if (download_) {
 			std::wstring filename = remotePath_.FormatFilename(remoteFile_);
 			LogMessage(MessageType::Status, _("Starting download of %s"), filename);
