@@ -76,7 +76,7 @@ int CHttpRequestOpData::Send()
 					if (chunkSize > dataToSend_) {
 						len = static_cast<unsigned int>(dataToSend_);
 					}
-					int res = request_.data_request_(controlSocket_.sendBuffer_ + controlSocket_.sendBufferSize_, len);
+					int res = request_.data_request_(controlSocket_.sendBuffer_, len);
 					if (res != FZ_REPLY_CONTINUE) {
 						return res;
 					}
@@ -96,13 +96,20 @@ int CHttpRequestOpData::Send()
 						LogMessage(MessageType::Error, _("Disconnected from server"));
 						return FZ_REPLY_ERROR | FZ_REPLY_DISCONNECTED;
 					}
-					written = 0;
+					dataToSend_ -= controlSocket_.sendBufferSize_ - controlSocket_.sendBufferPos_;
+					return FZ_REPLY_WOULDBLOCK;
 				}
 
-				dataToSend_ -= written;
-				if (static_cast<unsigned int>(written) != controlSocket_.sendBufferSize_ - controlSocket_.sendBufferPos_) {
-					controlSocket_.sendBufferPos_ += written;
-					controlSocket_.sendBufferSize_ -= written;
+				if (written) {
+					dataToSend_ -= written;
+
+					controlSocket_.SetActive(CFileZillaEngine::send);
+
+					controlSocket_.sendBufferPos_ += static_cast<unsigned int>(written);
+					if (controlSocket_.sendBufferPos_ == controlSocket_.sendBufferSize_) {
+						controlSocket_.sendBufferSize_ = 0;
+						controlSocket_.sendBufferPos_ = 0;
+					}
 				}
 			}
 			opState = request_read;
