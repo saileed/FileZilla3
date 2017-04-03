@@ -557,15 +557,15 @@ int main()
 			if (file == "null") {
 #ifdef FZ_WINDOWS
 				char buf[MAX_PATH + 2];
-				int ret = GetTempPath(MAX_PATH + 1, buf);
+				int ret = GetTempPathA(MAX_PATH + 1, buf);
 				if (ret && ret <= MAX_PATH + 1) {
 					char buf2[MAX_PATH + 1];
-					ret = GetTempFileName(buf, "fzstorj", 0, buf2);
+					ret = GetTempFileNameA(buf, "fzstorj", 0, buf2);
 					if (ret) {
 						fd = fopen(buf2, "r+D");
 						if (fd) {
 							fwrite(buf2, 1, 1, fd);
-							rewinf(fd);
+							rewind(fd);
 						}
 					}
 				}
