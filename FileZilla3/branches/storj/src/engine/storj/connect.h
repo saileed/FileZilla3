@@ -6,6 +6,7 @@
 enum connectStates
 {
 	connect_init,
+	connect_proxy,
 	connect_host,
 	connect_user,
 	connect_pass,

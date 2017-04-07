@@ -3,6 +3,8 @@
 #include "connect.h"
 #include "event.h"
 #include "input_thread.h"
+#include "proxy.h"
+#include "uri.h"
 
 #include <libfilezilla/process.hpp>
 
@@ -34,6 +36,38 @@ int CStorjConnectOpData::Send()
 			}
 		}
 		return FZ_REPLY_WOULDBLOCK;
+	case connect_proxy:
+		{
+			fz::uri proxy_uri;
+			switch (engine_.GetOptions().GetOptionVal(OPTION_PROXY_TYPE))
+			{
+			case 0:
+				opState = connect_host;
+				return FZ_REPLY_CONTINUE;
+			case CProxySocket::HTTP:
+				proxy_uri.scheme_ = "http";
+				break;
+			case CProxySocket::SOCKS5:
+				proxy_uri.scheme_ = "socks5h";
+				break;
+			case CProxySocket::SOCKS4:
+				proxy_uri.scheme_ = "socks4a";
+				break;
+			default:
+				LogMessage(MessageType::Debug_Warning, L"Unsupported proxy type");
+				return FZ_REPLY_INTERNALERROR | FZ_REPLY_DISCONNECTED;
+			}
+
+			proxy_uri.host_ = fz::to_utf8(engine_.GetOptions().GetOption(OPTION_PROXY_HOST));
+			proxy_uri.port_ = engine_.GetOptions().GetOptionVal(OPTION_PROXY_PORT);
+			proxy_uri.user_ = fz::to_utf8(engine_.GetOptions().GetOption(OPTION_PROXY_USER));
+			proxy_uri.pass_ = fz::to_utf8(engine_.GetOptions().GetOption(OPTION_PROXY_PASS));
+
+			auto cmd = L"proxy " + fz::to_wstring(proxy_uri.to_string());
+			proxy_uri.pass_.clear();
+			auto show = L"proxy " + fz::to_wstring(proxy_uri.to_string());
+			return controlSocket_.SendCommand(cmd, show);
+		}
 	case connect_host:
 		return controlSocket_.SendCommand(fz::sprintf(L"host %s", currentServer_.Format(ServerFormat::with_optional_port)));
 	case connect_user:
@@ -85,6 +119,9 @@ int CStorjConnectOpData::ParseResponse()
 			LogMessage(MessageType::Error, _("fzstorj belongs to a different version of FileZilla"));
 			return FZ_REPLY_INTERNALERROR | FZ_REPLY_DISCONNECTED;
 		}
+		opState = connect_proxy;
+		break;
+	case connect_proxy:
 		opState = connect_host;
 		break;
 	case connect_host:
