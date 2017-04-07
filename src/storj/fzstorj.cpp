@@ -83,12 +83,18 @@ extern "C" void get_buckets_callback(uv_work_t *work_req, int status)
 
 				std::string id = bucket.id;
 				std::string name = bucket.name;
+				std::string created;
+				if (bucket.created) {
+					created = bucket.created;
+				}
 				fz::replace_substrings(name, "\r", "");
 				fz::replace_substrings(id, "\r", "");
+				fz::replace_substrings(created, "\r", "");
 				fz::replace_substrings(name, "\n", "");
 				fz::replace_substrings(id, "\n", "");
+				fz::replace_substrings(created, "\n", "");
 
-				fzprintf(storjEvent::Listentry, "%s\n-1\n%s", name, id);
+				fzprintf(storjEvent::Listentry, "%s\n-1\n%s\n%s", name, id, created);
 			}
 
 			if (encrypted) {
@@ -120,7 +126,7 @@ extern "C" void list_files_callback(uv_work_t *work_req, int status)
 			fzprintf(storjEvent::Error, "Request failed with status code %d", req->status_code);
 		}
 		else {
-			std::map<std::string, std::string> dirs;
+			std::map<std::string, std::pair<std::string, std::string>> dirs;
 
 			bool prefixIsValid = prefix.empty();
 			bool encrypted = false;
@@ -135,10 +141,16 @@ extern "C" void list_files_callback(uv_work_t *work_req, int status)
 				std::string name = file.filename;
 				std::string id = file.id;
 				uint64_t size = file.size;
+				std::string created;
+				if (file.created) {
+					created = file.created;
+				}
 				fz::replace_substrings(name, "\r", "");
 				fz::replace_substrings(id, "\r", "");
+				fz::replace_substrings(created, "\r", "");
 				fz::replace_substrings(name, "\n", "");
 				fz::replace_substrings(id, "\n", "");
+				fz::replace_substrings(created, "\n", "");
 
 				if (name.empty() || name == "." || name == "..") {
 					continue;
@@ -151,7 +163,7 @@ extern "C" void list_files_callback(uv_work_t *work_req, int status)
 					name = name.substr(prefix.size());
 					if (name.empty()) {
 						prefixIsValid = true;
-						fzprintf(storjEvent::Listentry, ".\n-1\n%s", id);
+						fzprintf(storjEvent::Listentry, ".\n-1\n%s\n", id);
 						continue;
 					}
 				}
@@ -165,16 +177,16 @@ extern "C" void list_files_callback(uv_work_t *work_req, int status)
 					}
 
 					if (actualDirEntry) {
-						dirs[name] = id;
+						dirs[name] = std::make_pair(id, created);
 					}
 					else {
-						dirs.insert(std::make_pair(name, std::string()));
+						dirs.insert(std::make_pair(name, std::make_pair(std::string(), std::string())));
 					}
 					continue;
 				}
 
 				prefixIsValid = true;
-				fzprintf(storjEvent::Listentry, "%s\n%d\n%s", name, size, id);
+				fzprintf(storjEvent::Listentry, "%s\n%d\n%s\n%s", name, size, id, created);
 			}
 
 			if (encrypted) {
@@ -190,7 +202,7 @@ extern "C" void list_files_callback(uv_work_t *work_req, int status)
 				}
 				else {
 					for (auto const& dir : dirs) {
-						fzprintf(storjEvent::Listentry, "%s/\n-1\n%s", dir.first, dir.second);
+						fzprintf(storjEvent::Listentry, "%s/\n-1\n%s\n%s", dir.first, dir.second.first, dir.second.second);
 					}
 					fzprintf(storjEvent::Done);
 				}
@@ -324,6 +336,7 @@ int main()
 	std::string user;
 	std::string pass;
 	std::string mnemonic;
+	std::string proxy;
 
 	storj_env_t *env{};
 
@@ -344,6 +357,9 @@ int main()
 
 		storj_http_options_t http_options{};
 		http_options.user_agent = "FileZilla";
+		if (!proxy.empty()) {
+			http_options.proxy_url = proxy.c_str();
+		}
 
 		static storj_log_options_t log_options{};
 		log_options.logger = log;
@@ -392,11 +408,11 @@ int main()
 			fzprintf(storjEvent::Done);
 		}
 		else if (command == "genkey") {
-			char mnemonic[2048];
 
-			char* buf = mnemonic;
+			char* buf = 0;
 			storj_mnemonic_generate(128, &buf);
 			fzprintf(storjEvent::Done, "%s", mnemonic);
+			free(buf);
 		}
 		else if (command == "key" || command == "validatekey") {
 			mnemonic = arg;
@@ -411,6 +427,10 @@ int main()
 			else {
 				fzprintf(storjEvent::Error, "Invalid security key");
 			}
+		}
+		else if (command == "proxy") {
+			proxy = arg;
+			fzprintf(storjEvent::Done);
 		}
 		else if (command == "list-buckets") {
 			init_env();

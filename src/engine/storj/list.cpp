@@ -130,7 +130,7 @@ int CStorjListOpData::SubcommandResult(int prevResult, COpData const&)
 	return FZ_REPLY_INTERNALERROR;
 }
 
-int CStorjListOpData::ParseEntry(std::wstring && name, std::wstring const& size, std::wstring && id)
+int CStorjListOpData::ParseEntry(std::wstring && name, std::wstring const& size, std::wstring && id, std::wstring const& created)
 {
 	if (opState != list_list) {
 		LogMessage(MessageType::Debug_Warning, L"ListParseResponse called at inproper time: %d", opState);
@@ -164,6 +164,8 @@ int CStorjListOpData::ParseEntry(std::wstring && name, std::wstring const& size,
 	else {
 		entry.size = fz::to_integral<int64_t>(size, -1);
 	}
+
+	entry.time.set(created, fz::datetime::utc);
 
 	if (!entry.name.empty()) {
 		directoryListing_.Append(std::move(entry));
