@@ -1359,6 +1359,12 @@ void CSiteManagerDialog::OnLogontypeSelChanged(wxCommandEvent& event)
 	LogonType const t = GetLogonType();
 	SetControlVisibility(GetProtocol(), t);
 
+	SetLogonTypeCtrlState();
+}
+
+void CSiteManagerDialog::SetLogonTypeCtrlState()
+{
+	LogonType const t = GetLogonType();
 	xrc_call(*this, "ID_USER", &wxTextCtrl::Enable, t != ANONYMOUS);
 	xrc_call(*this, "ID_PASS", &wxTextCtrl::Enable, t == NORMAL || t == ACCOUNT);
 	xrc_call(*this, "ID_ACCOUNT", &wxTextCtrl::Enable, t == ACCOUNT);
@@ -1859,7 +1865,9 @@ void CSiteManagerDialog::OnCharsetChange(wxCommandEvent&)
 
 void CSiteManagerDialog::OnProtocolSelChanged(wxCommandEvent&)
 {
-	SetControlVisibility(GetProtocol(), GetLogonType());
+	auto protocol = GetProtocol();
+	auto logonType = GetLogonType();
+	SetControlVisibility(protocol, logonType);
 }
 
 namespace {
@@ -1890,15 +1898,21 @@ void CSiteManagerDialog::SetControlVisibility(ServerProtocol protocol, LogonType
 	auto choice = XRCCTRL(*this, "ID_LOGONTYPE", wxChoice);
 
 	// Disallow invalid combinations
-	if ((protocol == SFTP || protocol == STORJ) && type == ACCOUNT) {
+	if (protocol == SFTP && type == ACCOUNT) {
 		type = NORMAL;
 		choice->Select(choice->FindString(CServer::GetNameFromLogonType(type)));
+		SetLogonTypeCtrlState();
 	}
 	else if (protocol != SFTP && type == KEY) {
 		type = NORMAL;
 		choice->Select(choice->FindString(CServer::GetNameFromLogonType(type)));
+		SetLogonTypeCtrlState();
 	}
-
+	else if (protocol == STORJ && type != NORMAL && type != ASK) {
+		type = NORMAL;
+		choice->Select(choice->FindString(CServer::GetNameFromLogonType(type)));
+		SetLogonTypeCtrlState();
+	}
 	ShowItem(*choice, ANONYMOUS, protocol != STORJ);
 	ShowItem(*choice, INTERACTIVE, protocol != STORJ);
 	ShowItem(*choice, KEY, protocol == SFTP);
