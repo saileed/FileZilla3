@@ -109,7 +109,7 @@ void CStorjInputThread::entry()
 			lines = 1;
 			break;
 		case storjEvent::Listentry:
-			lines = 3;
+			lines = 4;
 			break;
 		};
 

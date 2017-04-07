@@ -19,7 +19,7 @@ public:
 	virtual int ParseResponse() override;
 	virtual int SubcommandResult(int prevResult, COpData const& previousOperation) override;
 
-	int ParseEntry(std::wstring && name, std::wstring const& size, std::wstring && id);
+	int ParseEntry(std::wstring && name, std::wstring const& size, std::wstring && id, std::wstring const& created);
 
 	std::wstring GetPathId() const { return pathId_; }
 

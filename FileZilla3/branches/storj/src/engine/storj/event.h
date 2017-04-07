@@ -6,7 +6,7 @@
 struct storj_message
 {
 	storjEvent type;
-	mutable std::wstring text[3];
+	mutable std::wstring text[4];
 };
 
 struct storj_event_type;

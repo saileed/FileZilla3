@@ -167,7 +167,7 @@ void CStorjControlSocket::OnStorjEvent(storj_message const& message)
 			break;
 		}
 		else {
-			int res = static_cast<CStorjListOpData&>(*operations_.back()).ParseEntry(std::move(message.text[0]), message.text[1], std::move(message.text[2]));
+			int res = static_cast<CStorjListOpData&>(*operations_.back()).ParseEntry(std::move(message.text[0]), message.text[1], std::move(message.text[2]), message.text[3]);
 			if (res != FZ_REPLY_WOULDBLOCK) {
 				ResetOperation(res);
 			}
@@ -281,21 +281,6 @@ bool CStorjControlSocket::SetAsyncRequestReply(CAsyncRequestNotification *pNotif
 			CFileExistsNotification *pFileExistsNotification = static_cast<CFileExistsNotification *>(pNotification);
 			return SetFileExistsAction(pFileExistsNotification);
 		}
-/*	case reqId_interactiveLogin:
-		{
-			CInteractiveLoginNotification *pInteractiveLoginNotification = static_cast<CInteractiveLoginNotification *>(pNotification);
-
-			if (!pInteractiveLoginNotification->passwordSet) {
-				DoClose(FZ_REPLY_CANCELED);
-				return false;
-			}
-			std::wstring const pass = pInteractiveLoginNotification->server.GetPass();
-			currentServer_.SetUser(currentServer_.GetUser(), pass);
-			std::wstring show = L"Pass: ";
-			show.append(pass.size(), '*');
-			SendCommand(pass, show);
-		}
-		break;*/
 	default:
 		LogMessage(MessageType::Debug_Warning, L"Unknown async request reply id: %d", requestId);
 		return false;
