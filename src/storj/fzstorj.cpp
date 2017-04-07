@@ -411,8 +411,13 @@ int main()
 
 			char* buf = 0;
 			storj_mnemonic_generate(128, &buf);
-			fzprintf(storjEvent::Done, "%s", mnemonic);
-			free(buf);
+			if (buf) {
+				fzprintf(storjEvent::Done, "%s", buf);
+				free(buf);
+			}
+			else {
+				fzprintf(storjEvent::Error);
+			}
 		}
 		else if (command == "key" || command == "validatekey") {
 			mnemonic = arg;
