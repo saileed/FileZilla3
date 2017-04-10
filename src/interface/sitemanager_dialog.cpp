@@ -376,7 +376,8 @@ bool CSiteManagerDialog::Create(wxWindow* parent, std::vector<_connected_site> *
 	// Set min height of encryption row
 	wxSize descSize = XRCCTRL(*this, "ID_ENCRYPTION_DESC", wxWindow)->GetSize();
 	wxSize encSize = XRCCTRL(*this, "ID_ENCRYPTION", wxWindow)->GetSize();
-	xrc_call(*this, "ID_ENCRYPTION", &wxWindow::GetContainingSizer)->GetItem(2)->SetMinSize(0, std::max(descSize.GetHeight(), encSize.GetHeight()));
+	auto encSizer = xrc_call(*this, "ID_ENCRYPTION", &wxWindow::GetContainingSizer);
+	encSizer->GetItem(encSizer->GetItemCount() - 1)->SetMinSize(0, std::max(descSize.GetHeight(), encSize.GetHeight()));
 
 	// Load bookmark notebook
 	m_pNotebook_Bookmark = new wxNotebook(m_pNotebook_Site->GetParent(), -1);
@@ -1893,7 +1894,13 @@ void CSiteManagerDialog::SetControlVisibility(ServerProtocol protocol, LogonType
 	xrc_call(*this, "ID_ENCRYPTION_DESC", &wxStaticText::Show, isFtp);
 	xrc_call(*this, "ID_ENCRYPTION", &wxChoice::Show, isFtp);
 
+	if (protocol == STORJ) {
+		auto extra = XRCCTRL(*this, "ID_EXTRA", wxStaticText);
+		extra->SetLabel(L"  " +_("Early access"));
+		//extra->SetInitialSize();
+	}
 	xrc_call(*this, "ID_SIGNUP", &wxControl::Show, protocol == STORJ);
+	xrc_call(*this, "ID_EXTRA", &wxControl::Show, protocol == STORJ);
 
 	auto choice = XRCCTRL(*this, "ID_LOGONTYPE", wxChoice);
 
