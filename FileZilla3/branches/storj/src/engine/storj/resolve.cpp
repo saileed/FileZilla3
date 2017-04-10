@@ -11,6 +11,25 @@ enum resolveStates
 	resolve_waitlist
 };
 
+namespace {
+std::wstring ExtractId(std::wstring const& metaData)
+{
+	std::wstring ret;
+
+	auto begin = metaData.find(L"id:");
+	if (begin != std::wstring::npos) {
+		auto end = metaData.find(' ', begin);
+		if (end == std::wstring::npos) {
+			ret = metaData.substr(begin + 3);
+		}
+		else {
+			ret = metaData.substr(begin + 3, end - begin - 3);
+		}
+	}
+	return ret;
+}
+}
+
 int CStorjResolveOpData::Send()
 {
 	LogMessage(MessageType::Debug_Verbose, L"CStorjResolveOpData::Send() in state %d", opState);
@@ -42,7 +61,7 @@ int CStorjResolveOpData::Send()
 			if (found && !outdated) {
 				int pos = buckets.FindFile_CmpCase(path_.GetFirstSegment());
 				if (pos != -1) {
-					bucket_ = *buckets[pos].ownerGroup;
+					bucket_ = ExtractId(*buckets[pos].ownerGroup);
 					LogMessage(MessageType::Debug_Info, L"Directory is in bucket %s", bucket_);
 					opState = resolve_id;
 					return FZ_REPLY_CONTINUE;
@@ -74,7 +93,7 @@ int CStorjResolveOpData::Send()
 			if (found && !outdated) {
 				int pos = listing.FindFile_CmpCase(file_);
 				if (pos != -1) {
-					*fileId_ = *listing[pos].ownerGroup;
+					*fileId_ = ExtractId(*listing[pos].ownerGroup);
 					LogMessage(MessageType::Debug_Info, L"File %s has id %s", path_.FormatFilename(file_), *fileId_);
 					return FZ_REPLY_OK;
 				}
@@ -121,7 +140,7 @@ int CStorjResolveOpData::SubcommandResult(int prevResult, COpData const&)
 			if (found && !outdated) {
 				int pos = buckets.FindFile_CmpCase(path_.GetFirstSegment());
 				if (pos != -1) {
-					bucket_ = *buckets[pos].ownerGroup;
+					bucket_ = ExtractId(*buckets[pos].ownerGroup);
 					LogMessage(MessageType::Debug_Info, L"Directory is in bucket %s", bucket_);
 					opState = resolve_id;
 					return FZ_REPLY_CONTINUE;
@@ -145,7 +164,7 @@ int CStorjResolveOpData::SubcommandResult(int prevResult, COpData const&)
 			if (found && !outdated) {
 				int pos = listing.FindFile_CmpCase(file_);
 				if (pos != -1) {
-					*fileId_ = *listing[pos].ownerGroup;
+					*fileId_ = ExtractId(*listing[pos].ownerGroup);
 					LogMessage(MessageType::Debug_Info, L"File %s has id %s", path_.FormatFilename(file_), *fileId_);
 					return FZ_REPLY_OK;
 				}
@@ -190,7 +209,7 @@ int CStorjResolveManyOpData::Send()
 			if (found && !outdated) {
 				int pos = buckets.FindFile_CmpCase(path_.GetFirstSegment());
 				if (pos != -1) {
-					bucket_ = *buckets[pos].ownerGroup;
+					bucket_ = ExtractId(*buckets[pos].ownerGroup);
 					LogMessage(MessageType::Debug_Info, L"Directory is in bucket %s", bucket_);
 					opState = resolve_id;
 					return FZ_REPLY_CONTINUE;
@@ -218,7 +237,7 @@ int CStorjResolveManyOpData::Send()
 					int pos = listing.FindFile_CmpCase(file);
 					if (pos != -1) {
 						LogMessage(MessageType::Debug_Info, L"File %s has id %s", path_.FormatFilename(file), *listing[pos].ownerGroup);
-						fileIds_.emplace_back(*listing[pos].ownerGroup);
+						fileIds_.emplace_back(ExtractId(*listing[pos].ownerGroup));
 					}
 					else {
 						fileIds_.emplace_back();
@@ -262,7 +281,7 @@ int CStorjResolveManyOpData::SubcommandResult(int prevResult, COpData const&)
 			if (found && !outdated) {
 				int pos = buckets.FindFile_CmpCase(path_.GetFirstSegment());
 				if (pos != -1) {
-					bucket_ = *buckets[pos].ownerGroup;
+					bucket_ = ExtractId(*buckets[pos].ownerGroup);
 					LogMessage(MessageType::Debug_Info, L"Directory is in bucket %s", bucket_);
 					opState = resolve_id;
 					return FZ_REPLY_CONTINUE;
@@ -282,7 +301,7 @@ int CStorjResolveManyOpData::SubcommandResult(int prevResult, COpData const&)
 					int pos = listing.FindFile_CmpCase(file);
 					if (pos != -1) {
 						LogMessage(MessageType::Debug_Info, L"File %s has id %s", path_.FormatFilename(file), *listing[pos].ownerGroup);
-						fileIds_.emplace_back(*listing[pos].ownerGroup);
+						fileIds_.emplace_back(ExtractId(*listing[pos].ownerGroup));
 					}
 					else {
 						fileIds_.emplace_back();

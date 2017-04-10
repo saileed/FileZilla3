@@ -78,7 +78,6 @@ extern "C" void get_buckets_callback(uv_work_t *work_req, int status)
 
 				if (!bucket.decrypted) {
 					encrypted = true;
-					break;
 				}
 
 				std::string id = bucket.id;
@@ -94,15 +93,18 @@ extern "C" void get_buckets_callback(uv_work_t *work_req, int status)
 				fz::replace_substrings(id, "\n", "");
 				fz::replace_substrings(created, "\n", "");
 
-				fzprintf(storjEvent::Listentry, "%s\n-1\n%s\n%s", name, id, created);
+				auto perms = "id:" + id;
+				if (encrypted) {
+					perms += " nokey";
+				}
+
+				fzprintf(storjEvent::Listentry, "%s\n-1\n%s\n%s", name, perms, created);
 			}
 
 			if (encrypted) {
-				fzprintf(storjEvent::Error, "Wrong security key for this account");
+				fzprintf(storjEvent::ErrorMsg, "Wrong encryption key for at lease one bucket");
 			}
-			else {
-				fzprintf(storjEvent::Done);
-			}
+			fzprintf(storjEvent::Done);
 		}
 
 		json_object_put(req->response);
@@ -168,6 +170,8 @@ extern "C" void list_files_callback(uv_work_t *work_req, int status)
 					}
 				}
 
+				auto perms = "id:" + id;
+
 				auto pos = name.find('/');
 				if (pos != std::string::npos) {
 					bool actualDirEntry = pos + 1 == name.size();
@@ -177,7 +181,7 @@ extern "C" void list_files_callback(uv_work_t *work_req, int status)
 					}
 
 					if (actualDirEntry) {
-						dirs[name] = std::make_pair(id, created);
+						dirs[name] = std::make_pair(perms, created);
 					}
 					else {
 						dirs.insert(std::make_pair(name, std::make_pair(std::string(), std::string())));
@@ -186,11 +190,11 @@ extern "C" void list_files_callback(uv_work_t *work_req, int status)
 				}
 
 				prefixIsValid = true;
-				fzprintf(storjEvent::Listentry, "%s\n%d\n%s\n%s", name, size, id, created);
+				fzprintf(storjEvent::Listentry, "%s\n%d\n%s\n%s", name, size, perms, created);
 			}
 
 			if (encrypted) {
-				fzprintf(storjEvent::Error, "Wrong security key for this bucket");
+				fzprintf(storjEvent::Error, "Wrong encryption key for this bucket");
 			}
 			else {
 				if (!dirs.empty()) {
@@ -430,7 +434,7 @@ int main()
 				}
 			}
 			else {
-				fzprintf(storjEvent::Error, "Invalid security key");
+				fzprintf(storjEvent::Error, "Invalid encryption key");
 			}
 		}
 		else if (command == "proxy") {

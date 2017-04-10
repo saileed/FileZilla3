@@ -6,6 +6,7 @@ enum class storjEvent {
 	Reply = 0,
 	Done,
 	Error,
+	ErrorMsg,
 	Verbose,
 	Info,
 	Status,

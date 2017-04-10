@@ -102,6 +102,7 @@ void CStorjInputThread::entry()
 			break;
 		case storjEvent::Reply:
 		case storjEvent::Error:
+		case storjEvent::ErrorMsg:
 		case storjEvent::Verbose:
 		case storjEvent::Info:
 		case storjEvent::Status:
