@@ -146,6 +146,9 @@ void CStorjControlSocket::OnStorjEvent(storj_message const& message)
 		LogMessageRaw(MessageType::Error, message.text[0]);
 		ProcessReply(FZ_REPLY_ERROR, message.text[0]);
 		break;
+	case storjEvent::ErrorMsg:
+		LogMessageRaw(MessageType::Error, message.text[0]);
+		break;
 	case storjEvent::Verbose:
 		LogMessageRaw(MessageType::Debug_Info, message.text[0]);
 		break;
