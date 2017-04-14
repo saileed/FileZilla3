@@ -671,7 +671,7 @@ if test "$buildmain" = "yes"; then
   # Find libstorj
   # -----------------
   PKG_CHECK_MODULES(LIBSTORJ, [libstorj >= 1.0],, [
-	AC_MSG_ERROR([libstorj not found: $LIBSTORJ_PKG_ERRORS. You can download it from https://github.com/Storj/libstorj-c])
+	AC_MSG_ERROR([libstorj not found: $LIBSTORJ_PKG_ERRORS. You can download it from https://github.com/Storj/libstorj])
   ])
   AC_SUBST(LIBSTORJ_CFLAGS)
   AC_SUBST(LIBSTORJ_LIBS)
