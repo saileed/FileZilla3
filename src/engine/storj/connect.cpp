@@ -73,24 +73,22 @@ int CStorjConnectOpData::Send()
 	case connect_user:
 		return controlSocket_.SendCommand(fz::sprintf(L"user %s", currentServer_.GetUser()));
 	case connect_pass:
-		// FIXME: interactive login
 		{
 			std::wstring pass = currentServer_.GetPass();
 			size_t pos = pass.rfind('|');
 			if (pos == std::wstring::npos) {
-				LogMessage(MessageType::Error, _("Password or encryption key are not set"));
+				LogMessage(MessageType::Error, _("Password or encryption key is not set"));
 				return FZ_REPLY_ERROR | FZ_REPLY_DISCONNECTED;
 			}
 			pass = pass.substr(0, pos);
 			return controlSocket_.SendCommand(fz::sprintf(L"pass %s", pass), fz::sprintf(L"pass %s", std::wstring(pass.size(), '*')));
 		}
 	case connect_key:
-		// FIXME: interactive login
 		{
 			std::wstring key = currentServer_.GetPass();
 			size_t pos = key.rfind('|');
 			if (pos == std::wstring::npos) {
-				LogMessage(MessageType::Error, _("Password or encryption key are not set"));
+				LogMessage(MessageType::Error, _("Password or encryption key is not set"));
 				return FZ_REPLY_ERROR | FZ_REPLY_DISCONNECTED;
 			}
 			key = key.substr(pos + 1);
