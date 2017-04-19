@@ -95,6 +95,7 @@ extern "C" void get_buckets_callback(uv_work_t *work_req, int status)
 
 				auto perms = "id:" + id;
 				if (encrypted) {
+					fz::replace_substrings(name, "/", "_");
 					perms += " nokey";
 				}
 
