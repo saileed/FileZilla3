@@ -441,6 +441,7 @@ bool CFileZillaApp::LoadResourceFiles()
 	pResource->LoadFile(wxString(dir + L"settings.xrc"));
 	pResource->LoadFile(wxString(dir + L"sitemanager.xrc"));
 	pResource->LoadFile(wxString(dir + L"update.xrc"));
+	pResource->LoadFile(wxString(dir + L"storj.xrc"));
 
 	// Useful for XRC files with embedded image data.
 	wxFileSystem::AddHandler(new wxFileSystemBlobHandler);

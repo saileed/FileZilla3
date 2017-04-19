@@ -2574,6 +2574,14 @@ void CSiteManagerDialog::OnGenerateEncryptionKey(wxCommandEvent& event)
 	if (!key.empty()) {
 		xrc_call(*this, "ID_ENCRYPTIONKEY", &wxTextCtrl::ChangeValue, wxString(key));
 		xrc_call(*this, "ID_ENCRYPTIONKEY", &wxWindow::SetFocus);
-		wxMessageBox(_("The generated encryption key is:") + L"\n\n" + key + L"\n\n" + _("Note: Please save this key in a secure location. A lost key cannot be recovered and you won't be able to access your files anymore."), _("Site Manager - Generated key"), wxICON_EXCLAMATION, this);
+
+		wxDialogEx dlg;
+		if (dlg.Load(this, "ID_STORJ_GENERATED_KEY")) {
+			dlg.WrapRecursive(&dlg, 2.5);
+			dlg.GetSizer()->Fit(&dlg);
+			dlg.GetSizer()->SetSizeHints(&dlg);
+			xrc_call(dlg, "ID_KEY", &wxTextCtrl::ChangeValue, wxString(key));
+			dlg.ShowModal();
+		}
 	}
 }
