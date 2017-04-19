@@ -59,6 +59,7 @@ filezilla_SOURCES = aboutdialog.cpp \
 		msgbox.cpp \
 		netconfwizard.cpp \
 		Options.cpp \
+		overlay.cpp \
 		power_management.cpp \
 		queue.cpp \
 		queue_storage.cpp \
@@ -183,6 +184,7 @@ noinst_HEADERS = aboutdialog.h \
 		 msgbox.h \
 		 netconfwizard.h \
 		 Options.h \
+		 overlay.h \
 		 power_management.h \
 		 prefix.h \
 		 queue.h \
