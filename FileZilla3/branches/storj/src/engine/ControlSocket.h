@@ -321,8 +321,7 @@ public:
 	CRealControlSocket(CFileZillaEnginePrivate & engine);
 	virtual ~CRealControlSocket();
 
-	int DoConnect(CServer const& server);
-	virtual int ContinueConnect();
+	int DoConnect(std::wstring const& host, unsigned int port);
 
 	virtual bool Connected() const override;
 
@@ -331,8 +330,8 @@ protected:
 	virtual void ResetSocket();
 
 	virtual void operator()(fz::event_base const& ev) override;
-	void OnSocketEvent(CSocketEventSource* source, SocketEventType t, int error);
-	void OnHostAddress(CSocketEventSource* source, std::string const& address);
+	void OnSocketEvent(fz::socket_event_source* source, fz::socket_event_flag t, int error);
+	void OnHostAddress(fz::socket_event_source* source, std::string const& address);
 
 	virtual void OnConnect();
 	virtual void OnReceive();
@@ -344,7 +343,7 @@ protected:
 		return Send(reinterpret_cast<unsigned char const*>(buffer), len);
 	}
 
-	CSocket* m_pSocket;
+	fz::socket* socket_;
 
 	CBackend* m_pBackend;
 	CProxySocket* m_pProxyBackend{};

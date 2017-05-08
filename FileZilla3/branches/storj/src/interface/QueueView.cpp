@@ -402,42 +402,48 @@ void CQueueView::ProcessNotification(t_EngineData* pEngineData, std::unique_ptr<
 		ProcessReply(pEngineData, static_cast<COperationNotification&>(*pNotification.get()));
 		break;
 	case nId_asyncrequest:
-		if (pEngineData->pItem) {
+		{
 			auto asyncRequestNotification = unique_static_cast<CAsyncRequestNotification>(std::move(pNotification));
-			switch (asyncRequestNotification->GetRequestID()) {
-				case reqId_fileexists:
-				{
-					CFileExistsNotification& fileExistsNotification = static_cast<CFileExistsNotification&>(*asyncRequestNotification.get());
-					fileExistsNotification.overwriteAction = pEngineData->pItem->m_defaultFileExistsAction;
-
-					if (pEngineData->pItem->GetType() == QueueItemType::File) {
-						CFileItem* pFileItem = (CFileItem*)pEngineData->pItem;
-
-						switch (pFileItem->m_onetime_action)
+			if (pEngineData->pItem) {
+				switch (asyncRequestNotification->GetRequestID()) {
+					case reqId_fileexists:
 						{
-						case CFileExistsNotification::resume:
-							if (fileExistsNotification.canResume &&
-								!pFileItem->Ascii())
-							{
-								fileExistsNotification.overwriteAction = CFileExistsNotification::resume;
-							}
-							break;
-						case CFileExistsNotification::overwrite:
-							fileExistsNotification.overwriteAction = CFileExistsNotification::overwrite;
-							break;
-						default:
-							// Others are unused
-							break;
-						}
-						pFileItem->m_onetime_action = CFileExistsNotification::unknown;
-					}
-				}
-				break;
-			default:
-				break;
-			}
+							CFileExistsNotification& fileExistsNotification = static_cast<CFileExistsNotification&>(*asyncRequestNotification.get());
+							fileExistsNotification.overwriteAction = pEngineData->pItem->m_defaultFileExistsAction;
 
-			m_pAsyncRequestQueue->AddRequest(pEngineData->pEngine, std::move(asyncRequestNotification));
+							if (pEngineData->pItem->GetType() == QueueItemType::File) {
+								CFileItem* pFileItem = (CFileItem*)pEngineData->pItem;
+
+								switch (pFileItem->m_onetime_action)
+								{
+								case CFileExistsNotification::resume:
+									if (fileExistsNotification.canResume &&
+										!pFileItem->Ascii())
+									{
+										fileExistsNotification.overwriteAction = CFileExistsNotification::resume;
+									}
+									break;
+								case CFileExistsNotification::overwrite:
+									fileExistsNotification.overwriteAction = CFileExistsNotification::overwrite;
+									break;
+								default:
+									// Others are unused
+									break;
+								}
+								pFileItem->m_onetime_action = CFileExistsNotification::unknown;
+							}
+						}
+						break;
+					default:
+						break;
+				}
+				m_pAsyncRequestQueue->AddRequest(pEngineData->pEngine, std::move(asyncRequestNotification));
+			}
+			else {
+				if (pEngineData->active && asyncRequestNotification->GetRequestID() != reqId_fileexists) {
+					m_pAsyncRequestQueue->AddRequest(pEngineData->pEngine, std::move(asyncRequestNotification));
+				}
+			}			
 		}
 		break;
 	case nId_active:
@@ -2593,12 +2599,14 @@ void CQueueView::ActionAfter(bool warned)
 				wxString fmt = wxPLURAL("All transfers have finished. %d file could not be transferred.", "All transfers have finished. %d files could not be transferred.", failed_count);
 				msg = wxString::Format(fmt, failed_count);
 			}
-			else
+			else {
 				msg = _("All files have been successfully transferred");
+			}
 
 #if WITH_LIBDBUS
-			if (!m_desktop_notification)
+			if (!m_desktop_notification) {
 				m_desktop_notification = std::make_unique<CDesktopNotification>();
+			}
 			m_desktop_notification->Notify(title, msg, (failed_count > 0) ? _T("transfer.error") : _T("transfer.complete"));
 #elif defined(__WXGTK__) || defined(__WXMSW__)
 			m_desktop_notification = std::make_unique<wxNotificationMessage>();
@@ -2665,18 +2673,25 @@ void CQueueView::ActionAfter(bool warned)
 			}
 			else {
 				wxString action;
-				if( m_actionAfterState == ActionAfterState::Reboot )
+				if (m_actionAfterState == ActionAfterState::Reboot) {
 					action = _T("restart");
-				else if( m_actionAfterState == ActionAfterState::Shutdown )
+				}
+				else if (m_actionAfterState == ActionAfterState::Shutdown) {
 					action = _T("shut down");
-				else
+				}
+				else {
 					action = _T("sleep");
+				}
 				wxExecute(_T("osascript -e 'tell application \"System Events\" to ") + action + _T("'"));
 				m_actionAfterState = ActionAfterState::None;
 			}
 			break;
 #else
-		(void)warned;
+		case ActionAfterState::Reboot:
+		case ActionAfterState::Shutdown:
+		case ActionAfterState::Sleep:
+			(void)warned;
+			break;
 #endif
 		default:
 			break;
