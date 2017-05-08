@@ -250,7 +250,7 @@ protected:
 };
 
 
-#include "overlay.h"
+/*#include "overlay.h"
 #include <wx/hyperlink.h>
 
 namespace {
@@ -290,7 +290,7 @@ void ShowStorjOverlay(wxWindow* parent, wxWindow* anchor, wxPoint const& offset)
 
 	p->SetAnchor(anchor, offset);
 }
-}
+}*/
 
 CMainFrame::CMainFrame()
 	: m_engineContext(*COptions::Get(), CustomEncodingConverter::Get())
@@ -478,8 +478,6 @@ CMainFrame::CMainFrame()
 	RegisterOption(OPTION_MESSAGELOG_POSITION);
 	RegisterOption(OPTION_FILEPANE_LAYOUT);
 	RegisterOption(OPTION_FILEPANE_SWAP);
-
-	CallAfter([this](){ShowStorjOverlay(this, m_pTopSplitter, wxPoint(-30, 20));});
 }
 
 CMainFrame::~CMainFrame()
