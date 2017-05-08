@@ -362,6 +362,8 @@ int main()
 
 		storj_http_options_t http_options{};
 		http_options.user_agent = "FileZilla";
+		http_options.low_speed_limit = STORJ_LOW_SPEED_LIMIT;
+		http_options.low_speed_time = STORJ_LOW_SPEED_TIME;
 		if (!proxy.empty()) {
 			http_options.proxy_url = proxy.c_str();
 		}
@@ -629,6 +631,8 @@ int main()
 			upload_opts.push_shard_limit = 64;
 			upload_opts.bucket_id = bucket.c_str();
 			upload_opts.file_name = remote_name.c_str();
+			upload_opts.index = NULL;
+			upload_opts.rs = true;
 			upload_opts.fd = fd;
 
 			storj_upload_state_t *state = static_cast<storj_upload_state_t*>(malloc(sizeof(storj_upload_state_t)));
