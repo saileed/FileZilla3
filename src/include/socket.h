@@ -2,18 +2,17 @@
 #define FILEZILLA_ENGINE_SOCKET_HEADER
 
 #include <libfilezilla/event_handler.hpp>
+#include <libfilezilla/iputils.hpp>
 
 #include <errno.h>
 
+/// \private
+struct sockaddr;
+
 namespace fz {
 class thread_pool;
-}
 
-// IPv6 capable, non-blocking socket class for use with wxWidgets.
-// Error codes are the same as used by the POSIX socket functions,
-// see 'man 2 socket', 'man 2 connect', ...
-
-enum class SocketEventType
+enum class socket_event_flag
 {
 	// This is a nonfatal condition. It
 	// means there are additional addresses to try.
@@ -25,33 +24,80 @@ enum class SocketEventType
 	close
 };
 
-class CSocketEventSource
+/**
+ * \brief All classes sending socket events should derive from this.
+ *
+ * Allows implementing socket layers, e.g. for TLS.
+ *
+ * \sa fz::RemoveSocketEvents
+ * \sa fz::ChangeSocketEventHandler
+ */
+class socket_event_source
 {
 public:
-	virtual ~CSocketEventSource() = default;
+	virtual ~socket_event_source() = default;
 };
 
+/// \private
 struct socket_event_type;
-typedef fz::simple_event<socket_event_type, CSocketEventSource*, SocketEventType, int> CSocketEvent;
 
+/**
+ * All socket events are sent through this.
+ *
+ * \sa \ref fz::socket_event_flag
+ */
+typedef simple_event<socket_event_type, socket_event_source*, socket_event_flag, int> socket_event;
+
+/// \private
 struct hostaddress_event_type;
-typedef fz::simple_event<hostaddress_event_type, CSocketEventSource*, std::string> CHostAddressEvent;
 
-void RemoveSocketEvents(fz::event_handler * handler, CSocketEventSource const* const source);
-void ChangeSocketEventHandler(fz::event_handler * oldHandler, fz::event_handler * newHandler, CSocketEventSource const* const source);
+/**
+* Whenever a hostname has been resolved to an IP address, this event is sent with the resolved IP address literal .
+*/
+typedef simple_event<hostaddress_event_type, socket_event_source*, std::string> hostaddress_event;
 
-class CSocketThread;
-class CSocket final : public CSocketEventSource
+/**
+ * \brief Remove all pendinmg socket events from source sent to handler.
+ *
+ * Useful e.g. if you want to destroy the handler but keep the source.
+ * This function is called, through change_socket_event_handler, by socket::set_event_handler(0)
+ */
+void remove_socket_events(event_handler * handler, socket_event_source const* const source);
+
+/**
+ * \brief Changes all pending socket events from source
+ *
+ * If newHandler is null, remove_socket_events is called.
+ *
+ * This function is called by socket::set_event_handler().
+ *
+ * \example Possible use-cases: Handoff after proxy handshakes, or handoff to TLS classes in
+			case of STARTTLS mechanism
+ */
+void change_socket_event_handler(event_handler * old_handler, event_handler * new_handler, socket_event_source const* const source);
+
+/// \private
+class socket_thread;
+
+/**
+ * \brief IPv6 capable, non-blocking socket class
+ *
+ * Uses and edge-triggered socket events.
+ *
+ * Error codes are the same as used by the POSIX socket functions,
+ * see 'man 2 socket', 'man 2 connect', ...
+ */
+class socket final : public socket_event_source
 {
-	friend class CSocketThread;
+	friend class socket_thread;
 public:
-	CSocket(fz::thread_pool& pool, fz::event_handler* pEvtHandler);
-	virtual ~CSocket();
+	socket(thread_pool& pool, event_handler* evt_handler);
+	virtual ~socket();
 
-	CSocket(CSocket const&) = delete;
-	CSocket& operator=(CSocket const&) = delete;
+	socket(socket const&) = delete;
+	socket& operator=(socket const&) = delete;
 
-	enum SocketState
+	enum socket_state
 	{
 		// How the socket is initially
 		none,
@@ -68,14 +114,7 @@ public:
 		closing,
 		closed
 	};
-	SocketState GetState();
-
-	enum address_family
-	{
-		unspec, // AF_UNSPEC
-		ipv4,   // AF_INET
-		ipv6    // AF_INET6
-	};
+	socket_state get_state();
 
 	// Connects to the given host, given as name, IPv4 or IPv6 address.
 	// Returns 0 on success, else an error code. Note: EINPROGRESS is
@@ -84,93 +123,123 @@ public:
 	// If host is a name that can be resolved, a hostaddress socket event gets sent.
 	// Once connections got established, a connection event gets sent. If
 	// connection could not be established, a close event gets sent.
-	int Connect(fz::native_string const& host, unsigned int port, address_family family = unspec, std::string const& bind = std::string());
+	int connect(native_string const& host, unsigned int port, address_type family = address_type::unknown, std::string const& bind = std::string());
 
 	// After receiving a send or receive event, you can call these functions
 	// as long as their return value is positive.
-	int Read(void *buffer, unsigned int size, int& error);
-	int Peek(void *buffer, unsigned int size, int& error);
-	int Write(const void *buffer, unsigned int size, int& error);
+	int read(void *buffer, unsigned int size, int& error);
+	int peek(void *buffer, unsigned int size, int& error);
+	int write(const void *buffer, unsigned int size, int& error);
 
-	int Close();
+	int close();
 
-	// Returns empty string on error
-	std::string GetLocalIP(bool strip_zone_index = false) const;
-	std::string GetPeerIP(bool strip_zone_index = false) const;
+	/**
+	 * \brief Returns local address of a connected socket
+	 *
+	 * \return empty string on error
+	 */
+	std::string local_ip(bool strip_zone_index = false) const;
 
-	// Returns the hostname passed to Connect()
-	fz::native_string GetPeerHost() const;
+	/**
+	* \brief Returns remote address of a connected socket
+	*
+	* \return empty string on error
+	*/
+	std::string peer_ip(bool strip_zone_index = false) const;
 
-	// -1 on error
-	int GetLocalPort(int& error);
-	int GetRemotePort(int& error);
+	/// Returns the hostname passed to Connect()
+	native_string peer_host() const;
 
-	// If connected, either ipv4 or ipv6, unspec otherwise
-	address_family GetAddressFamily() const;
+	/**
+	* \brief Returns local port of a connected socket
+	*
+	* \return -1 on error
+	*/
+	int local_port(int& error);
 
-	static std::string GetErrorString(int error);
-	static fz::native_string GetErrorDescription(int error);
+	/**
+	* \brief Returns remote port of a connected socket
+	*
+	* \return -1 on error
+	*/
+	int remote_port(int& error);
 
-	// Due to asynchronicity it is possible that the old handler receives one last
-	// socket event when changing handlers.
-	void SetEventHandler(fz::event_handler* pEvtHandler);
+	/// If connected, either ipv4 or ipv6, unknown otherwise
+	address_type address_family() const;
 
-	static void Cleanup(bool force);
+	/**
+	 * \brief Gets a symbolic name for socket errors.
+	 *
+	 * \example error_string(EAGAIN) == "EAGAIN"
+	 *
+	 * \return name if the error code is known
+	 * \return number as string if the error code is not known
+	 */
+	static std::string error_string(int error);
 
-	static std::string AddressToString(const struct sockaddr* addr, int addr_len, bool with_port = true, bool strip_zone_index = false);
-	static std::string AddressToString(char const* buf, int buf_len);
+	/**
+	 * \brief Gets a human-readable, translated description of the error
+	 */
+	static native_string error_description(int error);
 
-	int Listen(address_family family, int port = 0);
-	CSocket* Accept(int& error);
+	void set_event_handler(event_handler* pEvtHandler);
 
-	enum Flags
+	static std::string address_to_string(sockaddr const* addr, int addr_len, bool with_port = true, bool strip_zone_index = false);
+	static std::string address_to_string(char const* buf, int buf_len);
+
+	int listen(address_type family, int port = 0);
+	socket* accept(int& error);
+
+	enum
 	{
 		flag_nodelay = 0x01,
 		flag_keepalive = 0x02
 	};
 
-	int GetFlags() const { return m_flags; }
-	void SetFlags(int flags);
+	int flags() const { return flags_; }
+	void set_flags(int flags);
 
 	// If called on listen socket, sizes will be inherited by
 	// accepted sockets
-	int SetBufferSizes(int size_receive, int size_send);
+	int set_buffer_sizes(int size_receive, int size_send);
 
 	// Duration must not be smaller than 5 minutes.
 	// Default interval if 2 hours.
-	void SetKeepaliveInterval(fz::duration const& d);
+	void set_keepalive_interval(duration const& d);
 
-	// On a connected socket, gets the ideal send buffer size or
-	// -1 if it cannot be determined.
-	//
-	// Currently only implemented for Windows.
-	int GetIdealSendBufferSize();
+	/**
+	 * On a connected socket, gets the ideal send buffer size or
+	 * -1 if it cannot be determined.
+	 *
+	 * Currently only implemented for Windows.
+	 */
+	int ideal_send_buffer_size();
 
-protected:
-	static int DoSetFlags(int fd, int flags, int flags_mask, fz::duration const&);
-	static int DoSetBufferSizes(int fd, int size_read, int size_write);
-	static int SetNonblocking(int fd);
+private:
+	static int do_set_flags(int fd, int flags, int flags_mask, duration const& keepalive_interval);
+	static int do_set_buffer_sizes(int fd, int size_read, int size_write);
+	static int set_nonblocking(int fd);
 
 	// Note: Unlocks the lock.
-	void DetachThread(fz::scoped_lock & l);
+	void detach_thread(scoped_lock & l);
 
-	fz::thread_pool & thread_pool_;
-	fz::event_handler* m_pEvtHandler;
+	thread_pool & thread_pool_;
+	event_handler* evt_handler_;
 
-	int m_fd{-1};
+	int fd_{-1};
 
-	SocketState m_state{none};
+	socket_state state_{none};
 
-	CSocketThread* m_pSocketThread{};
+	socket_thread* socket_thread_{};
 
-	fz::native_string m_host;
-	unsigned int m_port{};
-	int m_family;
+	native_string host_;
+	unsigned int port_{};
+	int family_;
 
-	int m_flags{};
-	fz::duration m_keepalive_interval;
+	int flags_{};
+	duration keepalive_interval_;
 
-	int m_buffer_sizes[2];
+	int buffer_sizes_[2];
 };
 
 #ifdef FZ_WINDOWS
@@ -239,5 +308,7 @@ protected:
 // For the future:
 // Handle ERROR_NETNAME_DELETED=64
 #endif //FZ_WINDOWS
+
+}
 
 #endif

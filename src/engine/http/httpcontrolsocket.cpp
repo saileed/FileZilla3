@@ -84,9 +84,8 @@ void CHttpControlSocket::OnReceive()
 
 void CHttpControlSocket::OnConnect()
 {
-	assert(GetCurrentCommandId() == PrivCommand::http_connect);
-
 	if (operations_.empty() || operations_.back()->opId != PrivCommand::http_connect) {
+		LogMessage(MessageType::Debug_Warning, L"Discarding stale OnConnect");
 		return;
 	}
 
@@ -97,7 +96,7 @@ void CHttpControlSocket::OnConnect()
 			LogMessage(MessageType::Status, _("Connection established, initializing TLS..."));
 
 			delete m_pBackend;
-			m_pTlsSocket = new CTlsSocket(this, *m_pSocket, this);
+			m_pTlsSocket = new CTlsSocket(this, *socket_, this);
 			m_pBackend = m_pTlsSocket;
 
 			if (!m_pTlsSocket->Init()) {
@@ -176,7 +175,7 @@ void CHttpControlSocket::OnClose(int error)
 	LogMessage(MessageType::Debug_Verbose, L"CHttpControlSocket::OnClose(%d)", error);
 
 	if (error) {
-		LogMessage(MessageType::Error, _("Disconnected from server: %s"), CSocket::GetErrorDescription(error));
+		LogMessage(MessageType::Error, _("Disconnected from server: %s"), fz::socket::error_description(error));
 		ResetOperation(FZ_REPLY_ERROR | FZ_REPLY_DISCONNECTED);
 		return;
 	}

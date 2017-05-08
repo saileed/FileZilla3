@@ -43,9 +43,9 @@ protected:
 
 	virtual void operator()(fz::event_base const& ev);
 	void OnExternalIPAddress();
-	void OnSocketEvent(CSocketEventSource*, SocketEventType t, int error);
+	void OnSocketEvent(fz::socket_event_source*, fz::socket_event_flag t, int error);
 
-	void DoOnSocketEvent(CSocketEventSource*, SocketEventType t, int error);
+	void DoOnSocketEvent(fz::socket_event_source*, fz::socket_event_flag t, int error);
 
 	void OnReceive();
 	void ParseResponse(const char* line);
@@ -69,7 +69,7 @@ protected:
 	wxString m_nextLabelText;
 
 	// Test data
-	CSocket* m_socket{};
+	fz::socket* m_socket{};
 	int m_state;
 
 	char m_recvBuffer[NETCONFBUFFERSIZE];
@@ -92,8 +92,8 @@ protected:
 	CExternalIPResolver* m_pIPResolver{};
 	wxString m_externalIP;
 
-	CSocket* m_pSocketServer{};
-	CSocket* m_pDataSocket{};
+	fz::socket* m_pSocketServer{};
+	fz::socket* m_pDataSocket{};
 	int m_listenPort{};
 	bool gotListReply{};
 	int m_data{};
