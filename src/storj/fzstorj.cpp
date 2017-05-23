@@ -346,6 +346,7 @@ int main()
 
 	storj_env_t *env{};
 
+	uint64_t timeout = STORJ_HTTP_TIMEOUT;
 
 	auto init_env = [&](){
 		if (env) {
@@ -365,7 +366,7 @@ int main()
 		http_options.user_agent = "FileZilla";
 		http_options.low_speed_limit = STORJ_LOW_SPEED_LIMIT;
 		http_options.low_speed_time = STORJ_LOW_SPEED_TIME;
-		http_options.timeout = STORJ_HTTP_TIMEOUT;
+		http_options.timeout = timeout;
 		if (!proxy.empty()) {
 			http_options.proxy_url = proxy.c_str();
 		}
@@ -441,6 +442,10 @@ int main()
 			else {
 				fzprintf(storjEvent::Error, "Invalid encryption key");
 			}
+		}
+		else if (command == "timeout") {
+			timeout = fz::to_integral<uint64_t>(arg);
+			fzprintf(storjEvent::Done);
 		}
 		else if (command == "proxy") {
 			proxy = arg;
