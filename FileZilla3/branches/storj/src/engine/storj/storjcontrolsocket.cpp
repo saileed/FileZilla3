@@ -231,7 +231,9 @@ void CStorjControlSocket::OnTerminate(std::wstring const& error)
 
 int CStorjControlSocket::SendCommand(std::wstring const& cmd, std::wstring const& show)
 {
-	SetWait(true);
+	if (cmd.substr(0, 4) != L"get " && cmd.substr(0, 4) != L"put ") {
+		SetWait(true);
+	}
 
 	LogMessageRaw(MessageType::Command, show.empty() ? cmd : show);
 
