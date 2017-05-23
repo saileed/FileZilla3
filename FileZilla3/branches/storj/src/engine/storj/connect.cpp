@@ -36,6 +36,8 @@ int CStorjConnectOpData::Send()
 			}
 		}
 		return FZ_REPLY_WOULDBLOCK;
+	case connect_timeout:
+		return controlSocket_.SendCommand(fz::sprintf(L"timeout %d", engine_.GetOptions().GetOptionVal(OPTION_TIMEOUT)));
 	case connect_proxy:
 		{
 			fz::uri proxy_uri;
@@ -117,7 +119,10 @@ int CStorjConnectOpData::ParseResponse()
 			LogMessage(MessageType::Error, _("fzstorj belongs to a different version of FileZilla"));
 			return FZ_REPLY_INTERNALERROR | FZ_REPLY_DISCONNECTED;
 		}
-		opState = connect_proxy;
+		opState = connect_timeout;
+		break;
+	case connect_timeout:
+		opState = connect_host;
 		break;
 	case connect_proxy:
 		opState = connect_host;
