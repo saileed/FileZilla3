@@ -244,7 +244,7 @@ extern "C" void download_file_complete(int status, FILE *fd, void *)
 	}
 }
 
-extern "C" void upload_file_complete(int status, void *)
+extern "C" void upload_file_complete(int status, char* file_id, void *)
 {
 	if (status) {
 		fzprintf(storjEvent::Error, "Upload failed with error %s (%d)", storj_strerror(status), status);
@@ -252,6 +252,7 @@ extern "C" void upload_file_complete(int status, void *)
 	else {
 		fzprintf(storjEvent::Done);
 	}
+	free(file_id);
 }
 
 extern "C" void log(char const* msg, int level, void*)
@@ -364,6 +365,7 @@ int main()
 		http_options.user_agent = "FileZilla";
 		http_options.low_speed_limit = STORJ_LOW_SPEED_LIMIT;
 		http_options.low_speed_time = STORJ_LOW_SPEED_TIME;
+		http_options.timeout = STORJ_HTTP_TIMEOUT;
 		if (!proxy.empty()) {
 			http_options.proxy_url = proxy.c_str();
 		}
