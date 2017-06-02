@@ -60,6 +60,7 @@ filezilla_SOURCES = aboutdialog.cpp \
 		netconfwizard.cpp \
 		Options.cpp \
 		overlay.cpp \
+		password_crypto.cpp \
 		power_management.cpp \
 		queue.cpp \
 		queue_storage.cpp \
@@ -74,6 +75,7 @@ filezilla_SOURCES = aboutdialog.cpp \
 		RemoteListView.cpp \
 		RemoteTreeView.cpp \
 		search.cpp \
+		serverdata.cpp \
 		settings/optionspage.cpp \
 		settings/optionspage_connection.cpp \
 		settings/optionspage_connection_active.cpp \
@@ -185,6 +187,7 @@ noinst_HEADERS = aboutdialog.h \
 		 netconfwizard.h \
 		 Options.h \
 		 overlay.h \
+		 password_crypto.h \
 		 power_management.h \
 		 prefix.h \
 		 queue.h \
@@ -200,6 +203,7 @@ noinst_HEADERS = aboutdialog.h \
 		 RemoteListView.h \
 		 RemoteTreeView.h \
 		 search.h \
+		 serverdata.h \
 		 settings/optionspage.h \
 		 settings/optionspage_connection.h \
 		 settings/optionspage_connection_active.h \
@@ -270,7 +274,7 @@ filezilla_CFLAGS = $(WX_CFLAGS_ONLY)
 
 filezilla_LDFLAGS = ../engine/libengine.a $(LIBFILEZILLA_LIBS)
 filezilla_LDFLAGS += $(PUGIXML_LIBS)
-filezilla_LDFLAGS += $(NETTLE_LIBS)
+filezilla_LDFLAGS += $(NETTLE_LIBS) $(HOGWEED_LIBS)
 filezilla_LDFLAGS += $(LIBGNUTLS_LIBS)
 
 if HAVE_DBUS

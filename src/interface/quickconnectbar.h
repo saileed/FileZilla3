@@ -1,12 +1,13 @@
-#ifndef __QUICKCONNECTBAR_H__
-#define __QUICKCONNECTBAR_H__
+#ifndef FILEZILLA_INTERFACE_QUICKCONNECTBAR_HEADER
+#define FILEZILLA_INTERFACE_QUICKCONNECTBAR_HEADER
+
+#include "serverdata.h"
 
 class CMainFrame;
 class CQuickconnectBar final : public wxPanel
 {
 public:
 	CQuickconnectBar();
-	virtual ~CQuickconnectBar();
 
 	bool Create(CMainFrame* pParent);
 
@@ -14,7 +15,7 @@ public:
 
 protected:
 	// Only valid while menu is being displayed
-	std::list<CServer> m_recentServers;
+	std::deque<ServerWithCredentials> m_recentServers;
 
 	DECLARE_EVENT_TABLE()
 	void OnQuickconnect(wxCommandEvent& event);
@@ -30,4 +31,4 @@ protected:
 };
 
 
-#endif //__QUICKCONNECTBAR_H__
+#endif

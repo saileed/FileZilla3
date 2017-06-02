@@ -1,14 +1,18 @@
 #include <filezilla.h>
 
-CConnectCommand::CConnectCommand(CServer const& server, bool retry_connecting)
-	: m_Server(server)
-	, m_retry_connecting(retry_connecting)
+CConnectCommand::CConnectCommand(CServer const& server, Credentials const& credentials, bool retry_connecting)
+	: server_(server)
+	, credentials_(credentials)
+	, retry_connecting_(retry_connecting)
 {
 }
 
-CServer const& CConnectCommand::GetServer() const
+bool CConnectCommand::valid() const
 {
-	return m_Server;
+	if (!server_ || server_.GetUser().empty()) {
+		return false;
+	}
+	return true;
 }
 
 CListCommand::CListCommand(int flags)

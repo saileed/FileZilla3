@@ -100,6 +100,7 @@ enum interfaceOptions
 	OPTION_QUEUE_COMPLETION_COMMAND,
 	OPTION_DND_DISABLED,
 	OPTION_DISABLE_UPDATE_FOOTER,
+	OPTION_MASTERPASSWORDENCRYPTOR,
 
 	// Default/internal options
 	OPTION_DEFAULT_SETTINGSDIR, // guaranteed to be (back)slash-terminated
@@ -135,8 +136,8 @@ public:
 
 	bool OptionFromFzDefaultsXml(unsigned int nID);
 
-	void SetLastServer(const CServer& server);
-	bool GetLastServer(CServer& server);
+	void SetLastServer(const ServerWithCredentials& server);
+	bool GetLastServer(ServerWithCredentials& server);
 
 	static COptions* Get();
 	static void Init();
@@ -161,8 +162,8 @@ protected:
 	void SetXmlValue(unsigned int nID, std::wstring const& value);
 
 	// path is element path below document root, separated by slashes
-	void SetServer(std::wstring path, const CServer& server);
-	bool GetServer(std::wstring path, CServer& server);
+	void SetServer(std::wstring path, ServerWithCredentials const& server);
+	bool GetServer(std::wstring path, ServerWithCredentials& server);
 
 	pugi::xml_node CreateSettingsXmlElement();
 
@@ -181,7 +182,7 @@ protected:
 
 	t_OptionsCache m_optionsCache[OPTIONS_NUM];
 
-	CServer* m_pLastServer;
+	std::unique_ptr<ServerWithCredentials> lastServer_;
 
 	static COptions* m_theOptions;
 
