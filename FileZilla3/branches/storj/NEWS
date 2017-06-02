@@ -10,6 +10,23 @@ Legend:
     *nix: Unix (e.g BSD) and Unix-like systems (e.g. Linux)
     OS X: Apple Mac OS X
 
+3.26.1 (2017-06-02)
+
+- Fixed crash if changing password settings and the Site Manager contains subdirectories
+- *nix: Fixed saving of sites having more than one site-specific bookmark
+
+3.26.0 (2017-06-01)
+
+- When changing or removing the master password, update protected credentials of server items in the transfer queue
+- Fix display of remember checkbox when showing the password entry dialog for sites that have no username set and are using the "Ask" logon type
+- Some icons were missing in the Windows .zip binary archive 
+
+3.26.0-rc1 (2017-05-25)
+
++ Passwords can now be stored encrypted, protected with a master password
++ Building and running FileZilla now depends on libfilezilla >= 0.9.2 (https://lib.filezilla-project.org/).
++ Building and running FileZilla now depends on wxWidgets >= 3.0.3
+
 3.25.2 (2017-04-30)
 
 - SFTP components have been updated and are now based on PuTTY 0.69
