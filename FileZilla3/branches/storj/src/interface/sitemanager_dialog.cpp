@@ -1,6 +1,7 @@
 #include <filezilla.h>
 #include "sitemanager_dialog.h"
 
+#include "asksavepassworddialog.h"
 #include "buildinfo.h"
 #include "conditionaldialog.h"
 #include "drop_target_ex.h"
@@ -217,8 +218,9 @@ public:
 		wxTreeCtrl *pTree = XRCCTRL(*m_pSiteManager, "ID_SITETREE", wxTreeCtrl);
 		wxTreeItemId hit = pTree->HitTest(point, flags);
 
-		if (flags & (wxTREE_HITTEST_ABOVE | wxTREE_HITTEST_BELOW | wxTREE_HITTEST_NOWHERE | wxTREE_HITTEST_TOLEFT | wxTREE_HITTEST_TORIGHT))
+		if (flags & (wxTREE_HITTEST_ABOVE | wxTREE_HITTEST_BELOW | wxTREE_HITTEST_NOWHERE | wxTREE_HITTEST_TOLEFT | wxTREE_HITTEST_TORIGHT)) {
 			return wxTreeItemId();
+		}
 
 		return hit;
 	}
@@ -282,14 +284,13 @@ CSiteManagerDialog::~CSiteManagerDialog()
 {
 	delete m_pSiteManagerMutex;
 
-	if (m_pWindowStateManager)
-	{
+	if (m_pWindowStateManager) {
 		m_pWindowStateManager->Remember(OPTION_SITEMANAGER_POSITION);
 		delete m_pWindowStateManager;
 	}
 }
 
-bool CSiteManagerDialog::Create(wxWindow* parent, std::vector<_connected_site> *connected_sites, const CServer* pServer)
+bool CSiteManagerDialog::Create(wxWindow* parent, std::vector<_connected_site> *connected_sites, ServerWithCredentials const* pServer)
 {
 	m_pSiteManagerMutex = new CInterProcessMutex(MUTEX_SITEMANAGERGLOBAL, false);
 	if (m_pSiteManagerMutex->TryLock() == 0) {
@@ -432,7 +433,7 @@ bool CSiteManagerDialog::Create(wxWindow* parent, std::vector<_connected_site> *
 	m_connected_sites = connected_sites;
 	MarkConnectedSites();
 
-	if (pServer) {
+	if (pServer && *pServer) {
 		CopyAddServer(*pServer);
 	}
 
@@ -525,8 +526,8 @@ void CSiteManagerDialog::CreateControls(wxWindow* parent)
 
 	pChoice = XRCCTRL(*this, "ID_LOGONTYPE", wxChoice);
 	wxASSERT(pChoice);
-	for (int i = 0; i < LOGONTYPE_MAX; ++i) {
-		pChoice->Append(CServer::GetNameFromLogonType(static_cast<LogonType>(i)));
+	for (int i = 0; i < static_cast<int>(LogonType::count); ++i) {
+		pChoice->Append(GetNameFromLogonType(static_cast<LogonType>(i)));
 	}
 
 	wxChoice* pEncryption = XRCCTRL(*this, "ID_ENCRYPTION", wxChoice);
@@ -552,10 +553,15 @@ void CSiteManagerDialog::CreateControls(wxWindow* parent)
 
 void CSiteManagerDialog::OnOK(wxCommandEvent&)
 {
-	if (!Verify())
+	if (!Verify()) {
 		return;
+	}
 
 	UpdateItem();
+
+	if (!CAskSavePasswordDialog::Run(this)) {
+		return;
+	}
 
 	Save();
 
@@ -591,6 +597,10 @@ void CSiteManagerDialog::OnConnect(wxCommandEvent&)
 	}
 
 	UpdateItem();
+
+	if (!CAskSavePasswordDialog::Run(this)) {
+		return;
+	}
 
 	Save();
 
@@ -636,11 +646,13 @@ public:
 					m_pTree->SafeSelectItem(newItem);
 				}
 			}
-			else
+			else {
 				++m_wrong_sel_depth;
+			}
 		}
-		else
+		else {
 			++m_wrong_sel_depth;
+		}
 
 		return true;
 	}
@@ -648,14 +660,14 @@ public:
 	virtual bool AddSite(std::unique_ptr<Site> data)
 	{
 		if (m_kiosk && !m_predefined &&
-			data->m_server.GetLogonType() == NORMAL)
+			data->server_.credentials.logonType_ == LogonType::normal)
 		{
 			// Clear saved password
-			data->m_server.SetLogonType(ASK);
-			data->m_server.SetUser(data->m_server.GetUser());
+			data->server_.SetLogonType(LogonType::ask);
+			data->server_.credentials.SetPass(std::wstring());
 		}
 
-		const wxString name(data->m_server.GetName());
+		const wxString name(data->server_.server.GetName());
 
 		CSiteManagerItemData* pData = new CSiteManagerItemData(std::move(data));
 		wxTreeItemId newItem = m_pTree->AppendItem(m_item, name, 2, 2, pData);
@@ -749,10 +761,12 @@ bool CSiteManagerDialog::Load()
 
 	// Load default sites
 	bool hasDefaultSites = LoadDefaultSites();
-	if (hasDefaultSites)
+	if (hasDefaultSites) {
 		m_ownSites = pTree->AppendItem(pTree->GetRootItem(), _("My Sites"), 0, 0);
-	else
+	}
+	else {
 		m_ownSites = pTree->AddRoot(_("My Sites"), 0, 0);
+	}
 
 	wxTreeItemId treeId = m_ownSites;
 	pTree->SetItemImage(treeId, 1, wxTreeItemIcon_Expanded);
@@ -775,26 +789,31 @@ bool CSiteManagerDialog::Load()
 	}
 
 	auto element = document.child("Servers");
-	if (!element)
+	if (!element) {
 		return true;
+	}
 
 	std::wstring lastSelection = COptions::Get()->GetOption(OPTION_SITEMANAGER_LASTSELECTED);
 	if (!lastSelection.empty() && lastSelection[0] == '0') {
-		if (lastSelection == _T("0"))
+		if (lastSelection == _T("0")) {
 			pTree->SafeSelectItem(treeId);
-		else
+		}
+		else {
 			lastSelection = lastSelection.substr(1);
+		}
 	}
-	else
+	else {
 		lastSelection.clear();
+	}
 	CSiteManagerXmlHandler_Tree handler(pTree, treeId, lastSelection, false);
 
 	bool res = CSiteManager::Load(element, handler);
 
 	pTree->SortChildren(treeId);
 	pTree->Expand(treeId);
-	if (!pTree->GetSelection())
+	if (!pTree->GetSelection()) {
 		pTree->SafeSelectItem(treeId);
+	}
 
 	pTree->EnsureVisible(pTree->GetSelection());
 
@@ -878,54 +897,28 @@ bool CSiteManagerDialog::SaveChild(pugi::xml_node element, wxTreeItemId child)
 	}
 	else if (data->m_site) {
 		auto node = element.append_child("Server");
-		SetServer(node, data->m_site->m_server);
 
-		// Save comments
-		AddTextElement(node, "Comments", data->m_site->m_comments.ToStdWstring());
-
-		// Save colour
-		AddTextElement(node, "Colour", CSiteManager::GetColourIndex(data->m_site->m_colour));
-
-		// Save local dir
-		AddTextElement(node, "LocalDir", data->m_site->m_default_bookmark.m_localDir.ToStdWstring());
-
-		// Save remote dir
-		AddTextElement(node, "RemoteDir", data->m_site->m_default_bookmark.m_remoteDir.GetSafePath());
-
-		AddTextElementUtf8(node, "SyncBrowsing", data->m_site->m_default_bookmark.m_sync ? "1" : "0");
-		AddTextElementUtf8(node, "DirectoryComparison", data->m_site->m_default_bookmark.m_comparison ? "1" : "0");
-		AddTextElement(node, name);
-
+		// Update bookmarks
 		data->m_site->m_bookmarks.clear();
 
-		Save(node, child);
+		wxTreeItemIdValue cookie;
+		wxTreeItemId bookmarkChild = pTree->GetFirstChild(child, cookie);
+		while (bookmarkChild.IsOk()) {
+			CSiteManagerItemData* bookmarkData = static_cast<CSiteManagerItemData* >(pTree->GetItemData(bookmarkChild));
+			wxASSERT(bookmarkData->m_bookmark);
+			bookmarkData->m_bookmark->m_name = pTree->GetItemText(bookmarkChild).ToStdWstring();
+			data->m_site->m_bookmarks.push_back(*bookmarkData->m_bookmark);
+			bookmarkChild = pTree->GetNextChild(child, cookie);
+		}
+
+		CSiteManager::Save(node, *data->m_site);
 
 		if (data->connected_item != -1) {
-			if ((*m_connected_sites)[data->connected_item].server.EqualsNoPass(data->m_site->m_server)) {
+			if ((*m_connected_sites)[data->connected_item].server.server == data->m_site->server_.server) {
 				(*m_connected_sites)[data->connected_item].new_path = GetSitePath(child);
-				(*m_connected_sites)[data->connected_item].server = data->m_site->m_server;
+				(*m_connected_sites)[data->connected_item].server = data->m_site->server_;
 			}
 		}
-	}
-	else if (data->m_bookmark) {
-		data->m_bookmark->m_name = name;
-		CSiteManagerItemData* siteData = static_cast<CSiteManagerItemData* >(pTree->GetItemData(pTree->GetItemParent(child)));
-		if (siteData && siteData->m_site) {
-			siteData->m_site->m_bookmarks.push_back(*data->m_bookmark);
-		}
-
-		auto node = element.append_child("Bookmark");
-
-		AddTextElement(node, "Name", name);
-
-		// Save local dir
-		AddTextElement(node, "LocalDir", data->m_bookmark->m_localDir.ToStdWstring());
-
-		// Save remote dir
-		AddTextElement(node, "RemoteDir", data->m_bookmark->m_remoteDir.GetSafePath());
-
-		AddTextElementUtf8(node, "SyncBrowsing", data->m_bookmark->m_sync ? "1" : "0");
-		AddTextElementUtf8(node, "DirectoryComparison", data->m_bookmark->m_comparison ? "1" : "0");
 	}
 
 	return true;
@@ -964,12 +957,14 @@ void CSiteManagerDialog::OnNewFolder(wxCommandEvent&)
 bool CSiteManagerDialog::Verify()
 {
 	wxTreeCtrl *pTree = XRCCTRL(*this, "ID_SITETREE", wxTreeCtrl);
-	if (!pTree)
+	if (!pTree) {
 		return true;
+	}
 
 	wxTreeItemId item = pTree->GetSelection();
-	if (!item.IsOk())
+	if (!item.IsOk()) {
 		return true;
+	}
 
 	CSiteManagerItemData* data = (CSiteManagerItemData *)pTree->GetItemData(item);
 	if (!data)
@@ -989,7 +984,7 @@ bool CSiteManagerDialog::Verify()
 		wxASSERT(protocol != UNKNOWN);
 
 		if (protocol == SFTP &&
-			logon_type == ACCOUNT)
+			logon_type == LogonType::account)
 		{
 			XRCCTRL(*this, "ID_LOGONTYPE", wxChoice)->SetFocus();
 			wxMessageBoxEx(_("'Account' logontype not supported by selected protocol"), _("Site Manager - Invalid data"), wxICON_EXCLAMATION, this);
@@ -998,26 +993,28 @@ bool CSiteManagerDialog::Verify()
 
 		if (COptions::Get()->GetOptionVal(OPTION_DEFAULT_KIOSKMODE) != 0 &&
 			!IsPredefinedItem(item) &&
-			(logon_type == ACCOUNT || logon_type == NORMAL))
+			(logon_type == LogonType::account || logon_type == LogonType::normal))
 		{
 			XRCCTRL(*this, "ID_LOGONTYPE", wxChoice)->SetFocus();
 			wxString msg;
-			if (COptions::Get()->OptionFromFzDefaultsXml(OPTION_DEFAULT_KIOSKMODE))
+			if (COptions::Get()->OptionFromFzDefaultsXml(OPTION_DEFAULT_KIOSKMODE)) {
 				msg = _("Saving of password has been disabled by your system administrator.");
-			else
+			}
+			else {
 				msg = _("Saving of passwords has been disabled by you.");
+			}
 			msg += _T("\n");
 			msg += _("'Normal' and 'Account' logontypes are not available. Your entry has been changed to 'Ask for password'.");
-			XRCCTRL(*this, "ID_LOGONTYPE", wxChoice)->SetStringSelection(CServer::GetNameFromLogonType(ASK));
+			XRCCTRL(*this, "ID_LOGONTYPE", wxChoice)->SetStringSelection(GetNameFromLogonType(LogonType::ask));
 			XRCCTRL(*this, "ID_PASS", wxTextCtrl)->ChangeValue(wxString());
-			logon_type = ASK;
+			logon_type = LogonType::ask;
 			wxMessageBoxEx(msg, _("Site Manager - Cannot remember password"), wxICON_INFORMATION, this);
 		}
 
 		// Set selected type
-		CServer server;
+		ServerWithCredentials server;
 		server.SetLogonType(logon_type);
-		server.SetProtocol(protocol);
+		server.server.SetProtocol(protocol);
 
 		std::wstring port = xrc_call(*this, "ID_PORT", &wxTextCtrl::GetValue).ToStdWstring();
 		CServerPath path;
@@ -1029,14 +1026,14 @@ bool CSiteManagerDialog::Verify()
 		}
 
 		XRCCTRL(*this, "ID_HOST", wxTextCtrl)->ChangeValue(server.Format(ServerFormat::host_only));
-		if (server.GetPort() != CServer::GetDefaultPort(server.GetProtocol())) {
-			XRCCTRL(*this, "ID_PORT", wxTextCtrl)->ChangeValue(wxString::Format(_T("%d"), server.GetPort()));
+		if (server.server.GetPort() != CServer::GetDefaultPort(server.server.GetProtocol())) {
+			XRCCTRL(*this, "ID_PORT", wxTextCtrl)->ChangeValue(wxString::Format(_T("%d"), server.server.GetPort()));
 		}
 		else {
 			XRCCTRL(*this, "ID_PORT", wxTextCtrl)->ChangeValue(wxString());
 		}
 
-		SetProtocol(server.GetProtocol());
+		SetProtocol(server.server.GetProtocol());
 
 		if (XRCCTRL(*this, "ID_CHARSET_CUSTOM", wxRadioButton)->GetValue()) {
 			if (XRCCTRL(*this, "ID_ENCODING", wxTextCtrl)->GetValue().empty()) {
@@ -1048,9 +1045,9 @@ bool CSiteManagerDialog::Verify()
 
 		// Require username for non-anonymous, non-ask logon type
 		const wxString user = XRCCTRL(*this, "ID_USER", wxTextCtrl)->GetValue();
-		if (logon_type != ANONYMOUS &&
-			logon_type != ASK &&
-			logon_type != INTERACTIVE &&
+		if (logon_type != LogonType::anonymous &&
+			logon_type != LogonType::ask &&
+			logon_type != LogonType::interactive &&
 			user.empty())
 		{
 			XRCCTRL(*this, "ID_USER", wxTextCtrl)->SetFocus();
@@ -1075,7 +1072,7 @@ bool CSiteManagerDialog::Verify()
 		}
 
 		// Require account for account logon type
-		if (logon_type == ACCOUNT &&
+		if (logon_type == LogonType::account &&
 			XRCCTRL(*this, "ID_ACCOUNT", wxTextCtrl)->GetValue().empty())
 		{
 			XRCCTRL(*this, "ID_ACCOUNT", wxTextCtrl)->SetFocus();
@@ -1084,7 +1081,7 @@ bool CSiteManagerDialog::Verify()
 		}
 
 		// In key file logon type, check that the provided key file exists
-		if (logon_type == KEY) {
+		if (logon_type == LogonType::key) {
 			std::wstring keyFile = xrc_call(*this, "ID_KEYFILE", &wxTextCtrl::GetValue).ToStdWstring();
 			if (keyFile.empty()) {
 				wxMessageBox(_("You have to enter a key file path"), _("Site Manager - Invalid data"), wxICON_EXCLAMATION, this);
@@ -1105,14 +1102,25 @@ bool CSiteManagerDialog::Verify()
 			}
 		}
 
-		if (protocol == STORJ && logon_type == NORMAL) {
+		if (protocol == STORJ && logon_type == LogonType::normal) {
+			std::wstring pw = xrc_call(*this, "ID_PASS", &wxTextCtrl::GetValue).ToStdWstring();
 			std::wstring encryptionKey = xrc_call(*this, "ID_ENCRYPTIONKEY", &wxTextCtrl::GetValue).ToStdWstring();
 
-			CStorjKeyInterface validator(this);
-			if (!validator.ValidateKey(encryptionKey, false)) {
-				wxMessageBox(_("You have to enter a valid encryption key"), _("Site Manager - Invalid data"), wxICON_EXCLAMATION, this);
-				xrc_call(*this, "ID_ENCRYPTIONKEY", &wxWindow::SetFocus);
-				return false;
+			bool encrypted = !xrc_call(*this, "ID_PASS", &wxTextCtrl::GetHint).empty();
+			if (encrypted) {
+				if (pw.empty() != encryptionKey.empty()) {
+					wxMessageBox(_("You cannot change password and encryption key individually if using a master password."), _("Site Manager - Invalid data"), wxICON_EXCLAMATION, this);
+					xrc_call(*this, "ID_ENCRYPTIONKEY", &wxWindow::SetFocus);
+					return false;
+				}
+			}
+			if (!encryptionKey.empty() || !encrypted) {
+				CStorjKeyInterface validator(this);
+				if (!validator.ValidateKey(encryptionKey, false)) {
+					wxMessageBox(_("You have to enter a valid encryption key"), _("Site Manager - Invalid data"), wxICON_EXCLAMATION, this);
+					xrc_call(*this, "ID_ENCRYPTIONKEY", &wxWindow::SetFocus);
+					return false;
+				}
 			}
 		}
 
@@ -1151,12 +1159,12 @@ bool CSiteManagerDialog::Verify()
 		const wxString remotePathRaw = XRCCTRL(*this, "ID_BOOKMARK_REMOTEDIR", wxTextCtrl)->GetValue();
 		if (!remotePathRaw.empty()) {
 			CServerPath remotePath;
-			remotePath.SetType(pServer->m_site->m_server.GetType());
+			remotePath.SetType(pServer->m_site->server_.server.GetType());
 			if (!remotePath.SetPath(remotePathRaw.ToStdWstring())) {
 				XRCCTRL(*this, "ID_BOOKMARK_REMOTEDIR", wxTextCtrl)->SetFocus();
 				wxString msg;
-				if (pServer->m_site->m_server.GetType() != DEFAULT)
-					msg = wxString::Format(_("Remote path cannot be parsed. Make sure it is a valid absolute path and is supported by the servertype (%s) selected on the parent site."), CServer::GetNameFromServerType(pServer->m_site->m_server.GetType()));
+				if (pServer->m_site->server_.server.GetType() != DEFAULT)
+					msg = wxString::Format(_("Remote path cannot be parsed. Make sure it is a valid absolute path and is supported by the servertype (%s) selected on the parent site."), CServer::GetNameFromServerType(pServer->m_site->server_.server.GetType()));
 				else
 					msg = _("Remote path cannot be parsed. Make sure it is a valid absolute path.");
 				wxMessageBoxEx(msg, _("Site Manager - Invalid data"), wxICON_EXCLAMATION, this);
@@ -1237,8 +1245,9 @@ void CSiteManagerDialog::OnEndLabelEdit(wxTreeEvent& event)
 
 	wxTreeItemIdValue cookie;
 	for (wxTreeItemId child = pTree->GetFirstChild(parent, cookie); child.IsOk(); child = pTree->GetNextChild(parent, cookie)) {
-		if (child == item)
+		if (child == item) {
 			continue;
+		}
 		if (!name.CmpNoCase(pTree->GetItemText(child))) {
 			wxMessageBoxEx(_("Name already exists"), _("Cannot rename entry"), wxICON_EXCLAMATION, this);
 			event.Veto();
@@ -1335,8 +1344,8 @@ void CSiteManagerDialog::OnNewSite(wxCommandEvent&)
 		return;
 	}
 
-	CServer server;
-	server.SetProtocol(ServerProtocol::FTP);
+	ServerWithCredentials server;
+	server.server.SetProtocol(ServerProtocol::FTP);
 	AddNewSite(item, server);
 }
 
@@ -1366,13 +1375,13 @@ void CSiteManagerDialog::OnLogontypeSelChanged(wxCommandEvent& event)
 void CSiteManagerDialog::SetLogonTypeCtrlState()
 {
 	LogonType const t = GetLogonType();
-	xrc_call(*this, "ID_USER", &wxTextCtrl::Enable, t != ANONYMOUS);
-	xrc_call(*this, "ID_PASS", &wxTextCtrl::Enable, t == NORMAL || t == ACCOUNT);
-	xrc_call(*this, "ID_ACCOUNT", &wxTextCtrl::Enable, t == ACCOUNT);
-	xrc_call(*this, "ID_KEYFILE", &wxTextCtrl::Enable, t == KEY);
-	xrc_call(*this, "ID_KEYFILE_BROWSE", &wxButton::Enable, t == KEY);
-	xrc_call(*this, "ID_ENCRYPTIONKEY", &wxTextCtrl::Enable, t == NORMAL);
-	xrc_call(*this, "ID_ENCRYPTIONKEY_GENERATE", &wxButton::Enable, t == NORMAL);
+	xrc_call(*this, "ID_USER", &wxTextCtrl::Enable, t != LogonType::anonymous);
+	xrc_call(*this, "ID_PASS", &wxTextCtrl::Enable, t == LogonType::normal || t == LogonType::account);
+	xrc_call(*this, "ID_ACCOUNT", &wxTextCtrl::Enable, t == LogonType::account);
+	xrc_call(*this, "ID_KEYFILE", &wxTextCtrl::Enable, t == LogonType::key);
+	xrc_call(*this, "ID_KEYFILE_BROWSE", &wxButton::Enable, t == LogonType::key);
+	xrc_call(*this, "ID_ENCRYPTIONKEY", &wxTextCtrl::Enable, t == LogonType::normal);
+	xrc_call(*this, "ID_ENCRYPTIONKEY_GENERATE", &wxButton::Enable, t == LogonType::normal);
 }
 
 bool CSiteManagerDialog::UpdateItem()
@@ -1407,15 +1416,15 @@ bool CSiteManagerDialog::UpdateItem()
 			return false;
 		}
 		data->m_bookmark->m_name = pTree->GetItemText(item);
-		return UpdateBookmark(*data->m_bookmark, pServer->m_site->m_server);
+		return UpdateBookmark(*data->m_bookmark, pServer->m_site->server_);
 	}
 }
 
-bool CSiteManagerDialog::UpdateBookmark(Bookmark &bookmark, const CServer& server)
+bool CSiteManagerDialog::UpdateBookmark(Bookmark &bookmark, ServerWithCredentials const& server)
 {
 	bookmark.m_localDir = xrc_call(*this, "ID_BOOKMARK_LOCALDIR", &wxTextCtrl::GetValue);
 	bookmark.m_remoteDir = CServerPath();
-	bookmark.m_remoteDir.SetType(server.GetType());
+	bookmark.m_remoteDir.SetType(server.server.GetType());
 	bookmark.m_remoteDir.SetPath(xrc_call(*this, "ID_BOOKMARK_REMOTEDIR", &wxTextCtrl::GetValue).ToStdWstring());
 	bookmark.m_sync = xrc_call(*this, "ID_BOOKMARK_SYNC", &wxCheckBox::GetValue);
 	bookmark.m_comparison = xrc_call(*this, "ID_BOOKMARK_COMPARISON", &wxCheckBox::GetValue);
@@ -1427,7 +1436,7 @@ bool CSiteManagerDialog::UpdateServer(Site &server, const wxString &name)
 {
 	ServerProtocol const protocol = GetProtocol();
 	wxASSERT(protocol != UNKNOWN);
-	server.m_server.SetProtocol(protocol);
+	server.server_.server.SetProtocol(protocol);
 
 	unsigned long port;
 	if (!xrc_call(*this, "ID_PORT", &wxTextCtrl::GetValue).ToULong(&port) || !port || port > 65535) {
@@ -1438,31 +1447,41 @@ bool CSiteManagerDialog::UpdateServer(Site &server, const wxString &name)
 	if (!host.empty() && host[0] == '[') {
 		host = host.substr(1, host.size() - 2);
 	}
-	server.m_server.SetHost(host, port);
-
-	std::wstring pass = xrc_call(*this, "ID_PASS", &wxTextCtrl::GetValue).ToStdWstring();
+	server.server_.server.SetHost(host, port);
 
 	auto logon_type = GetLogonType();
-	if (protocol == STORJ && logon_type == NORMAL) {
-		pass += '|';
-		pass += xrc_call(*this, "ID_ENCRYPTIONKEY", &wxTextCtrl::GetValue).ToStdWstring();
+	server.server_.SetLogonType(logon_type);
+
+	server.server_.SetUser(xrc_call(*this, "ID_USER", &wxTextCtrl::GetValue).ToStdWstring());
+	auto pw = xrc_call(*this, "ID_PASS", &wxTextCtrl::GetValue).ToStdWstring();
+
+	if (protocol == STORJ && logon_type == LogonType::normal && (!pw.empty() || !server.server_.credentials.encrypted_)) {
+		pw += '|';
+		pw += xrc_call(*this, "ID_ENCRYPTIONKEY", &wxTextCtrl::GetValue).ToStdWstring();
 	}
-	server.m_server.SetLogonType(logon_type);
 
-	server.m_server.SetUser(xrc_call(*this, "ID_USER", &wxTextCtrl::GetValue).ToStdWstring(), pass);
-	server.m_server.SetAccount(xrc_call(*this, "ID_ACCOUNT", &wxTextCtrl::GetValue).ToStdWstring());
+	if (server.server_.credentials.encrypted_) {
+		if (!pw.empty()) {
+			server.server_.credentials.encrypted_ = public_key();
+			server.server_.credentials.SetPass(pw);
+		}
+	}
+	else {
+		server.server_.credentials.SetPass(pw);
+	}
+	server.server_.credentials.account_ = xrc_call(*this, "ID_ACCOUNT", &wxTextCtrl::GetValue).ToStdWstring();
 
-	server.m_server.SetKeyFile(xrc_call(*this, "ID_KEYFILE", &wxTextCtrl::GetValue).ToStdWstring());
+	server.server_.credentials.keyFile_ = xrc_call(*this, "ID_KEYFILE", &wxTextCtrl::GetValue).ToStdWstring();
 
 	server.m_comments = xrc_call(*this, "ID_COMMENTS", &wxTextCtrl::GetValue);
 	server.m_colour = CSiteManager::GetColourFromIndex(xrc_call(*this, "ID_COLOR", &wxChoice::GetSelection));
 
 	std::wstring const serverType = xrc_call(*this, "ID_SERVERTYPE", &wxChoice::GetStringSelection).ToStdWstring();
-	server.m_server.SetType(CServer::GetServerTypeFromName(serverType));
+	server.server_.server.SetType(CServer::GetServerTypeFromName(serverType));
 
 	server.m_default_bookmark.m_localDir = xrc_call(*this, "ID_LOCALDIR", &wxTextCtrl::GetValue);
 	server.m_default_bookmark.m_remoteDir = CServerPath();
-	server.m_default_bookmark.m_remoteDir.SetType(server.m_server.GetType());
+	server.m_default_bookmark.m_remoteDir.SetType(server.server_.server.GetType());
 	server.m_default_bookmark.m_remoteDir.SetPath(xrc_call(*this, "ID_REMOTEDIR", &wxTextCtrl::GetValue).ToStdWstring());
 	server.m_default_bookmark.m_sync = xrc_call(*this, "ID_SYNC", &wxCheckBox::GetValue);
 	server.m_default_bookmark.m_comparison = xrc_call(*this, "ID_COMPARISON", &wxCheckBox::GetValue);
@@ -1470,37 +1489,43 @@ bool CSiteManagerDialog::UpdateServer(Site &server, const wxString &name)
 	int hours = xrc_call(*this, "ID_TIMEZONE_HOURS", &wxSpinCtrl::GetValue);
 	int minutes = xrc_call(*this, "ID_TIMEZONE_MINUTES", &wxSpinCtrl::GetValue);
 
-	server.m_server.SetTimezoneOffset(hours * 60 + minutes);
+	server.server_.server.SetTimezoneOffset(hours * 60 + minutes);
 
-	if (xrc_call(*this, "ID_TRANSFERMODE_ACTIVE", &wxRadioButton::GetValue))
-		server.m_server.SetPasvMode(MODE_ACTIVE);
-	else if (xrc_call(*this, "ID_TRANSFERMODE_PASSIVE", &wxRadioButton::GetValue))
-		server.m_server.SetPasvMode(MODE_PASSIVE);
-	else
-		server.m_server.SetPasvMode(MODE_DEFAULT);
-
-	if (xrc_call(*this, "ID_LIMITMULTIPLE", &wxCheckBox::GetValue)) {
-		server.m_server.MaximumMultipleConnections(xrc_call(*this, "ID_MAXMULTIPLE", &wxSpinCtrl::GetValue));
+	if (xrc_call(*this, "ID_TRANSFERMODE_ACTIVE", &wxRadioButton::GetValue)) {
+		server.server_.server.SetPasvMode(MODE_ACTIVE);
 	}
-	else
-		server.m_server.MaximumMultipleConnections(0);
-
-	if (xrc_call(*this, "ID_CHARSET_UTF8", &wxRadioButton::GetValue))
-		server.m_server.SetEncodingType(ENCODING_UTF8);
-	else if (xrc_call(*this, "ID_CHARSET_CUSTOM", &wxRadioButton::GetValue)) {
-		std::wstring encoding = xrc_call(*this, "ID_ENCODING", &wxTextCtrl::GetValue).ToStdWstring();
-		server.m_server.SetEncodingType(ENCODING_CUSTOM, encoding);
+	else if (xrc_call(*this, "ID_TRANSFERMODE_PASSIVE", &wxRadioButton::GetValue)) {
+		server.server_.server.SetPasvMode(MODE_PASSIVE);
 	}
 	else {
-		server.m_server.SetEncodingType(ENCODING_AUTO);
+		server.server_.server.SetPasvMode(MODE_DEFAULT);
 	}
 
-	if (xrc_call(*this, "ID_BYPASSPROXY", &wxCheckBox::GetValue))
-		server.m_server.SetBypassProxy(true);
-	else
-		server.m_server.SetBypassProxy(false);
+	if (xrc_call(*this, "ID_LIMITMULTIPLE", &wxCheckBox::GetValue)) {
+		server.server_.server.MaximumMultipleConnections(xrc_call(*this, "ID_MAXMULTIPLE", &wxSpinCtrl::GetValue));
+	}
+	else {
+		server.server_.server.MaximumMultipleConnections(0);
+	}
 
-	server.m_server.SetName(name.ToStdWstring());
+	if (xrc_call(*this, "ID_CHARSET_UTF8", &wxRadioButton::GetValue))
+		server.server_.server.SetEncodingType(ENCODING_UTF8);
+	else if (xrc_call(*this, "ID_CHARSET_CUSTOM", &wxRadioButton::GetValue)) {
+		std::wstring encoding = xrc_call(*this, "ID_ENCODING", &wxTextCtrl::GetValue).ToStdWstring();
+		server.server_.server.SetEncodingType(ENCODING_CUSTOM, encoding);
+	}
+	else {
+		server.server_.server.SetEncodingType(ENCODING_AUTO);
+	}
+
+	if (xrc_call(*this, "ID_BYPASSPROXY", &wxCheckBox::GetValue)) {
+		server.server_.server.SetBypassProxy(true);
+	}
+	else {
+		server.server_.server.SetBypassProxy(false);
+	}
+
+	server.server_.server.SetName(name.ToStdWstring());
 
 	return true;
 }
@@ -1634,8 +1659,9 @@ void CSiteManagerDialog::OnLimitMultipleConnectionsChanged(wxCommandEvent& event
 void CSiteManagerDialog::SetCtrlState()
 {
 	wxTreeCtrl *pTree = XRCCTRL(*this, "ID_SITETREE", wxTreeCtrl);
-	if (!pTree)
+	if (!pTree) {
 		return;
+	}
 
 	wxTreeItemId item = pTree->GetSelection();
 
@@ -1646,8 +1672,9 @@ void CSiteManagerDialog::SetCtrlState()
 #endif
 
 	CSiteManagerItemData* data = 0;
-	if (item.IsOk())
-		data = static_cast<CSiteManagerItemData* >(pTree->GetItemData(item));
+	if (item.IsOk()) {
+		data = static_cast<CSiteManagerItemData*>(pTree->GetItemData(item));
+	}
 	if (!data) {
 		m_pNotebook_Site->Show();
 		m_pNotebook_Bookmark->Hide();
@@ -1673,13 +1700,14 @@ void CSiteManagerDialog::SetCtrlState()
 		xrc_call(*this, "ID_LOGONTYPE", &wxChoice::SetStringSelection, _("Anonymous"));
 		xrc_call(*this, "ID_USER", &wxTextCtrl::ChangeValue, wxString());
 		xrc_call(*this, "ID_PASS", &wxTextCtrl::ChangeValue, wxString());
+		xrc_call(*this, "ID_PASS", &wxTextCtrl::SetHint, wxString());
 		xrc_call(*this, "ID_ACCOUNT", &wxTextCtrl::ChangeValue, wxString());
 		xrc_call(*this, "ID_KEYFILE", &wxTextCtrl::ChangeValue, wxString());
 		xrc_call(*this, "ID_ENCRYPTIONKEY", &wxTextCtrl::ChangeValue, wxString());
 		xrc_call(*this, "ID_COMMENTS", &wxTextCtrl::ChangeValue, wxString());
 		xrc_call(*this, "ID_COLOR", &wxChoice::Select, 0);
 
-		SetControlVisibility(FTP, ANONYMOUS);
+		SetControlVisibility(FTP, LogonType::anonymous);
 
 		xrc_call(*this, "ID_SERVERTYPE", &wxChoice::SetSelection, 0);
 		xrc_call(*this, "ID_LOCALDIR", &wxTextCtrl::ChangeValue, wxString());
@@ -1714,39 +1742,41 @@ void CSiteManagerDialog::SetCtrlState()
 		xrc_call(*this, "ID_CONNECT", &wxButton::Enable, true);
 
 		xrc_call(*this, "ID_HOST", &wxWindow::Enable, !predefined);
-		xrc_call(*this, "ID_HOST", &wxTextCtrl::ChangeValue, data->m_site->m_server.Format(ServerFormat::host_only));
-		unsigned int port = data->m_site->m_server.GetPort();
+		xrc_call(*this, "ID_HOST", &wxTextCtrl::ChangeValue, data->m_site->server_.Format(ServerFormat::host_only));
+		unsigned int port = data->m_site->server_.server.GetPort();
 
-		if (port != CServer::GetDefaultPort(data->m_site->m_server.GetProtocol()))
+		if (port != CServer::GetDefaultPort(data->m_site->server_.server.GetProtocol())) {
 			xrc_call(*this, "ID_PORT", &wxTextCtrl::ChangeValue, wxString::Format(_T("%d"), port));
-		else
+		}
+		else {
 			xrc_call(*this, "ID_PORT", &wxTextCtrl::ChangeValue, wxString());
+		}
 		xrc_call(*this, "ID_PORT", &wxWindow::Enable, !predefined);
 
-		ServerProtocol protocol = data->m_site->m_server.GetProtocol();
+		ServerProtocol protocol = data->m_site->server_.server.GetProtocol();
 		SetProtocol(protocol);
 		xrc_call(*this, "ID_PROTOCOL", &wxWindow::Enable, !predefined);
 		xrc_call(*this, "ID_ENCRYPTION", &wxWindow::Enable, !predefined);
-		xrc_call(*this, "ID_BYPASSPROXY", &wxCheckBox::SetValue, data->m_site->m_server.GetBypassProxy());
+		xrc_call(*this, "ID_BYPASSPROXY", &wxCheckBox::SetValue, data->m_site->server_.server.GetBypassProxy());
 
-		LogonType logonType = data->m_site->m_server.GetLogonType();
-		xrc_call(*this, "ID_USER", &wxTextCtrl::Enable, !predefined && logonType != ANONYMOUS);
-		xrc_call(*this, "ID_PASS", &wxTextCtrl::Enable, !predefined && (logonType == NORMAL || logonType == ACCOUNT));
-		xrc_call(*this, "ID_ACCOUNT", &wxTextCtrl::Enable, !predefined && logonType == ACCOUNT);
-		xrc_call(*this, "ID_KEYFILE", &wxTextCtrl::Enable, !predefined && logonType == KEY);
-		xrc_call(*this, "ID_KEYFILE_BROWSE", &wxButton::Enable, !predefined && logonType == KEY);
-		xrc_call(*this, "ID_ENCRYPTIONKEY", &wxTextCtrl::Enable, !predefined && logonType == NORMAL);
-		xrc_call(*this, "ID_ENCRYPTIONKEY_GENERATE", &wxButton::Enable, !predefined && logonType == NORMAL);
+		LogonType logonType = data->m_site->server_.credentials.logonType_;
+		xrc_call(*this, "ID_USER", &wxTextCtrl::Enable, !predefined && logonType != LogonType::anonymous);
+		xrc_call(*this, "ID_PASS", &wxTextCtrl::Enable, !predefined && (logonType == LogonType::normal || logonType == LogonType::account));
+		xrc_call(*this, "ID_ACCOUNT", &wxTextCtrl::Enable, !predefined && logonType == LogonType::account);
+		xrc_call(*this, "ID_KEYFILE", &wxTextCtrl::Enable, !predefined && logonType == LogonType::key);
+		xrc_call(*this, "ID_KEYFILE_BROWSE", &wxButton::Enable, !predefined && logonType == LogonType::key);
+		xrc_call(*this, "ID_ENCRYPTIONKEY", &wxTextCtrl::Enable, !predefined && logonType == LogonType::normal);
+		xrc_call(*this, "ID_ENCRYPTIONKEY_GENERATE", &wxButton::Enable, !predefined && logonType == LogonType::normal);
 
 		SetControlVisibility(protocol, logonType);
 
-		xrc_call(*this, "ID_LOGONTYPE", &wxChoice::SetStringSelection, CServer::GetNameFromLogonType(logonType));
+		xrc_call(*this, "ID_LOGONTYPE", &wxChoice::SetStringSelection, GetNameFromLogonType(logonType));
 		xrc_call(*this, "ID_LOGONTYPE", &wxWindow::Enable, !predefined);
 
-		xrc_call(*this, "ID_USER", &wxTextCtrl::ChangeValue, data->m_site->m_server.GetUser());
-		xrc_call(*this, "ID_ACCOUNT", &wxTextCtrl::ChangeValue, data->m_site->m_server.GetAccount());
+		xrc_call(*this, "ID_USER", &wxTextCtrl::ChangeValue, data->m_site->server_.server.GetUser());
+		xrc_call(*this, "ID_ACCOUNT", &wxTextCtrl::ChangeValue, data->m_site->server_.credentials.account_);
 
-		std::wstring pass = data->m_site->m_server.GetPass();
+		std::wstring pass = data->m_site->server_.credentials.GetPass();
 		std::wstring encryptionKey;
 		if (protocol == STORJ) {
 			size_t pos = pass.rfind('|');
@@ -1755,15 +1785,26 @@ void CSiteManagerDialog::SetCtrlState()
 				pass = pass.substr(0, pos);
 			}
 		}
-		xrc_call(*this, "ID_PASS", &wxTextCtrl::ChangeValue, pass);
-		xrc_call(*this, "ID_KEYFILE", &wxTextCtrl::ChangeValue, data->m_site->m_server.GetKeyFile());
-		xrc_call(*this, "ID_ENCRYPTIONKEY", &wxTextCtrl::ChangeValue, encryptionKey);
+
+		if (data->m_site->server_.credentials.encrypted_) {
+			xrc_call(*this, "ID_PASS", &wxTextCtrl::ChangeValue, wxString());
+			xrc_call(*this, "ID_ENCRYPTIONKEY", &wxTextCtrl::ChangeValue, wxString());
+
+			// @translator: Keep this string as short as possible
+			xrc_call(*this, "ID_PASS", &wxTextCtrl::SetHint, _("Leave empty to keep existing password."));
+		}
+		else {
+			xrc_call(*this, "ID_PASS", &wxTextCtrl::ChangeValue, pass);
+			xrc_call(*this, "ID_PASS", &wxTextCtrl::SetHint, wxString());
+			xrc_call(*this, "ID_ENCRYPTIONKEY", &wxTextCtrl::ChangeValue, encryptionKey);
+		}
+		xrc_call(*this, "ID_KEYFILE", &wxTextCtrl::ChangeValue, data->m_site->server_.credentials.keyFile_);
 		xrc_call(*this, "ID_COMMENTS", &wxTextCtrl::ChangeValue, data->m_site->m_comments);
 		xrc_call(*this, "ID_COMMENTS", &wxWindow::Enable, !predefined);
 		xrc_call(*this, "ID_COLOR", &wxChoice::Select, CSiteManager::GetColourIndex(data->m_site->m_colour));
 		xrc_call(*this, "ID_COLOR", &wxWindow::Enable, !predefined);
 
-		xrc_call(*this, "ID_SERVERTYPE", &wxChoice::SetSelection, data->m_site->m_server.GetType());
+		xrc_call(*this, "ID_SERVERTYPE", &wxChoice::SetSelection, data->m_site->server_.server.GetType());
 		xrc_call(*this, "ID_SERVERTYPE", &wxWindow::Enable, !predefined);
 		xrc_call(*this, "ID_LOCALDIR", &wxTextCtrl::ChangeValue, data->m_site->m_default_bookmark.m_localDir);
 		xrc_call(*this, "ID_LOCALDIR", &wxWindow::Enable, !predefined);
@@ -1773,23 +1814,26 @@ void CSiteManagerDialog::SetCtrlState()
 		xrc_call(*this, "ID_SYNC", &wxCheckBox::SetValue, data->m_site->m_default_bookmark.m_sync);
 		xrc_call(*this, "ID_COMPARISON", &wxCheckBox::Enable, !predefined);
 		xrc_call(*this, "ID_COMPARISON", &wxCheckBox::SetValue, data->m_site->m_default_bookmark.m_comparison);
-		xrc_call<wxSpinCtrl, int>(*this, "ID_TIMEZONE_HOURS", &wxSpinCtrl::SetValue, data->m_site->m_server.GetTimezoneOffset() / 60);
+		xrc_call<wxSpinCtrl, int>(*this, "ID_TIMEZONE_HOURS", &wxSpinCtrl::SetValue, data->m_site->server_.server.GetTimezoneOffset() / 60);
 		xrc_call(*this, "ID_TIMEZONE_HOURS", &wxWindow::Enable, !predefined);
-		xrc_call<wxSpinCtrl, int>(*this, "ID_TIMEZONE_MINUTES", &wxSpinCtrl::SetValue, data->m_site->m_server.GetTimezoneOffset() % 60);
+		xrc_call<wxSpinCtrl, int>(*this, "ID_TIMEZONE_MINUTES", &wxSpinCtrl::SetValue, data->m_site->server_.server.GetTimezoneOffset() % 60);
 		xrc_call(*this, "ID_TIMEZONE_MINUTES", &wxWindow::Enable, !predefined);
 
-		PasvMode pasvMode = data->m_site->m_server.GetPasvMode();
-		if (pasvMode == MODE_ACTIVE)
+		PasvMode pasvMode = data->m_site->server_.server.GetPasvMode();
+		if (pasvMode == MODE_ACTIVE) {
 			xrc_call(*this, "ID_TRANSFERMODE_ACTIVE", &wxRadioButton::SetValue, true);
-		else if (pasvMode == MODE_PASSIVE)
+		}
+		else if (pasvMode == MODE_PASSIVE) {
 			xrc_call(*this, "ID_TRANSFERMODE_PASSIVE", &wxRadioButton::SetValue, true);
-		else
+		}
+		else {
 			xrc_call(*this, "ID_TRANSFERMODE_DEFAULT", &wxRadioButton::SetValue, true);
+		}
 		xrc_call(*this, "ID_TRANSFERMODE_ACTIVE", &wxWindow::Enable, !predefined);
 		xrc_call(*this, "ID_TRANSFERMODE_PASSIVE", &wxWindow::Enable, !predefined);
 		xrc_call(*this, "ID_TRANSFERMODE_DEFAULT", &wxWindow::Enable, !predefined);
 
-		int maxMultiple = data->m_site->m_server.MaximumMultipleConnections();
+		int maxMultiple = data->m_site->server_.server.MaximumMultipleConnections();
 		xrc_call(*this, "ID_LIMITMULTIPLE", &wxCheckBox::SetValue, maxMultiple != 0);
 		xrc_call(*this, "ID_LIMITMULTIPLE", &wxWindow::Enable, !predefined);
 		if (maxMultiple != 0) {
@@ -1801,7 +1845,7 @@ void CSiteManagerDialog::SetCtrlState()
 			xrc_call<wxSpinCtrl, int>(*this, "ID_MAXMULTIPLE", &wxSpinCtrl::SetValue, 1);
 		}
 
-		switch (data->m_site->m_server.GetEncodingType()) {
+		switch (data->m_site->server_.server.GetEncodingType()) {
 		default:
 		case ENCODING_AUTO:
 			xrc_call(*this, "ID_CHARSET_AUTO", &wxRadioButton::SetValue, true);
@@ -1816,8 +1860,8 @@ void CSiteManagerDialog::SetCtrlState()
 		xrc_call(*this, "ID_CHARSET_AUTO", &wxWindow::Enable, !predefined);
 		xrc_call(*this, "ID_CHARSET_UTF8", &wxWindow::Enable, !predefined);
 		xrc_call(*this, "ID_CHARSET_CUSTOM", &wxWindow::Enable, !predefined);
-		xrc_call(*this, "ID_ENCODING", &wxTextCtrl::Enable, !predefined && data->m_site->m_server.GetEncodingType() == ENCODING_CUSTOM);
-		xrc_call(*this, "ID_ENCODING", &wxTextCtrl::ChangeValue, data->m_site->m_server.GetCustomEncoding());
+		xrc_call(*this, "ID_ENCODING", &wxTextCtrl::Enable, !predefined && data->m_site->server_.server.GetEncodingType() == ENCODING_CUSTOM);
+		xrc_call(*this, "ID_ENCODING", &wxTextCtrl::ChangeValue, data->m_site->server_.server.GetCustomEncoding());
 #ifdef __WXGTK__
 		xrc_call(*this, "ID_CONNECT", &wxButton::SetDefault);
 #endif
@@ -1874,7 +1918,7 @@ void CSiteManagerDialog::OnProtocolSelChanged(wxCommandEvent&)
 namespace {
 void ShowItem(wxChoice & choice, LogonType logonType, bool show)
 {
-	auto const name = CServer::GetNameFromLogonType(logonType);
+	auto const name = GetNameFromLogonType(logonType);
 	int item = choice.FindString(name);
 	if (item == -1 && show) {
 		if (show) {
@@ -1905,33 +1949,33 @@ void CSiteManagerDialog::SetControlVisibility(ServerProtocol protocol, LogonType
 	auto choice = XRCCTRL(*this, "ID_LOGONTYPE", wxChoice);
 
 	// Disallow invalid combinations
-	if (protocol == SFTP && type == ACCOUNT) {
-		type = NORMAL;
-		choice->Select(choice->FindString(CServer::GetNameFromLogonType(type)));
+	if (protocol == SFTP && type == LogonType::account) {
+		type = LogonType::normal;
+		choice->Select(choice->FindString(GetNameFromLogonType(type)));
 		SetLogonTypeCtrlState();
 	}
-	else if (protocol != SFTP && type == KEY) {
-		type = NORMAL;
-		choice->Select(choice->FindString(CServer::GetNameFromLogonType(type)));
+	else if (protocol != SFTP && type == LogonType::key) {
+		type = LogonType::normal;
+		choice->Select(choice->FindString(GetNameFromLogonType(type)));
 		SetLogonTypeCtrlState();
 	}
-	else if (protocol == STORJ && type != NORMAL && type != ASK) {
-		type = NORMAL;
-		choice->Select(choice->FindString(CServer::GetNameFromLogonType(type)));
+	else if (protocol == STORJ && type != LogonType::normal && type != LogonType::ask) {
+		type = LogonType::normal;
+		choice->Select(choice->FindString(GetNameFromLogonType(type)));
 		SetLogonTypeCtrlState();
 	}
-	ShowItem(*choice, ANONYMOUS, protocol != STORJ);
-	ShowItem(*choice, INTERACTIVE, protocol != STORJ);
-	ShowItem(*choice, KEY, protocol == SFTP);
-	ShowItem(*choice, ACCOUNT, isFtp);
+	ShowItem(*choice, LogonType::anonymous, protocol != STORJ);
+	ShowItem(*choice, LogonType::interactive, protocol != STORJ);
+	ShowItem(*choice, LogonType::key, protocol == SFTP);
+	ShowItem(*choice, LogonType::account, isFtp);
 
-	xrc_call(*this, "ID_ACCOUNT_DESC", &wxStaticText::Show, isFtp && type == ACCOUNT);
-	xrc_call(*this, "ID_ACCOUNT", &wxTextCtrl::Show, isFtp && type == ACCOUNT);
-	xrc_call(*this, "ID_PASS_DESC", &wxStaticText::Show, protocol != SFTP || type != KEY);
-	xrc_call(*this, "ID_PASS", &wxTextCtrl::Show, protocol != SFTP || type != KEY);
-	xrc_call(*this, "ID_KEYFILE_DESC", &wxStaticText::Show, protocol == SFTP && type == KEY);
-	xrc_call(*this, "ID_KEYFILE", &wxTextCtrl::Show, protocol == SFTP && type == KEY);
-	xrc_call(*this, "ID_KEYFILE_BROWSE", &wxButton::Show, protocol == SFTP && type == KEY);
+	xrc_call(*this, "ID_ACCOUNT_DESC", &wxStaticText::Show, isFtp && type == LogonType::account);
+	xrc_call(*this, "ID_ACCOUNT", &wxTextCtrl::Show, isFtp && type == LogonType::account);
+	xrc_call(*this, "ID_PASS_DESC", &wxStaticText::Show, protocol != SFTP || type != LogonType::key);
+	xrc_call(*this, "ID_PASS", &wxTextCtrl::Show, protocol != SFTP || type != LogonType::key);
+	xrc_call(*this, "ID_KEYFILE_DESC", &wxStaticText::Show, protocol == SFTP && type == LogonType::key);
+	xrc_call(*this, "ID_KEYFILE", &wxTextCtrl::Show, protocol == SFTP && type == LogonType::key);
+	xrc_call(*this, "ID_KEYFILE_BROWSE", &wxButton::Show, protocol == SFTP && type == LogonType::key);
 
 	xrc_call(*this, "ID_ENCRYPTIONKEY_DESC", &wxStaticText::Show, protocol == STORJ);
 	xrc_call(*this, "ID_ENCRYPTIONKEY", &wxTextCtrl::Show, protocol == STORJ);
@@ -2279,8 +2323,7 @@ bool CSiteManagerDialog::MoveItems(wxTreeItemId source, wxTreeItemId target, boo
 
 void CSiteManagerDialog::OnChar(wxKeyEvent& event)
 {
-	if (event.GetKeyCode() != WXK_F2)
-	{
+	if (event.GetKeyCode() != WXK_F2) {
 		event.Skip();
 		return;
 	}
@@ -2289,10 +2332,11 @@ void CSiteManagerDialog::OnChar(wxKeyEvent& event)
 	OnRename(cmdEvent);
 }
 
-void CSiteManagerDialog::CopyAddServer(const CServer& server)
+void CSiteManagerDialog::CopyAddServer(ServerWithCredentials const& server)
 {
-	if (!Verify())
+	if (!Verify()) {
 		return;
+	}
 
 	AddNewSite(m_ownSites, server, true);
 }
@@ -2328,17 +2372,18 @@ wxString CSiteManagerDialog::FindFirstFreeName(const wxTreeItemId &parent, const
 	return newName;
 }
 
-void CSiteManagerDialog::AddNewSite(wxTreeItemId parent, const CServer& server, bool connected /*=false*/)
+void CSiteManagerDialog::AddNewSite(wxTreeItemId parent, ServerWithCredentials const& server, bool connected)
 {
 	wxTreeCtrlEx *pTree = XRCCTRL(*this, "ID_SITETREE", wxTreeCtrlEx);
-	if (!pTree)
+	if (!pTree) {
 		return;
+	}
 
 	wxString name = FindFirstFreeName(parent, _("New site"));
 
 	CSiteManagerItemData* pData = new CSiteManagerItemData;
 	pData->m_site = std::make_unique<Site>();
-	pData->m_site->m_server = server;
+	pData->m_site->server_ = server;
 	if (connected) {
 		pData->connected_item = 0;
 	}
@@ -2564,7 +2609,7 @@ ServerProtocol CSiteManagerDialog::GetProtocol() const
 
 LogonType CSiteManagerDialog::GetLogonType() const
 {
-	return CServer::GetLogonTypeFromName(xrc_call(*this, "ID_LOGONTYPE", &wxChoice::GetStringSelection).ToStdWstring());
+	return GetLogonTypeFromName(xrc_call(*this, "ID_LOGONTYPE", &wxChoice::GetStringSelection).ToStdWstring());
 }
 
 void CSiteManagerDialog::OnGenerateEncryptionKey(wxCommandEvent& event)

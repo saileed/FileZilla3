@@ -1,5 +1,5 @@
-#ifndef __DRAGDROPMANAGER__
-#define __DRAGDROPMANAGER__
+#ifndef FILEZILLA_INTERFACE_DRAGDROPMANAGER_HEADER
+#define FILEZILLA_INTERFACE_DRAGDROPMANAGER_HEADER
 
 // wxWidgets doesn't provide any means to check on the type of objects
 // while an object hasn't been dropped yet and is still being moved around
@@ -7,6 +7,8 @@
 // and drop system.
 
 // As such, keep track on the objects.
+
+#include "serverdata.h"
 
 class CDragDropManager final
 {
@@ -22,14 +24,14 @@ public:
 	CLocalPath localParent;
 	std::list<wxString> m_localFiles;
 
-	CServer server;
+	ServerWithCredentials server;
 	CServerPath remoteParent;
 
 protected:
 	CDragDropManager();
-	virtual ~CDragDropManager() {}
+	virtual ~CDragDropManager() = default;
 
 	static CDragDropManager* m_pDragDropManager;
 };
 
-#endif //__DRAGDROPMANAGER__
+#endif

@@ -202,17 +202,19 @@ protected:
 	{
 		if (notification == STATECHANGE_CHANGEDCONTEXT) {
 			// Update window title
-			const CServer* pServer = pState ? pState->GetServer() : 0;
-			if (!pServer)
+			if (!pState || !pState->GetServer()) {
 				m_pMainFrame->SetTitle(_T("FileZilla"));
-			else
+			}
+			else {
 				m_pMainFrame->SetTitle(pState->GetTitle() + _T(" - FileZilla"));
+			}
 
 			return;
 		}
 
-		if (!pState)
+		if (!pState) {
 			return;
+		}
 
 		if (!m_pMainFrame->m_pContextControl) {
 			return;
@@ -224,17 +226,18 @@ protected:
 		}
 
 		if (!controls->used()) {
-			if (notification == STATECHANGE_REMOTE_IDLE || notification == STATECHANGE_SERVER)
+			if (notification == STATECHANGE_REMOTE_IDLE || notification == STATECHANGE_SERVER) {
 				pState->Disconnect();
+			}
 
 			return;
 		}
 
 		if (notification == STATECHANGE_SERVER) {
-			const CServer* pServer = pState->GetServer();
+			ServerWithCredentials const& server = pState->GetServer();
 
 			if (pState == CContextManager::Get()->GetCurrentContext()) {
-				if (!pServer) {
+				if (!server) {
 					m_pMainFrame->SetTitle(_T("FileZilla"));
 				}
 				else {
@@ -600,23 +603,28 @@ void CMainFrame::OnMenuHandler(wxCommandEvent &event)
 		OpenSiteManager();
 	}
 	else if (event.GetId() == XRCID("ID_MENU_FILE_COPYSITEMANAGER")) {
+		ServerWithCredentials server;
 		CState* pState = CContextManager::Get()->GetCurrentContext();
-		const CServer* pServer = pState ? pState->GetServer() : 0;
-		if (!pServer) {
+		if (pState) {
+			server = pState->GetServer();
+		}
+		if (!server) {
 			wxMessageBoxEx(_("Not connected to any server."), _("Cannot add server to Site Manager"), wxICON_EXCLAMATION);
 			return;
 		}
-		OpenSiteManager(pServer);
+		OpenSiteManager(&server);
 	}
 	else if (event.GetId() == XRCID("ID_MENU_SERVER_CMD")) {
 		CState* pState = CContextManager::Get()->GetCurrentContext();
-		if (!pState || !pState->m_pCommandQueue || !pState->IsRemoteConnected() || !pState->IsRemoteIdle())
+		if (!pState || !pState->m_pCommandQueue || !pState->IsRemoteConnected() || !pState->IsRemoteIdle()) {
 			return;
+		}
 
 		CInputDialog dlg;
 		dlg.Create(this, _("Enter custom command"), _("Please enter raw FTP command.\nUsing raw ftp commands will clear the directory cache."));
-		if (dlg.ShowModal() != wxID_OK)
+		if (dlg.ShowModal() != wxID_OK) {
 			return;
+		}
 
 		pState = CContextManager::Get()->GetCurrentContext();
 		if (!pState || !pState->m_pCommandQueue || !pState->IsRemoteConnected() || !pState->IsRemoteIdle()) {
@@ -839,11 +847,11 @@ void CMainFrame::OnMenuHandler(wxCommandEvent &event)
 		// controls->last_bookmark_path can get modified if it's empty now
 		int res;
 		if (event.GetId() == XRCID("ID_BOOKMARK_ADD")) {
-			CNewBookmarkDialog dlg(this, sitePath, old_site.m_server ? &old_site.m_server : 0);
+			CNewBookmarkDialog dlg(this, sitePath, old_site.server_ ? &old_site.server_ : 0);
 			res = dlg.Run(pState->GetLocalDir().GetPath(), pState->GetRemotePath());
 		}
 		else {
-			CBookmarksDialog dlg(this, sitePath, old_site.m_server ? &old_site.m_server : 0);
+			CBookmarksDialog dlg(this, sitePath, old_site.server_ ? &old_site.server_ : 0);
 			res = dlg.Run();
 		}
 		if (res == wxID_OK) {
@@ -1322,7 +1330,7 @@ void CMainFrame::OnClose(wxCloseEvent &event)
 	CContextControl::_context_controls* controls = m_pContextControl ? m_pContextControl->GetCurrentControls() : 0;
 	if (controls) {
 		Site site = controls->pState->GetLastSite();
-		COptions::Get()->SetLastServer(site.m_server);
+		COptions::Get()->SetLastServer(site.server_);
 		COptions::Get()->SetOption(OPTION_LASTSERVERPATH, controls->pState->GetLastServerPath().GetSafePath());
 		COptions::Get()->SetOption(OPTION_LAST_CONNECTED_SITE, site.m_path);
 	}
@@ -1392,7 +1400,7 @@ void CMainFrame::OnTimer(wxTimerEvent& event)
 #endif
 }
 
-void CMainFrame::OpenSiteManager(CServer const* pServer)
+void CMainFrame::OpenSiteManager(ServerWithCredentials const* pServer)
 {
 	CState* pState = CContextManager::Get()->GetCurrentContext();
 	if (!pState) {
@@ -1427,7 +1435,7 @@ void CMainFrame::OpenSiteManager(CServer const* pServer)
 
 		CSiteManagerDialog::_connected_site connected_site;
 		connected_site.old_path = path;
-		connected_site.server = site.m_server;
+		connected_site.server = site.server_;
 		connected_sites.push_back(connected_site);
 		handled_paths.insert(path);
 	}
@@ -1527,8 +1535,9 @@ void CMainFrame::OnMenuEditSettings(wxCommandEvent&)
 
 void CMainFrame::OnToggleLogView(wxCommandEvent&)
 {
-	if (!m_pTopSplitter)
+	if (!m_pTopSplitter) {
 		return;
+	}
 
 	bool shown;
 
@@ -1970,12 +1979,8 @@ void CMainFrame::OnSitemanagerDropdown(wxCommandEvent& event)
 bool CMainFrame::ConnectToSite(Site & data, Bookmark const& bookmark)
 {
 	// First check if we need to ask user for a password
-	if (data.m_server.GetLogonType() == ASK ||
-		(data.m_server.GetLogonType() == INTERACTIVE && data.m_server.GetUser().empty()))
-	{
-		if (!CLoginManager::Get().GetPassword(data.m_server, false, data.m_server.GetName())) {
-			return false;
-		}
+	if (!CLoginManager::Get().GetPassword(data.server_, false, data.server_.server.GetName())) {
+		return false;
 	}
 
 	// Check if current state is already connected and if needed ask whether to open in new tab
@@ -2440,14 +2445,14 @@ void CMainFrame::ProcessCommandLine()
 	if (!param.empty()) {
 		std::wstring error;
 
-		CServer server;
+		ServerWithCredentials server;
 
 		wxString logontype = pCommandLine->GetOption(CCommandLine::logontype);
 		if (logontype == _T("ask")) {
-			server.SetLogonType(ASK);
+			server.SetLogonType(LogonType::ask);
 		}
 		else if (logontype == _T("interactive")) {
-			server.SetLogonType(INTERACTIVE);
+			server.SetLogonType(LogonType::interactive);
 		}
 
 		CServerPath path;
@@ -2457,20 +2462,16 @@ void CMainFrame::ProcessCommandLine()
 			wxMessageBoxEx(error, _("Syntax error in command line"));
 		}
 
-		if (COptions::Get()->GetOptionVal(OPTION_DEFAULT_KIOSKMODE) && server.GetLogonType() == NORMAL) {
-			server.SetLogonType(ASK);
+		if (COptions::Get()->GetOptionVal(OPTION_DEFAULT_KIOSKMODE) && server.credentials.logonType_ == LogonType::normal) {
+			server.SetLogonType(LogonType::ask);
 			CLoginManager::Get().RememberPassword(server);
 		}
-		else if (server.GetLogonType() == ASK ||
-			(server.GetLogonType() == INTERACTIVE && server.GetUser().empty()))
-		{
-			if (!CLoginManager::Get().GetPassword(server, false)) {
-				return;
-			}
+		else if (!CLoginManager::Get().GetPassword(server, false)) {
+			return;
 		}
 
 		Site site;
-		site.m_server = server;
+		site.server_ = server;
 		Bookmark bm;
 		bm.m_remoteDir = path;
 		ConnectToSite(site, bm);

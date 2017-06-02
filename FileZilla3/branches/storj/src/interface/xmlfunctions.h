@@ -3,14 +3,16 @@
  * improve usability together with wxWidgets.
  */
 
-#ifndef __XMLFUNCTIONS_H__
-#define __XMLFUNCTIONS_H__
+#ifndef FILEZILLA_INTERFACE_XMLFUNCTIONS_HEADER
+#define FILEZILLA_INTERFACE_XMLFUNCTIONS_HEADER
 
 #ifdef HAVE_LIBPUGIXML
 #include <pugixml.hpp>
 #else
 #include "../pugixml/pugixml.hpp"
 #endif
+
+#include "serverdata.h"
 
 class CXmlFile final
 {
@@ -106,7 +108,8 @@ int64_t GetTextElementInt(pugi::xml_node node, const char* name, int defValue = 
 bool GetTextElementBool(pugi::xml_node node, const char* name, bool defValue = false);
 
 // Functions to save and retrieve CServer objects to the XML file
-void SetServer(pugi::xml_node node, const CServer& server);
-bool GetServer(pugi::xml_node node, CServer& server);
+void SetServer(pugi::xml_node node, ServerWithCredentials const& server);
 
-#endif //__XMLFUNCTIONS_H__
+bool GetServer(pugi::xml_node node, ServerWithCredentials& server);
+
+#endif

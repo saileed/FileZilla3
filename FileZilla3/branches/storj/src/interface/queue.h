@@ -1,5 +1,5 @@
-#ifndef __QUEUE_H__
-#define __QUEUE_H__
+#ifndef FILEZILLA_INTERFACE_QUEUE_HEADER
+#define FILEZILLA_INTERFACE_QUEUE_HEADER
 
 #include "aui_notebook_ex.h"
 #include "listctrlex.h"
@@ -81,11 +81,12 @@ class CFileItem;
 class CServerItem final : public CQueueItem
 {
 public:
-	CServerItem(const CServer& server);
+	CServerItem(ServerWithCredentials const& server);
 	virtual ~CServerItem();
 	virtual QueueItemType GetType() const { return QueueItemType::Server; }
 
-	const CServer& GetServer() const;
+	ServerWithCredentials const& GetServer() const;
+	ProtectedCredentials& GetCredentials() {return server_.credentials; }
 	wxString GetName() const;
 
 	virtual void AddChild(CQueueItem* pItem);
@@ -120,7 +121,7 @@ protected:
 	void AddFileItemToList(CFileItem* pItem);
 	void RemoveFileItemFromList(CFileItem* pItem, bool forward);
 
-	CServer m_server;
+	ServerWithCredentials server_;
 
 	// array of item lists, sorted by priority. Used by scheduler to find
 	// next file to transfer
@@ -314,7 +315,7 @@ public:
 	virtual ~CQueueViewBase();
 
 	// Gets item for given server or creates new if it doesn't exist
-	CServerItem* CreateServerItem(const CServer& server);
+	CServerItem* CreateServerItem(ServerWithCredentials const& server);
 
 	virtual void InsertItem(CServerItem* pServerItem, CQueueItem* pItem);
 	virtual bool RemoveItem(CQueueItem* pItem, bool destroy, bool updateItemCount = true, bool updateSelections = true, bool forward = true);
@@ -335,7 +336,7 @@ protected:
 	void AddQueueColumn(ColumnId id);
 
 	// Gets item for given server
-	CServerItem* GetServerItem(const CServer& server);
+	CServerItem* GetServerItem(ServerWithCredentials const& server);
 
 	// Gets item with given index
 	CQueueItem* GetQueueItem(unsigned int item) const;
@@ -414,4 +415,4 @@ protected:
 
 #include "QueueView.h"
 
-#endif //__QUEUE_H__
+#endif

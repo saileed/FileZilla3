@@ -76,7 +76,7 @@ int CStorjConnectOpData::Send()
 		return controlSocket_.SendCommand(fz::sprintf(L"user %s", currentServer_.GetUser()));
 	case connect_pass:
 		{
-			std::wstring pass = currentServer_.GetPass();
+			std::wstring pass = credentials_.GetPass();
 			size_t pos = pass.rfind('|');
 			if (pos == std::wstring::npos) {
 				LogMessage(MessageType::Error, _("Password or encryption key is not set"));
@@ -87,7 +87,7 @@ int CStorjConnectOpData::Send()
 		}
 	case connect_key:
 		{
-			std::wstring key = currentServer_.GetPass();
+			std::wstring key = credentials_.GetPass();
 			size_t pos = key.rfind('|');
 			if (pos == std::wstring::npos) {
 				LogMessage(MessageType::Error, _("Password or encryption key is not set"));

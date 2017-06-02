@@ -1,5 +1,9 @@
-#ifndef __LOGINMANAGER_H__
-#define __LOGINMANAGER_H__
+#ifndef FILEZILLA_INTERFACE_LOGINMANAGER_HEADER
+#define FILEZILLA_INTERFACE_LOGINMANAGER_HEADER
+
+#include "serverdata.h"
+
+#include <list>
 
 // The purpose of this class is to manage some aspects of the login
 // behaviour. These are:
@@ -11,14 +15,19 @@ class CLoginManager
 public:
 	static CLoginManager& Get() { return m_theLoginManager; }
 
-	bool GetPassword(CServer& server, bool silent, std::wstring const& name = std::wstring(), std::wstring const& challenge = std::wstring(), bool canRemember = true);
+	bool GetPassword(ServerWithCredentials& server, bool silent, std::wstring const& name = std::wstring());
+	bool GetPassword(ServerWithCredentials& server, bool silent, std::wstring const& name, std::wstring const& challenge, bool canRemember);
 
-	void CachedPasswordFailed(const CServer& server, std::wstring const& challenge = std::wstring());
+	void CachedPasswordFailed(CServer const& server, std::wstring const& challenge = std::wstring());
 
-	void RememberPassword(CServer & server, std::wstring const& challenge = std::wstring());
+	void RememberPassword(ServerWithCredentials & server, std::wstring const& challenge = std::wstring());
+
+	bool AskDecryptor(public_key const& pub, bool allowForgotten, bool allowCancel);
+	private_key GetDecryptor(public_key const& pub);
 
 protected:
-	bool DisplayDialog(CServer& server, std::wstring const& name, std::wstring const& challenge, bool canRemember);
+	bool DisplayDialogForEncrypted(ServerWithCredentials& server, std::wstring const& name);
+	bool DisplayDialog(ServerWithCredentials& server, std::wstring const& name, std::wstring const& challenge, bool canRemember);
 
 	static CLoginManager m_theLoginManager;
 
@@ -35,6 +44,8 @@ protected:
 	std::list<t_passwordcache>::iterator FindItem(CServer const& server, std::wstring const& challenge);
 
 	std::list<t_passwordcache> m_passwordCache;
+
+	std::map<public_key, private_key> decryptors_;
 };
 
-#endif //__LOGINMANAGER_H__
+#endif

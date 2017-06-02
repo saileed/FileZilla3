@@ -37,7 +37,7 @@ CStorjControlSocket::~CStorjControlSocket()
 	DoClose();
 }
 
-void CStorjControlSocket::Connect(CServer const& server)
+void CStorjControlSocket::Connect(CServer const &server, Credentials const& credentials)
 {
 	LogMessage(MessageType::Status, _("Connecting to %s..."), server.Format(ServerFormat::with_optional_port));
 	SetWait(true);
@@ -47,7 +47,7 @@ void CStorjControlSocket::Connect(CServer const& server)
 	process_ = std::make_unique<fz::process>();
 
 	engine_.GetRateLimiter().AddObject(this);
-	Push(std::make_unique<CStorjConnectOpData>(*this));
+	Push(std::make_unique<CStorjConnectOpData>(*this, credentials));
 }
 
 void CStorjControlSocket::List(CServerPath const& path, std::wstring const& subDir, int flags)

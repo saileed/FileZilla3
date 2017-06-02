@@ -1,9 +1,10 @@
-#ifndef __MAINFRM_H__
-#define __MAINFRM_H__
+#ifndef FILEZILLA_INTERFACE_MAINFRM_HEADER
+#define FILEZILLA_INTERFACE_MAINFRM_HEADER
 
 #include "statusbar.h"
 #include "engine_context.h"
 #include "notification.h"
+#include "serverdata.h"
 
 #include <wx/timer.h>
 
@@ -75,7 +76,7 @@ private:
 	bool CreateMenus();
 	bool CreateQuickconnectBar();
 	bool CreateMainToolBar();
-	void OpenSiteManager(const CServer* pServer = 0);
+	void OpenSiteManager(ServerWithCredentials const* pServer = 0);
 
 	void FocusNextEnabled(std::list<wxWindow*>& windowOrder, std::list<wxWindow*>::iterator iter, bool skipFirst, bool forward);
 

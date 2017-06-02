@@ -193,12 +193,13 @@ static const t_Option options[OPTIONS_NUM] =
 	{ "Toolbar hidden", number, _T("0"), normal },
 	{ "Strip VMS revisions", number, _T("0"), normal },
 	{ "Show Site Manager on startup", number, _T("0"), normal },
-	{ "Prompt password change", number, _T("0"), normal },
+	{ "Prompt password save", number, _T("0"), normal },
 	{ "Persistent Choices", number, _T("0"), normal },
 	{ "Queue completion action", number, _T("1"), normal },
 	{ "Queue completion command", string, _T(""), normal },
 	{ "Drag and Drop disabled", number, _T("0"), normal },
 	{ "Disable update footer", number, _T("0"), normal },
+	{ "Master password encryptor", string, _T(""), normal },
 
 	// Default/internal options
 	{ "Config Location", string, _T(""), default_only },
@@ -229,7 +230,6 @@ COptions::COptions()
 {
 	m_theOptions = this;
 	m_pXmlFile = 0;
-	m_pLastServer = 0;
 
 	SetDefaultValues();
 
@@ -270,7 +270,6 @@ COptions::~COptions()
 {
 	COptionChangeEventHandler::UnregisterAllHandlers();
 
-	delete m_pLastServer;
 	delete m_pXmlFile;
 }
 
@@ -556,7 +555,7 @@ std::wstring COptions::Validate(unsigned int nID, std::wstring const& value)
 	return value;
 }
 
-void COptions::SetServer(std::wstring path, const CServer& server)
+void COptions::SetServer(std::wstring path, ServerWithCredentials const& server)
 {
 	if (!m_pXmlFile) {
 		return;
@@ -600,7 +599,7 @@ void COptions::SetServer(std::wstring path, const CServer& server)
 	m_pXmlFile->Save(true);
 }
 
-bool COptions::GetServer(std::wstring path, CServer& server)
+bool COptions::GetServer(std::wstring path, ServerWithCredentials& server)
 {
 	if (path.empty()) {
 		return false;
@@ -634,29 +633,29 @@ bool COptions::GetServer(std::wstring path, CServer& server)
 	return res;
 }
 
-void COptions::SetLastServer(const CServer& server)
+void COptions::SetLastServer(ServerWithCredentials const& server)
 {
-	if (!m_pLastServer) {
-		m_pLastServer = new CServer(server);
+	if (!lastServer_) {
+		lastServer_ = std::make_unique<ServerWithCredentials>(server);
 	}
 	else {
-		*m_pLastServer = server;
+		*lastServer_ = server;
 	}
 	SetServer(_T("Settings/LastServer"), server);
 }
 
-bool COptions::GetLastServer(CServer& server)
+bool COptions::GetLastServer(ServerWithCredentials& server)
 {
-	if (!m_pLastServer) {
+	if (!lastServer_) {
 		bool res = GetServer(_T("Settings/LastServer"), server);
 		if (res) {
-			m_pLastServer = new CServer(server);
+			lastServer_ = std::make_unique<ServerWithCredentials>(server);
 		}
 		return res;
 	}
 	else {
-		server = *m_pLastServer;
-		if (server == CServer()) {
+		server = *lastServer_;
+		if (!server) {
 			return false;
 		}
 
