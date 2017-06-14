@@ -299,6 +299,8 @@ void CStorjControlSocket::ProcessReply(int result, std::wstring const& reply)
 	result_ = result;
 	response_ = reply;
 
+	SetWait(false);
+
 	if (operations_.empty()) {
 		LogMessage(MessageType::Debug_Info, L"Skipping reply without active operation.");
 		return;
