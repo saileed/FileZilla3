@@ -25,7 +25,7 @@ int CStorjMkdirOpData::Send()
 		opState = mkd_mkbucket;
 		return FZ_REPLY_CONTINUE;
 	case mkd_mkbucket:
-		return controlSocket_.SendCommand(L"mkbucket " + path_.GetFirstSegment());
+		return controlSocket_.SendCommand(L"mkbucket " + controlSocket_.QuoteFilename(path_.GetFirstSegment()));
 	case mkd_put:
 		{
 			std::wstring path = path_.GetPath();
