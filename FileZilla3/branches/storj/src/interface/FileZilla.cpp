@@ -258,7 +258,9 @@ USE AT OWN RISK"), _T("Important Information"));
 	}
 
 	CheckExistsFzsftp();
+#if ENABLE_STORJ
 	CheckExistsFzstorj();
+#endif
 
 	// Turn off idle events, we don't need them
 	wxIdleEvent::SetMode(wxIDLE_PROCESS_SPECIFIED);
@@ -580,11 +582,13 @@ void CFileZillaApp::CheckExistsFzsftp()
 	CheckExistsTool(L"fzsftp", {L"/src/putty", L"/putty"}, L"FZ_FZSFTP", OPTION_FZSFTP_EXECUTABLE, _("SFTP support"));
 }
 
+#if ENABLE_STORJ
 void CFileZillaApp::CheckExistsFzstorj()
 {
 	AddStartupProfileRecord("FileZillaApp::CheckExistsFzstorj");
 	CheckExistsTool(L"fzstorj", {L"/src/storj", L"/storj"}, L"FZ_FZSTORJ", OPTION_FZSTORJ_EXECUTABLE, _("Storj support"));
 }
+#endif
 
 void CFileZillaApp::CheckExistsTool(std::wstring const& tool, std::vector<std::wstring> const& searchPaths, std::wstring const& env, int setting, wxString const& description)
 {

@@ -29,7 +29,16 @@ static const t_protocolInfo protocolInfos[] = {
 	{ UNKNOWN,      L"",      false, 21,  false, "", false }
 };
 
-static std::vector<ServerProtocol> const defaultProtocols = { FTP, SFTP, FTPS, FTPES, INSECURE_FTP, STORJ };
+static std::vector<ServerProtocol> const defaultProtocols = {
+	FTP,
+	SFTP,
+	FTPS,
+	FTPES,
+	INSECURE_FTP,
+#if ENABLE_STORJ
+	STORJ,
+#endif
+};
 
 static char const* const typeNames[SERVERTYPE_MAX] = {
 	fztranslate_mark("Default (Autodetect)"),
