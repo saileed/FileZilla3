@@ -140,7 +140,7 @@ extern "C" void get_buckets_callback(uv_work_t *work_req, int status)
 			}
 
 			if (encrypted) {
-				fzprintf(storjEvent::ErrorMsg, "Wrong encryption key for at least one bucket");
+				fzprintf(storjEvent::Status, "Warning: Wrong encryption key for at least one bucket");
 			}
 			fzprintf(storjEvent::Done);
 		}
