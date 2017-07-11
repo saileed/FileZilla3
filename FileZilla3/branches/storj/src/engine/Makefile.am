@@ -70,8 +70,7 @@ libengine_a_SOURCES = \
 		storj/rmd.cpp \
 		storj/storjcontrolsocket.cpp \
 		tlssocket.cpp \
-		tlssocket_impl.cpp \
-		uri.cpp
+		tlssocket_impl.cpp
 
 noinst_HEADERS = backend.h \
 		ControlSocket.h \

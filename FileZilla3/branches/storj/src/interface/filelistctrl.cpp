@@ -265,8 +265,8 @@ template<class CFileData> CFileListCtrl<CFileData>::CFileListCtrl(wxWindow* pPar
 	g_signal_connect(widget, "button_release_event", G_CALLBACK(gtk_button_release_event), m_gtkEventCallbackProxy.get());
 #endif
 
-	m_genericTypes[genericTypes::file] = _("File");
-	m_genericTypes[genericTypes::directory] = _("Directory");
+	m_genericTypes[genericTypes::file] = _("File").ToStdWstring();
+	m_genericTypes[genericTypes::directory] = _("Directory").ToStdWstring();
 
 	SetBackgroundStyle(wxBG_STYLE_SYSTEM);
 #ifndef __WXMSW__
@@ -499,104 +499,115 @@ wxString GetExt(const wxString& file)
 }
 #endif
 
-template<class CFileData> wxString CFileListCtrl<CFileData>::GetType(wxString name, bool dir, const wxString& path /*=_T("")*/)
+template<class CFileData> std::wstring CFileListCtrl<CFileData>::GetType(std::wstring name, bool dir, std::wstring const& path)
 {
 #ifdef __WXMSW__
-	wxString ext = GetExt(name);
-	ext.MakeLower();
-	std::map<wxString, wxString>::iterator typeIter = m_fileTypeMap.find(ext);
-	if (typeIter != m_fileTypeMap.end())
+	wxString ext;
+	if (dir) {
+		if (!path.empty()) {
+			ext = '/';
+		}
+	}
+	else {
+		ext = GetExt(name);
+		ext.MakeLower();
+	}
+	auto typeIter = m_fileTypeMap.find(ext);
+	if (typeIter != m_fileTypeMap.end()) {
 		return typeIter->second;
+	}
 
 	wxString type;
 	int flags = SHGFI_TYPENAME;
-	if (path.empty())
+	if (path.empty()) {
 		flags |= SHGFI_USEFILEATTRIBUTES;
-	else if (path == _T("\\"))
+	}
+	else if (path == _T("\\")) {
 		name += _T("\\");
-	else
+	}
+	else {
 		name = path + name;
+	}
 
 	SHFILEINFO shFinfo;
 	memset(&shFinfo, 0, sizeof(SHFILEINFO));
-	if (SHGetFileInfo(name.wc_str(),
+	if (SHGetFileInfo(name.c_str(),
 		dir ? FILE_ATTRIBUTE_DIRECTORY : FILE_ATTRIBUTE_NORMAL,
 		&shFinfo,
 		sizeof(shFinfo),
 		flags))
 	{
-		if (!*shFinfo.szTypeName)
-		{
-			if (!ext.empty())
-			{
+		if (!*shFinfo.szTypeName) {
+			if (!ext.empty()) {
 				type = ext;
 				type.MakeUpper();
 				type += _T("-");
 				type += _("file");
 			}
-			else
+			else {
 				type = m_genericTypes[genericTypes::file];
+			}
 		}
-		else
-		{
+		else {
 			type = shFinfo.szTypeName;
-			if (!dir && !ext.empty())
-				m_fileTypeMap[ext.MakeLower()] = type;
+			if (!ext.empty()) {
+				m_fileTypeMap[ext.MakeLower()] = type.ToStdWstring();
+			}
 		}
 	}
-	else
-	{
-		if (!ext.empty())
-		{
+	else {
+		if (!ext.empty()) {
 			type = ext;
 			type.MakeUpper();
 			type += _T("-");
 			type += _("file");
 		}
-		else
+		else {
 			type = m_genericTypes[genericTypes::file];
+		}
 	}
-	return type;
+	return type.ToStdWstring();
 #else
 	(void)path;
 
-	if (dir)
+	if (dir) {
 		return m_genericTypes[genericTypes::directory];
+	}
 
-	int pos = name.Find('.', true);
-	if (pos < 1 || !name[pos + 1]) // Starts or ends with dot
+	size_t pos = name.rfind('.');
+	if (pos == std::wstring::npos || pos < 1 || !name[pos + 1]) { // No dot or starts or ends with dot
 		return m_genericTypes[genericTypes::file];
-	wxString ext = name.Mid(pos + 1);
+	}
+	wxString ext = name.substr(pos + 1);
 	wxString lower_ext = ext.Lower();
 
-	std::map<wxString, wxString>::iterator typeIter = m_fileTypeMap.find(lower_ext);
-	if (typeIter != m_fileTypeMap.end())
+	auto typeIter = m_fileTypeMap.find(lower_ext);
+	if (typeIter != m_fileTypeMap.end()) {
 		return typeIter->second;
+	}
 
 	wxFileType *pType = wxTheMimeTypesManager->GetFileTypeFromExtension(ext);
-	if (!pType)
-	{
+	if (!pType) {
 		wxString desc = ext;
 		desc += _T("-");
 		desc += _("file");
-		m_fileTypeMap[ext] = desc;
-		return desc;
+		m_fileTypeMap[ext] = desc.ToStdWstring();
+		return desc.ToStdWstring();
 	}
 
 	wxString desc;
-	if (pType->GetDescription(&desc) && !desc.empty())
-	{
+	if (pType->GetDescription(&desc) && !desc.empty()) {
 		delete pType;
-		m_fileTypeMap[ext] = desc;
-		return desc;
+		m_fileTypeMap[ext] = desc.ToStdWstring();
+		return desc.ToStdWstring();
 	}
 	delete pType;
 
 	desc = ext;
 	desc += _T("-");
 	desc += _("file");
-	m_fileTypeMap[lower_ext] = desc;
-	return desc;
+	m_fileTypeMap[lower_ext] = desc.ToStdWstring();
+	return desc.ToStdWstring();
 #endif
 }
 
@@ -607,12 +618,14 @@ template<class CFileData> void CFileListCtrl<CFileData>::ScrollTopItem(int item)
 
 template<class CFileData> void CFileListCtrl<CFileData>::OnPostScroll()
 {
-	if (!IsComparing())
+	if (!IsComparing()) {
 		return;
+	}
 
 	CComparableListing* pOther = GetOther();
-	if (!pOther)
+	if (!pOther) {
 		return;
+	}
 
 	pOther->ScrollTopItem(GetTopItem());
 }
@@ -628,8 +641,9 @@ template<class CFileData> void CFileListCtrl<CFileData>::OnExitComparisonMode()
 	m_indexMapping.clear();
 	m_indexMapping.swap(m_originalIndexMapping);
 
-	for (unsigned int i = 0; i < m_fileData.size() - 1; i++)
+	for (unsigned int i = 0; i < m_fileData.size() - 1; ++i) {
 		m_fileData[i].comparison_flags = normal;
+	}
 
 	SetItemCount(m_indexMapping.size());
 
@@ -655,17 +669,20 @@ template<class CFileData> void CFileListCtrl<CFileData>::ComparisonRememberSelec
 {
 	m_comparisonSelections.clear();
 
-	if (GetItemCount() != (int)m_indexMapping.size())
+	if (GetItemCount() != (int)m_indexMapping.size()) {
 		return;
+	}
 
 	int focus = GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_FOCUSED);
 	if (focus != -1) {
 		SetItemState(focus, 0, wxLIST_STATE_FOCUSED);
 		int index = m_indexMapping[focus];
-		if (m_fileData[index].comparison_flags == fill)
+		if (m_fileData[index].comparison_flags == fill) {
 			focus = -1;
-		else
+		}
+		else {
 			focus = index;
+		}
 	}
 	m_comparisonSelections.push_back(focus);
 

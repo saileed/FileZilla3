@@ -568,8 +568,6 @@ int CTlsSocketImpl::Handshake(const CTlsSocketImpl* pPrimarySocket, bool try_res
 
 	m_tlsState = CTlsSocket::TlsState::handshake;
 
-	fz::native_string hostname;
-
 	if (pPrimarySocket) {
 		if (!pPrimarySocket->m_session) {
 			m_pOwner->LogMessage(MessageType::Debug_Warning, L"Primary socket has no session");
@@ -592,14 +590,28 @@ int CTlsSocketImpl::Handshake(const CTlsSocketImpl* pPrimarySocket, bool try_res
 			}
 		}
 
-		hostname = pPrimarySocket->m_socket.peer_host();
+		hostname_ = pPrimarySocket->m_socket.peer_host();
+
+		int port, tmp;
+		port = m_socket.remote_port(tmp);
+		if (port <= 0) {
+			return FZ_REPLY_ERROR;
+		}
+		port_ = port;
 	}
 	else {
-		hostname = m_socket.peer_host();
+		hostname_ = m_socket.peer_host();
+
+		int port, tmp;
+		port = m_socket.remote_port(tmp);
+		if (port <= 0) {
+			return FZ_REPLY_ERROR;
+		}
+		port_ = port;
 	}
 
-	if (!hostname.empty() && fz::get_address_type(hostname) == fz::address_type::unknown) {
-		auto const utf8 = fz::to_utf8(hostname);
+	if (!hostname_.empty() && fz::get_address_type(hostname_) == fz::address_type::unknown) {
+		auto const utf8 = fz::to_utf8(hostname_);
 		if (!utf8.empty()) {
 			int res = gnutls_server_name_set(m_session, GNUTLS_NAME_DNS, utf8.c_str(), utf8.size());
 			if (res) {
@@ -1275,6 +1287,49 @@ bool CTlsSocketImpl::GetSortedPeerCertificates(gnutls_x509_crt_t *& certs, unsig
 	return true;
 }
 
+void CTlsSocketImpl::PrintVerificationError(int status)
+{
+	gnutls_datum_t buffer{};
+	gnutls_certificate_verification_status_print(status, GNUTLS_CRT_X509, &buffer, 0);
+	if (buffer.data) {
+		m_pOwner->LogMessage(MessageType::Debug_Warning, L"Gnutls Verification status: %s", buffer.data);
+		gnutls_free(buffer.data);
+	}
+
+	if (status & GNUTLS_CERT_REVOKED) {
+		m_pOwner->LogMessage(MessageType::Error, _("Beware! Certificate has been revoked"));
+
+		// The remaining errors are no longer of interest
+		return;
+	}
+	if (status & GNUTLS_CERT_SIGNATURE_FAILURE) {
+		m_pOwner->LogMessage(MessageType::Error, _("Certificate signature verification failed"));
+		status &= ~GNUTLS_CERT_SIGNATURE_FAILURE;
+	}
+	if (status & GNUTLS_CERT_INSECURE_ALGORITHM) {
+		m_pOwner->LogMessage(MessageType::Error, _("A certificate in the chain was signed using an insecure algorithm"));
+		status &= ~GNUTLS_CERT_INSECURE_ALGORITHM;
+	}
+	if (status & GNUTLS_CERT_SIGNER_NOT_CA) {
+		m_pOwner->LogMessage(MessageType::Error, _("An issuer in the certificate chain is not a certificate authority"));
+		status &= ~GNUTLS_CERT_SIGNER_NOT_CA;
+	}
+	if (status & GNUTLS_CERT_UNEXPECTED_OWNER) {
+		m_pOwner->LogMessage(MessageType::Error, _("The server's hostname does not match the certificate's hostname"));
+		status &= ~GNUTLS_CERT_UNEXPECTED_OWNER;
+	}
+#ifdef GNUTLS_CERT_MISSING_OCSP_STATUS
+	if (status & GNUTLS_CERT_MISSING_OCSP_STATUS) {
+		m_pOwner->LogMessage(MessageType::Error, _("The certificate requires the server to include an OCSP status in its response, but the OCSP status is missing."));
+		status &= ~GNUTLS_CERT_MISSING_OCSP_STATUS;
+	}
+#endif
+	if (status) {
+		m_pOwner->LogMessage(MessageType::Error, _("Received certificate chain could not be verified. Verification status is %d."), status);
+	}
+
+}
+
 int CTlsSocketImpl::VerifyCertificate()
 {
 	if (m_tlsState != CTlsSocket::TlsState::handshake) {
@@ -1333,24 +1388,7 @@ int CTlsSocketImpl::VerifyCertificate()
 	}
 
 	if (status != 0) {
-		if (status & GNUTLS_CERT_REVOKED) {
-			m_pOwner->LogMessage(MessageType::Error, _("Beware! Certificate has been revoked"));
-		}
-		else if (status & GNUTLS_CERT_SIGNATURE_FAILURE) {
-			m_pOwner->LogMessage(MessageType::Error, _("Certificate signature verification failed"));
-		}
-		else if (status & GNUTLS_CERT_INSECURE_ALGORITHM) {
-			m_pOwner->LogMessage(MessageType::Error, _("A certificate in the chain was signed using an insecure algorithm"));
-		}
-		else if (status & GNUTLS_CERT_SIGNER_NOT_CA) {
-			m_pOwner->LogMessage(MessageType::Error, _("An issuer in the certificate chain is not a certificate authority"));
-		}
-		else if (status & GNUTLS_CERT_UNEXPECTED_OWNER) {
-			m_pOwner->LogMessage(MessageType::Error, _("The server's hostname does not match the certificate's hostname"));
-		}
-		else {
-			m_pOwner->LogMessage(MessageType::Error, _("Received certificate chain could not be verified. Verification status is %d."), status);
-		}
+		PrintVerificationError(status);
 
 		Failure(0, true);
 		return FZ_REPLY_ERROR;
@@ -1401,8 +1439,8 @@ int CTlsSocketImpl::VerifyCertificate()
 	int const algorithmWarnings = GetAlgorithmWarnings();
 
 	CCertificateNotification *pNotification = new CCertificateNotification(
-		m_pOwner->GetCurrentServer().GetHost(),
-		m_pOwner->GetCurrentServer().GetPort(),
+		fz::to_wstring(hostname_),
+		port_,
 		GetProtocolName(),
 		GetKeyExchange(),
 		GetCipherName(),

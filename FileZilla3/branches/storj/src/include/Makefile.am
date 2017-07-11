@@ -6,6 +6,7 @@ noinst_HEADERS = \
 	engine_context.h \
 	externalipresolver.h \
 	FileZillaEngine.h \
+	httpheaders.h \
 	libfilezilla_engine.h \
 	local_path.h \
 	logging.h \
@@ -17,6 +18,4 @@ noinst_HEADERS = \
 	serverpath.h \
 	setup.h \
 	sizeformatting_base.h \
-	socket.h \
-	uri.h
-
+	socket.h
