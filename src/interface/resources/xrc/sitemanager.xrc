@@ -162,12 +162,6 @@
                                   </object>
                                   <flag>wxALIGN_CENTRE_VERTICAL</flag>
                                 </object>
-                                <object class="sizeritem">
-                                  <object class="wxStaticText" name="ID_EXTRA">
-                                    <hidden>1</hidden>
-                                  </object>
-                                  <flag>wxALIGN_CENTRE_VERTICAL</flag>
-                                </object>
                                 <object class="spacer">
                                   <size>0,0</size>
                                 </object>

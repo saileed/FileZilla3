@@ -1947,13 +1947,7 @@ void CSiteManagerDialog::SetControlVisibility(ServerProtocol protocol, LogonType
 	xrc_call(*this, "ID_ENCRYPTION_DESC", &wxStaticText::Show, isFtp);
 	xrc_call(*this, "ID_ENCRYPTION", &wxChoice::Show, isFtp);
 
-	if (protocol == STORJ) {
-		auto extra = XRCCTRL(*this, "ID_EXTRA", wxStaticText);
-		extra->SetLabel(L"  " +_("Early access"));
-		//extra->SetInitialSize();
-	}
 	xrc_call(*this, "ID_SIGNUP", &wxControl::Show, protocol == STORJ);
-	xrc_call(*this, "ID_EXTRA", &wxControl::Show, protocol == STORJ);
 
 	auto choice = XRCCTRL(*this, "ID_LOGONTYPE", wxChoice);
 
