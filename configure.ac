@@ -678,19 +678,27 @@ if test "$buildmain" = "yes"; then
   # Find libstorj
   # -----------------
 
-  AC_ARG_ENABLE(storj, AS_HELP_STRING([--enable-storj],[Enable support for the Storj D-Bus support through libdbu. Default: no]),
+  AC_ARG_ENABLE(storj, AS_HELP_STRING([--enable-storj@<:@=ARG@:>@],[Enable support for the Storj decentralized cloud storage provider. Default: no]),
     [
     ],
     [
       enable_storj="no"
     ])
 
-  PKG_CHECK_MODULES(LIBSTORJ, [libstorj >= 1.0],, [
-	AC_MSG_ERROR([libstorj not found: $LIBSTORJ_PKG_ERRORS. You can download it from https://github.com/Storj/libstorj])
-  ])
-  AC_SUBST(LIBSTORJ_CFLAGS)
-  AC_SUBST(LIBSTORJ_LIBS)
-
+  if test "$enable_storj" != "no"; then
+    PKG_CHECK_MODULES(LIBSTORJ, [libstorj >= 1.0],[
+      AC_DEFINE([ENABLE_STORJ], [1], [Define if building with Storj support.])
+      enable_storj="yes"
+    ], [
+      if test "$enable_storj" = "yes"; then
+  	AC_MSG_ERROR([libstorj not found: $LIBSTORJ_PKG_ERRORS. You can download it from https://github.com/Storj/libstorj])
+      else
+        enable_storj="no"
+      fi
+    ])
+    AC_SUBST(LIBSTORJ_CFLAGS)
+    AC_SUBST(LIBSTORJ_LIBS)
+  fi
 fi
 
 # Everything translation related

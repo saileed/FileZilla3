@@ -60,15 +60,6 @@ libengine_a_SOURCES = \
 		sftp/sftpcontrolsocket.cpp \
 		sizeformatting_base.cpp \
 		socket.cpp \
-		storj/connect.cpp \
-		storj/delete.cpp \
-		storj/file_transfer.cpp \
-		storj/input_thread.cpp \
-		storj/list.cpp \
-		storj/mkd.cpp \
-		storj/resolve.cpp \
-		storj/rmd.cpp \
-		storj/storjcontrolsocket.cpp \
 		tlssocket.cpp \
 		tlssocket_impl.cpp
 
@@ -115,6 +106,22 @@ noinst_HEADERS = backend.h \
 		sftp/rename.h \
 		sftp/rmd.h \
 		sftp/sftpcontrolsocket.h \
+		tlssocket.h \
+		tlssocket_impl.h
+
+if ENABLE_STORJ
+libengine_a_SOURCES += \
+		storj/connect.cpp \
+		storj/delete.cpp \
+		storj/file_transfer.cpp \
+		storj/input_thread.cpp \
+		storj/list.cpp \
+		storj/mkd.cpp \
+		storj/resolve.cpp \
+		storj/rmd.cpp \
+		storj/storjcontrolsocket.cpp
+
+noinst_HEADERS += \
 		storj/connect.h \
 		storj/delete.h \
 		storj/event.h \
@@ -124,9 +131,8 @@ noinst_HEADERS = backend.h \
 		storj/mkd.h \
 		storj/resolve.h \
 		storj/rmd.h \
-		storj/storjcontrolsocket.h \
-		tlssocket.h \
-		tlssocket_impl.h
+		storj/storjcontrolsocket.h
+endif
 
 dist_noinst_DATA = engine.vcxproj
 

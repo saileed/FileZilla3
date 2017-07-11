@@ -14,7 +14,9 @@
 #include "wrapengine.h"
 #include "xmlfunctions.h"
 #include "fzputtygen_interface.h"
+#if ENABLE_STORJ
 #include "storj_key_interface.h"
+#endif
 #include "xrc_helper.h"
 
 #include <wx/dcclient.h>
@@ -1117,6 +1119,7 @@ bool CSiteManagerDialog::Verify()
 					return false;
 				}
 			}
+#if ENABLE_STORJ
 			if (!encryptionKey.empty() || !encrypted) {
 				CStorjKeyInterface validator(this);
 				if (!validator.ValidateKey(encryptionKey, false)) {
@@ -1125,6 +1128,7 @@ bool CSiteManagerDialog::Verify()
 					return false;
 				}
 			}
+#endif
 		}
 
 		std::wstring const remotePathRaw = XRCCTRL(*this, "ID_REMOTEDIR", wxTextCtrl)->GetValue().ToStdWstring();
@@ -2619,6 +2623,7 @@ LogonType CSiteManagerDialog::GetLogonType() const
 
 void CSiteManagerDialog::OnGenerateEncryptionKey(wxCommandEvent& event)
 {
+#if ENABLE_STORJ
 	CStorjKeyInterface generator(this);
 	std::wstring key = generator.GenerateKey();
 	if (!key.empty()) {
@@ -2634,4 +2639,5 @@ void CSiteManagerDialog::OnGenerateEncryptionKey(wxCommandEvent& event)
 			dlg.ShowModal();
 		}
 	}
+#endif
 }
