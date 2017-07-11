@@ -59,7 +59,6 @@ filezilla_SOURCES = aboutdialog.cpp \
 		msgbox.cpp \
 		netconfwizard.cpp \
 		Options.cpp \
-		overlay.cpp \
 		password_crypto.cpp \
 		power_management.cpp \
 		queue.cpp \
@@ -185,7 +184,6 @@ noinst_HEADERS = aboutdialog.h \
 		 msgbox.h \
 		 netconfwizard.h \
 		 Options.h \
-		 overlay.h \
 		 password_crypto.h \
 		 power_management.h \
 		 prefix.h \
@@ -259,9 +257,11 @@ noinst_HEADERS = aboutdialog.h \
 
 if ENABLE_STORJ
 filezilla_SOURCES += \
+		overlay.cpp \
 		storj_key_interface.cpp
 
 noinst_HEADERS += \
+		 overlay.h \
 		 storj_key_interface.h
 endif
 
