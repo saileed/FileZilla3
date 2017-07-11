@@ -57,6 +57,43 @@ bool getLine(std::string & line)
 	}
 }
 
+std::string next_argument(std::string & line)
+{
+	std::string ret;
+
+	fz::trim(line);
+
+	if (line[0] == '"') {
+		size_t pos = 1;
+		size_t pos2;
+		while ((pos2 = line.find('"', pos)) != std::string::npos && line[pos2 + 1] == '"') {
+			ret += line.substr(pos, pos2 - pos + 1);
+			pos = pos2 + 2;
+		}
+		if (pos2 == std::string::npos || (line[pos2 + 1] != ' ' && line[pos2 + 1] != '\0')) {
+			line.clear();
+			ret.clear();
+		}
+		ret += line.substr(pos, pos2 - pos);
+		line = line.substr(pos2 + 1);
+	}
+	else {
+		size_t pos = line.find(' ');
+		if (pos == std::string::npos) {
+			ret = line;
+			line.clear();
+		}
+		else {
+			ret = line.substr(0, pos);
+			line = line.substr(pos + 1);
+		}
+	}
+
+	fz::trim(line);
+
+	return ret;
+}
+
 namespace {
 extern "C" void get_buckets_callback(uv_work_t *work_req, int status)
 {
@@ -545,50 +582,13 @@ int main()
 			fclose(fd);
 		}
 		else if (command == "put") {
-			size_t pos = arg.find(' ');
-			if (pos == std::string::npos) {
-				fzprintf(storjEvent::Error, "Bad arguments");
-				continue;
-			}
-			std::string bucket = arg.substr(0, pos);
-			arg = arg.substr(pos + 1);
+			std::string bucket = next_argument(arg);
+			std::string file = next_argument(arg);
+			std::string remote_name = next_argument(arg);
 
-			if (arg[0] != '"') {
+			if (bucket.empty() || file.empty() || remote_name.empty() || !arg.empty()) {
 				fzprintf(storjEvent::Error, "Bad arguments");
-				continue;
 			}
-
-			std::string file;
-			pos = 1;
-			size_t pos2;
-			while ((pos2 = arg.find('"', pos)) != std::string::npos && arg[pos2 + 1] == '"') {
-				file += arg.substr(pos, pos2 - pos + 1);
-				pos = pos2 + 2;
-			}
-			if (pos2 == std::string::npos || arg[pos2 + 1] != ' ') {
-				fzprintf(storjEvent::Error, "Bad arguments");
-				continue;
-			}
-			file += arg.substr(pos, pos2 - pos);
-			arg = arg.substr(pos2 + 2);
-
-			if (arg[0] != '"') {
-				fzprintf(storjEvent::Error, "Bad arguments");
-				continue;
-			}
-
-			std::string remote_name;
-			pos = 1;
-			while ((pos2 = arg.find('"', pos)) != std::string::npos && arg[pos2 + 1] == '"') {
-				remote_name += arg.substr(pos, pos2 - pos + 1);
-				pos = pos2 + 2;
-			}
-			if (pos2 == std::string::npos || arg[pos2 + 1] != '\0') {
-				fzprintf(storjEvent::Error, "Bad arguments");
-				continue;
-			}
-			remote_name += arg.substr(pos, pos2 - pos);
-
 
 			init_env();
 
@@ -679,14 +679,14 @@ int main()
 			}
 		}
 		else if (command == "mkbucket") {
-			auto args = fz::strtok(arg, ' ');
-			if (args.size() != 1) {
+			std::string bucket = next_argument(arg);
+			if (bucket.empty() || !arg.empty()) {
 				fzprintf(storjEvent::Error, "Bad arguments");
 				continue;
 			}
 			init_env();
 
-			int status = storj_bridge_create_bucket(env, args.front().c_str(),
+			int status = storj_bridge_create_bucket(env, bucket.c_str(),
 												   NULL, create_bucket_callback);
 
 			if (status) {
