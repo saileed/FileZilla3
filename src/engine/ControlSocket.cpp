@@ -136,7 +136,9 @@ int CControlSocket::ResetOperation(int nErrorCode)
 			UnlockCache();
 		}
 		oldOperation = std::move(operations_.back());
-		operations_.pop_back();		
+		operations_.pop_back();
+
+		oldOperation->Reset(nErrorCode);
 	}
 	if (!operations_.empty()) {
 		int ret;
@@ -356,6 +358,7 @@ bool CControlSocket::ParsePwdReply(std::wstring reply, bool unquoted, CServerPat
 
 int CControlSocket::CheckOverwriteFile()
 {
+	LogMessage(MessageType::Debug_Debug, L"CControlSocket::CheckOverwriteFile()");
 	if (operations_.empty() || operations_.back()->opId != Command::transfer) {
 		LogMessage(MessageType::Debug_Info, L"CheckOverwriteFile called without active transfer.");
 		return FZ_REPLY_INTERNALERROR;
@@ -1133,6 +1136,8 @@ int CRealControlSocket::DoConnect(std::wstring const& host, unsigned int port)
 		LogMessage(MessageType::Status, _("Resolving address of %s"), real_host);
 	}
 
+	m_closed = false;
+
 	real_host = ConvertDomainName(real_host);
 	int res = socket_->connect(fz::to_native(real_host), real_port);
 
@@ -1147,6 +1152,7 @@ int CRealControlSocket::DoConnect(std::wstring const& host, unsigned int port)
 
 int CRealControlSocket::DoClose(int nErrorCode)
 {
+	LogMessage(MessageType::Debug_Debug, L"CRealControlSocket::DoClose(%d)", nErrorCode);
 	ResetSocket();
 
 	return CControlSocket::DoClose(nErrorCode);
@@ -1335,7 +1341,7 @@ bool CControlSocket::SetFileExistsAction(CFileExistsNotification *pFileExistsNot
 	return true;
 }
 
-void CControlSocket::CreateLocalDir(std::wstring const & local_file)
+void CControlSocket::CreateLocalDir(std::wstring const& local_file)
 {
 	std::wstring file;
 	CLocalPath local_path(local_file, &file);

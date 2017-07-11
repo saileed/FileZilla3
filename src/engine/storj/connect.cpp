@@ -4,9 +4,9 @@
 #include "event.h"
 #include "input_thread.h"
 #include "proxy.h"
-#include "uri.h"
 
 #include <libfilezilla/process.hpp>
+#include <libfilezilla/uri.hpp>
 
 int CStorjConnectOpData::Send()
 {
