@@ -332,8 +332,14 @@ int CFileZillaEnginePrivate::List(CListCommand const& command)
 		CServer const& server = m_pControlSocket->GetCurrentServer();
 		if (server) {
 			CServerPath path(path_cache_.Lookup(server, command.GetPath(), command.GetSubDir()));
-			if (path.empty() && command.GetSubDir().empty()) {
-				path = command.GetPath();
+			if (path.empty()) {
+				if (command.GetSubDir().empty()) {
+					path = command.GetPath();
+				}
+				else if (server.GetProtocol() == STORJ) {
+                                        path = command.GetPath();
+                                        path.ChangePath(command.GetSubDir());
+                                }
 			}
 			if (!path.empty()) {
 				CDirectoryListing *pListing = new CDirectoryListing;
