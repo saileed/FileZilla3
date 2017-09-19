@@ -25,7 +25,7 @@ CSocketBackend::CSocketBackend(fz::event_handler* pEvtHandler, fz::socket & sock
 
 CSocketBackend::~CSocketBackend()
 {
-	socket_.set_event_handler(nullptr);
+	socket_.set_event_handler(0);
 	m_rateLimiter.RemoveObject(this);
 }
 

@@ -629,7 +629,7 @@ bool CLocalPath::Create(CLocalPath *last_successful)
 		local_path.AddSegment(*iter);
 
 	#ifdef FZ_WINDOWS
-		BOOL res = CreateDirectory(local_path.GetPath().c_str(), nullptr);
+		BOOL res = CreateDirectory(local_path.GetPath().c_str(), 0);
 		if (!res && GetLastError() != ERROR_ALREADY_EXISTS) {
 			ret = false;
 			break;

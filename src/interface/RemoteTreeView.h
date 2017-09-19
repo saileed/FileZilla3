@@ -1,5 +1,5 @@
-#ifndef FILEZILLA_INTERFACE_REMOTETREEVIEW_HEADER
-#define FILEZILLA_INTERFACE_REMOTETREEVIEW_HEADER
+#ifndef __REMOTETREEVIEW_H__
+#define __REMOTETREEVIEW_H__
 
 #include <option_change_event_handler.h>
 #include "systemimagelist.h"
@@ -11,6 +11,8 @@ class CQueueView;
 class CWindowTinter;
 class CRemoteTreeView final : public wxTreeCtrlEx, CSystemImageList, CStateEventHandler, COptionChangeEventHandler
 {
+	DECLARE_CLASS(CRemoteTreeView)
+
 	friend class CRemoteTreeViewDropTarget;
 
 public:
@@ -43,7 +45,7 @@ protected:
 
 	// Set to true in SetDirectoryListing.
 	// Used to suspends event processing in OnItemExpanding for example
-	bool m_busy{};
+	bool m_busy;
 
 	wxTreeItemId m_ExpandAfterList;
 

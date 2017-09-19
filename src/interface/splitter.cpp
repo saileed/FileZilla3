@@ -1,6 +1,8 @@
 #include <filezilla.h>
 #include "splitter.h"
 
+IMPLEMENT_CLASS(CSplitterWindowEx, wxSplitterWindow)
+
 BEGIN_EVENT_TABLE(CSplitterWindowEx, wxSplitterWindow)
 EVT_SIZE(CSplitterWindowEx::OnSize)
 END_EVENT_TABLE()

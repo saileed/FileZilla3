@@ -1,5 +1,5 @@
-#ifndef FILEZILLA_INTERFACES_NETCONFWIZARD_HEADER
-#define FILEZILLA_INTERFACES_NETCONFWIZARD_HEADER
+#ifndef __NETCONFWIZARD_H__
+#define __NETCONFWIZARD_H__
 
 #include <wx/wizard.h>
 #include "wrapengine.h"
@@ -103,4 +103,4 @@ protected:
 	wxTimer m_timer;
 };
 
-#endif
+#endif //__NETCONFWIZARD_H__

@@ -39,16 +39,16 @@ wxTreeCtrlEx::wxTreeCtrlEx(wxWindow *parent, wxWindowID id /*=wxID_ANY*/,
 void wxTreeCtrlEx::SafeSelectItem(const wxTreeItemId& item)
 {
 	if( !item ) {
-		++m_setSelection;
+		m_setSelection = true;
 		UnselectAll();
-		--m_setSelection;
+		m_setSelection = false;
 	}
 	else {
 		const wxTreeItemId old_selection = GetSelection();
 
-		++m_setSelection;
+		m_setSelection = true;
 		SelectItem(item);
-		--m_setSelection;
+		m_setSelection = false;
 		if (item != old_selection)
 			EnsureVisible(item);
 	}

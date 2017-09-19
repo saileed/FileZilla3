@@ -1358,7 +1358,7 @@ void CSiteManagerDialog::OnNewSite(wxCommandEvent&)
 	AddNewSite(item, server);
 }
 
-void CSiteManagerDialog::OnLogontypeSelChanged(wxCommandEvent&)
+void CSiteManagerDialog::OnLogontypeSelChanged(wxCommandEvent& event)
 {
 	wxTreeCtrl *pTree = XRCCTRL(*this, "ID_SITETREE", wxTreeCtrl);
 	if (!pTree) {
@@ -2582,10 +2582,6 @@ void CSiteManagerDialog::SetProtocol(ServerProtocol protocol)
 	if (protoIt != mainProtocolListIndex_.cend()) {
 		pProtocol->SetSelection(protoIt->second);
 	}
-	else if (protocol != ServerProtocol::UNKNOWN) {
-		mainProtocolListIndex_[protocol] = pProtocol->Append(CServer::GetProtocolName(protocol));
-		pProtocol->SetSelection(mainProtocolListIndex_[protocol]); 
-	}
 	else {
 		pProtocol->SetSelection(mainProtocolListIndex_[FTP]);
 	}
@@ -2619,7 +2615,7 @@ LogonType CSiteManagerDialog::GetLogonType() const
 	return GetLogonTypeFromName(xrc_call(*this, "ID_LOGONTYPE", &wxChoice::GetStringSelection).ToStdWstring());
 }
 
-void CSiteManagerDialog::OnGenerateEncryptionKey(wxCommandEvent&)
+void CSiteManagerDialog::OnGenerateEncryptionKey(wxCommandEvent& event)
 {
 #if ENABLE_STORJ
 	CStorjKeyInterface generator(this);

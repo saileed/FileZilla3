@@ -251,7 +251,7 @@ int CControlSocket::DoClose(int nErrorCode)
 std::wstring CControlSocket::ConvertDomainName(std::wstring const& domain)
 {
 #ifdef FZ_WINDOWS
-	int len = IdnToAscii(IDN_ALLOW_UNASSIGNED, domain.c_str(), domain.size() + 1, nullptr, 0);
+	int len = IdnToAscii(IDN_ALLOW_UNASSIGNED, domain.c_str(), domain.size() + 1, 0, 0);
 	if (!len) {
 		LogMessage(MessageType::Debug_Warning, L"Could not convert domain name");
 		return domain;
@@ -884,7 +884,7 @@ CRealControlSocket::~CRealControlSocket()
 		delete m_pProxyBackend;
 	}
 	delete m_pBackend;
-	m_pBackend = nullptr;
+	m_pBackend = 0;
 
 	delete socket_;
 	delete[] sendBuffer_;
@@ -1169,10 +1169,10 @@ void CRealControlSocket::ResetSocket()
 		if (m_pProxyBackend != m_pBackend) {
 			delete m_pProxyBackend;
 		}
-		m_pProxyBackend = nullptr;
+		m_pProxyBackend = 0;
 	}
 	delete m_pBackend;
-	m_pBackend = nullptr;
+	m_pBackend = 0;
 }
 
 bool CControlSocket::SetFileExistsAction(CFileExistsNotification *pFileExistsNotification)
@@ -1287,7 +1287,7 @@ bool CControlSocket::SetFileExistsAction(CFileExistsNotification *pFileExistsNot
 
 			int64_t size;
 			bool isLink;
-			if (fz::local_filesys::get_file_info(fz::to_native(data.localFile_), isLink, &size, nullptr, nullptr) == fz::local_filesys::file) {
+			if (fz::local_filesys::get_file_info(fz::to_native(data.localFile_), isLink, &size, 0, 0) == fz::local_filesys::file) {
 				data.localFileSize_ = size;
 			}
 			else {

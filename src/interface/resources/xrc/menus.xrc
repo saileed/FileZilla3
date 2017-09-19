@@ -55,7 +55,7 @@
         <help>Open the settings dialog of FileZilla</help>
       </object>
       <object class="wxMenuItem" name="ID_MENU_EDIT_SANDBOX_DIRECTORIES" platform="mac">
-        <label>&amp;Directory access permissions...</label>
+        <label>&amp;Directory access permisssions...</label>
         <help>Open the directory access permissions dialog to configure the local directories FileZilla has access to.</help>
       </object>
     </object>
@@ -405,10 +405,7 @@
         <label>&amp;Play sound</label>
         <checkable>1</checkable>
       </object>
-      <object class="wxMenuItem" name="ID_ACTIONAFTER_CLOSE_ONCE">
-        <label>&amp;Close FileZilla once</label>
-        <checkable>1</checkable>
-      </object>
+      <object class="separator" platform="win|mac"/>
       <object class="wxMenuItem" name="ID_ACTIONAFTER_REBOOT" platform="win|mac">
         <label>R&amp;eboot system once</label>
         <checkable>1</checkable>

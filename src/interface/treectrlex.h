@@ -1,5 +1,5 @@
-#ifndef FILEZILLA_INTERFACE_TREECTRLEX_HEADER
-#define FILEZILLA_INTERFACE_TREECTRLEX_HEADER
+#ifndef __TREECTRLEX_H__
+#define __TREECTRLEX_H__
 
 #include <wx/dnd.h>
 #include "filelistctrl.h"
@@ -39,7 +39,7 @@ public:
 
 protected:
 
-	int m_setSelection{};
+	bool m_setSelection{};
 
 #ifdef __WXMAC__
 	DECLARE_EVENT_TABLE()
@@ -51,4 +51,4 @@ protected:
 	CFileListCtrlSortBase::NameSortMode m_nameSortMode;
 };
 
-#endif
+#endif //__TREECTRLEX_H__

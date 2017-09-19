@@ -1049,10 +1049,13 @@ bool CServerPath::SegmentizeAddSegment(std::wstring & segment, tSegmentList& seg
 			return true;
 		}
 		else if (segment == L"..") {
-			if (!segments.empty()) {
-				segments.pop_back();
+			if (segments.empty()) {
+				return false;
 			}
-			return true;
+			else {
+				segments.pop_back();
+				return true;
+			}
 		}
 	}
 

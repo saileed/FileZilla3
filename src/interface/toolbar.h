@@ -1,5 +1,5 @@
-#ifndef FILEZILLA_INTERFACE_TOOLBAR_HEADER
-#define FILEZILLA_INTERFACE_TOOLBAR_HEADER
+#ifndef __TOOLBAR_H__
+#define __TOOLBAR_H__
 
 #include <option_change_event_handler.h>
 #include "state.h"
@@ -42,4 +42,4 @@ protected:
 	wxSize iconSize_;
 };
 
-#endif
+#endif //__TOOLBAR_H__

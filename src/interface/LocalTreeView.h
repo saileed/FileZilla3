@@ -1,5 +1,5 @@
-#ifndef FILEZILLA_INTERFACE_LOCALTREEVIEW_HEADER
-#define FILEZILLA_INTERFACE_LOCALTREEVIEW_HEADER
+#ifndef __LOCALTREEVIEW_H__
+#define __LOCALTREEVIEW_H__
 
 #include <option_change_event_handler.h>
 #include "systemimagelist.h"
@@ -15,6 +15,8 @@ class CVolumeDescriptionEnumeratorThread;
 
 class CLocalTreeView final : public wxTreeCtrlEx, CSystemImageList, CStateEventHandler, COptionChangeEventHandler
 {
+	DECLARE_CLASS(CLocalTreeView)
+
 	friend class CLocalTreeViewDropTarget;
 
 public:
@@ -29,7 +31,7 @@ public:
 protected:
 	virtual void OnStateChange(t_statechange_notifications notification, const wxString& data, const void* data2);
 
-	void SetDir(wxString const& localDir);
+	void SetDir(wxString localDir);
 	void RefreshListing();
 
 #ifdef __WXMSW__

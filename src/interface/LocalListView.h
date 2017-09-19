@@ -1,5 +1,5 @@
-#ifndef FILEZILLA_INTERFACE_LOCALLISTVIEW_HEADER
-#define FILEZILLA_INTERFACE_LOCALLISTVIEW_HEADER
+#ifndef __LOCALLISTVIEW_H__
+#define __LOCALLISTVIEW_H__
 
 #include "filelistctrl.h"
 #include "state.h"

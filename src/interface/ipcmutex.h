@@ -1,5 +1,5 @@
-#ifndef FILEZILLA_INTERFACE_IPCMUTEX_HEADER
-#define FILEZILLA_INTERFACE_IPCMUTEX_HEADER
+#ifndef __IPCMUTEX_H__
+#define __IPCMUTEX_H__
 
 /*
  * Unfortunately wxWidgets does not provide interprocess mutexes, so I've to
@@ -78,4 +78,4 @@ protected:
 	t_ipcMutexType m_type;
 };
 
-#endif
+#endif //__IPCMUTEX_H__

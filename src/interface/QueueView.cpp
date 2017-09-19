@@ -212,7 +212,7 @@ CQueueView::CQueueView(CQueue* parent, int index, CMainFrame* pMainFrame, CAsync
 	if (action < 0 || action >= ActionAfterState::Count) {
 		action = 1;
 	}
-	else if (action == ActionAfterState::Reboot || action == ActionAfterState::Shutdown || action == ActionAfterState::Sleep || action == ActionAfterState::CloseOnce) {
+	else if (action == ActionAfterState::Reboot || action == ActionAfterState::Shutdown || action == ActionAfterState::Sleep) {
 		action = 1;
 	}
 	m_actionAfterState = static_cast<ActionAfterState::type>(action);
@@ -226,7 +226,6 @@ CQueueView::CQueueView(CQueue* parent, int index, CMainFrame* pMainFrame, CAsync
 	RegisterOption(OPTION_CONCURRENTUPLOADLIMIT);
 
 	CContextManager::Get()->RegisterHandler(this, STATECHANGE_REWRITE_CREDENTIALS, false);
-	CContextManager::Get()->RegisterHandler(this, STATECHANGE_QUITNOW, false);
 
 	SetDropTarget(new CQueueViewDropTarget(this));
 
@@ -761,7 +760,7 @@ void CQueueView::ProcessReply(t_EngineData* pEngineData, COperationNotification 
 		ResetReason reason;
 		if (pEngineData->pItem) {
 			if (pEngineData->pItem->pending_remove()) {
-				reason = ResetReason::remove;
+				reason = remove;
 			}
 			else {
 				if (pEngineData->pItem->GetType() == QueueItemType::File && ((CFileItem*)pEngineData->pItem)->made_progress()) {
@@ -769,12 +768,12 @@ void CQueueView::ProcessReply(t_EngineData* pEngineData, COperationNotification 
 					pItem->set_made_progress(false);
 					pItem->m_onetime_action = CFileExistsNotification::resume;
 				}
-				reason = ResetReason::reset;
+				reason = reset;
 			}
-			pEngineData->pItem->SetStatusMessage(CFileItem::Status::interrupted);
+			pEngineData->pItem->SetStatusMessage(CFileItem::interrupted);
 		}
 		else {
-			reason = ResetReason::reset;
+			reason = reset;
 		}
 		ResetEngine(*pEngineData, reason);
 		return;
@@ -796,7 +795,7 @@ void CQueueView::ProcessReply(t_EngineData* pEngineData, COperationNotification 
 		break;
 	case t_EngineData::connect:
 		if (!pEngineData->pItem) {
-			ResetEngine(*pEngineData, ResetReason::reset);
+			ResetEngine(*pEngineData, reset);
 			return;
 		}
 		else if (replyCode == FZ_REPLY_OK) {
@@ -816,19 +815,19 @@ void CQueueView::ProcessReply(t_EngineData* pEngineData, COperationNotification 
 			}
 
 			if ((replyCode & FZ_REPLY_CANCELED) == FZ_REPLY_CANCELED) {
-				pEngineData->pItem->SetStatusMessage(CFileItem::Status::none);
+				pEngineData->pItem->SetStatusMessage(CFileItem::none);
 			}
 			else if (replyCode & FZ_REPLY_PASSWORDFAILED) {
-				pEngineData->pItem->SetStatusMessage(CFileItem::Status::incorrect_password);
+				pEngineData->pItem->SetStatusMessage(CFileItem::incorrect_password);
 			}
 			else if ((replyCode & FZ_REPLY_TIMEOUT) == FZ_REPLY_TIMEOUT) {
-				pEngineData->pItem->SetStatusMessage(CFileItem::Status::timeout);
+				pEngineData->pItem->SetStatusMessage(CFileItem::timeout);
 			}
 			else if (replyCode & FZ_REPLY_DISCONNECTED) {
-				pEngineData->pItem->SetStatusMessage(CFileItem::Status::disconnected);
+				pEngineData->pItem->SetStatusMessage(CFileItem::disconnected);
 			}
 			else {
-				pEngineData->pItem->SetStatusMessage(CFileItem::Status::connection_failed);
+				pEngineData->pItem->SetStatusMessage(CFileItem::connection_failed);
 			}
 
 			if (replyCode != (FZ_REPLY_ERROR | FZ_REPLY_DISCONNECTED) ||
@@ -846,11 +845,11 @@ void CQueueView::ProcessReply(t_EngineData* pEngineData, COperationNotification 
 		break;
 	case t_EngineData::transfer:
 		if (!pEngineData->pItem) {
-			ResetEngine(*pEngineData, ResetReason::reset);
+			ResetEngine(*pEngineData, reset);
 			return;
 		}
 		if (replyCode == FZ_REPLY_OK) {
-			ResetEngine(*pEngineData, ResetReason::success);
+			ResetEngine(*pEngineData, success);
 			return;
 		}
 		// Increase error count only if item didn't make any progress. This keeps
@@ -866,33 +865,33 @@ void CQueueView::ProcessReply(t_EngineData* pEngineData, COperationNotification 
 		}
 		else {
 			if ((replyCode & FZ_REPLY_CANCELED) == FZ_REPLY_CANCELED) {
-				pEngineData->pItem->SetStatusMessage(CFileItem::Status::none);
+				pEngineData->pItem->SetStatusMessage(CFileItem::none);
 			}
 			else if ((replyCode & FZ_REPLY_TIMEOUT) == FZ_REPLY_TIMEOUT) {
-				pEngineData->pItem->SetStatusMessage(CFileItem::Status::timeout);
+				pEngineData->pItem->SetStatusMessage(CFileItem::timeout);
 			}
 			else if (replyCode & FZ_REPLY_DISCONNECTED) {
-				pEngineData->pItem->SetStatusMessage(CFileItem::Status::disconnected);
+				pEngineData->pItem->SetStatusMessage(CFileItem::disconnected);
 			}
 			else if ((replyCode & FZ_REPLY_WRITEFAILED) == FZ_REPLY_WRITEFAILED) {
-				pEngineData->pItem->SetStatusMessage(CFileItem::Status::local_file_unwriteable);
-				ResetEngine(*pEngineData, ResetReason::failure);
+				pEngineData->pItem->SetStatusMessage(CFileItem::local_file_unwriteable);
+				ResetEngine(*pEngineData, failure);
 				return;
 			}
 			else if ((replyCode & FZ_REPLY_CRITICALERROR) == FZ_REPLY_CRITICALERROR) {
-				pEngineData->pItem->SetStatusMessage(CFileItem::Status::could_not_start);
-				ResetEngine(*pEngineData, ResetReason::failure);
+				pEngineData->pItem->SetStatusMessage(CFileItem::could_not_start);
+				ResetEngine(*pEngineData, failure);
 				return;
 			}
 			else {
-				pEngineData->pItem->SetStatusMessage(CFileItem::Status::could_not_start);
+				pEngineData->pItem->SetStatusMessage(CFileItem::could_not_start);
 			}
 			if (!IncreaseErrorCount(*pEngineData)) {
 				return;
 			}
 
 			if (replyCode & FZ_REPLY_DISCONNECTED && pEngineData->transient) {
-				ResetEngine(*pEngineData, ResetReason::retry);
+				ResetEngine(*pEngineData, retry);
 				return;
 			}
 		}
@@ -904,7 +903,7 @@ void CQueueView::ProcessReply(t_EngineData* pEngineData, COperationNotification 
 		break;
 	case t_EngineData::mkdir:
 		if (replyCode == FZ_REPLY_OK) {
-			ResetEngine(*pEngineData, ResetReason::success);
+			ResetEngine(*pEngineData, success);
 			return;
 		}
 		if (replyCode & FZ_REPLY_DISCONNECTED) {
@@ -913,7 +912,7 @@ void CQueueView::ProcessReply(t_EngineData* pEngineData, COperationNotification 
 			}
 
 			if (pEngineData->transient) {
-				ResetEngine(*pEngineData, ResetReason::retry);
+				ResetEngine(*pEngineData, retry);
 				return;
 			}
 
@@ -923,13 +922,13 @@ void CQueueView::ProcessReply(t_EngineData* pEngineData, COperationNotification 
 		}
 		else {
 			// Cannot retry
-			ResetEngine(*pEngineData, ResetReason::failure);
+			ResetEngine(*pEngineData, failure);
 			return;
 		}
 
 		break;
 	case t_EngineData::list:
-		ResetEngine(*pEngineData, ResetReason::remove);
+		ResetEngine(*pEngineData, remove);
 		return;
 	default:
 		return;
@@ -944,10 +943,10 @@ void CQueueView::ProcessReply(t_EngineData* pEngineData, COperationNotification 
 	if (!m_activeMode) {
 		ResetReason reason;
 		if (pEngineData->pItem && pEngineData->pItem->pending_remove()) {
-			reason = ResetReason::remove;
+			reason = remove;
 		}
 		else {
-			reason = ResetReason::reset;
+			reason = reset;
 		}
 		ResetEngine(*pEngineData, reason);
 		return;
@@ -997,21 +996,21 @@ void CQueueView::ResetEngine(t_EngineData& data, const ResetReason reason)
 				}
 			}
 
-			if (pFileItem->m_edit != CEditHandler::none && reason != ResetReason::retry && reason != ResetReason::reset) {
+			if (pFileItem->m_edit != CEditHandler::none && reason != retry && reason != reset) {
 				CEditHandler* pEditHandler = CEditHandler::Get();
 				wxASSERT(pEditHandler);
 				if (pFileItem->m_edit == CEditHandler::remote) {
-					pEditHandler->FinishTransfer(reason == ResetReason::success, pFileItem->GetRemoteFile(), pFileItem->GetRemotePath(), pServerItem->GetServer());
+					pEditHandler->FinishTransfer(reason == success, pFileItem->GetRemoteFile(), pFileItem->GetRemotePath(), pServerItem->GetServer());
 				}
 				else {
-					pEditHandler->FinishTransfer(reason == ResetReason::success, pFileItem->GetLocalPath().GetPath() + pFileItem->GetLocalFile());
+					pEditHandler->FinishTransfer(reason == success, pFileItem->GetLocalPath().GetPath() + pFileItem->GetLocalFile());
 				}
-				if (reason == ResetReason::success) {
+				if (reason == success) {
 					pFileItem->m_edit = CEditHandler::none;
 				}
 			}
 
-			if (reason == ResetReason::failure) {
+			if (reason == failure) {
 				pFileItem->m_onetime_action = CFileExistsNotification::unknown;
 				pFileItem->set_made_progress(false);
 			}
@@ -1035,15 +1034,12 @@ void CQueueView::ResetEngine(t_EngineData& data, const ResetReason reason)
 			}
 		}
 
-		if (reason == ResetReason::reset) {
+		if (reason == reset) {
 			if (!data.pItem->queued()) {
 				static_cast<CServerItem*>(data.pItem->GetTopLevelItem())->QueueImmediateFile(data.pItem);
 			}
-			if (data.pItem->GetType() == QueueItemType::File || data.pItem->GetType() == QueueItemType::Folder) {
-				static_cast<CFileItem*>(data.pItem)->SetStatusMessage(CFileItem::Status::none);
-			}
 		}
-		else if (reason == ResetReason::failure) {
+		else if (reason == failure) {
 			if (data.pItem->GetType() == QueueItemType::File || data.pItem->GetType() == QueueItemType::Folder) {
 				ServerWithCredentials const server = ((CServerItem*)data.pItem->GetTopLevelItem())->GetServer();
 
@@ -1057,7 +1053,7 @@ void CQueueView::ResetEngine(t_EngineData& data, const ResetReason reason)
 				pQueueViewFailed->CommitChanges();
 			}
 		}
-		else if (reason == ResetReason::success) {
+		else if (reason == success) {
 			if (data.pItem->GetType() == QueueItemType::File || data.pItem->GetType() == QueueItemType::Folder) {
 				CQueueViewSuccessful* pQueueViewSuccessful = m_pQueue->GetQueueView_Successful();
 				if (pQueueViewSuccessful->AutoClear()) {
@@ -1071,7 +1067,7 @@ void CQueueView::ResetEngine(t_EngineData& data, const ResetReason reason)
 					CServerItem* pNewServerItem = pQueueViewSuccessful->CreateServerItem(server);
 					data.pItem->UpdateTime();
 					data.pItem->SetParent(pNewServerItem);
-					data.pItem->SetStatusMessage(CFileItem::Status::none);
+					data.pItem->SetStatusMessage(CFileItem::none);
 					pQueueViewSuccessful->InsertItem(pNewServerItem, data.pItem);
 					pQueueViewSuccessful->CommitChanges();
 				}
@@ -1080,7 +1076,7 @@ void CQueueView::ResetEngine(t_EngineData& data, const ResetReason reason)
 				RemoveItem(data.pItem, true);
 			}
 		}
-		else if (reason != ResetReason::retry) {
+		else if (reason != retry) {
 			RemoveItem(data.pItem, true);
 		}
 		data.pItem = 0;
@@ -1149,11 +1145,11 @@ void CQueueView::SendNextCommand(t_EngineData& engineData)
 {
 	for (;;) {
 		if (engineData.state == t_EngineData::waitprimary) {
-			engineData.pItem->SetStatusMessage(CFileItem::Status::wait_browsing);
+			engineData.pItem->SetStatusMessage(CFileItem::wait_browsing);
 
 			wxASSERT(engineData.pEngine);
 			if (!engineData.pEngine) {
-				ResetEngine(engineData, ResetReason::retry);
+				ResetEngine(engineData, retry);
 				return;
 			}
 
@@ -1167,7 +1163,7 @@ void CQueueView::SendNextCommand(t_EngineData& engineData)
 				break;
 			}
 			if (!pState) {
-				ResetEngine(engineData, ResetReason::retry);
+				ResetEngine(engineData, retry);
 				return;
 			}
 
@@ -1177,7 +1173,7 @@ void CQueueView::SendNextCommand(t_EngineData& engineData)
 		}
 
 		if (engineData.state == t_EngineData::disconnect) {
-			engineData.pItem->SetStatusMessage(CFileItem::Status::disconnecting);
+			engineData.pItem->SetStatusMessage(CFileItem::disconnecting);
 			RefreshItem(engineData.pItem);
 			if (engineData.pEngine->Execute(CDisconnectCommand()) == FZ_REPLY_WOULDBLOCK) {
 				return;
@@ -1196,7 +1192,7 @@ void CQueueView::SendNextCommand(t_EngineData& engineData)
 		}
 
 		if (engineData.state == t_EngineData::askpassword) {
-			engineData.pItem->SetStatusMessage(CFileItem::Status::wait_password);
+			engineData.pItem->SetStatusMessage(CFileItem::wait_password);
 			RefreshItem(engineData.pItem);
 			if (m_waitingForPassword.empty()) {
 				CallAfter(&CQueueView::OnAskPassword);
@@ -1206,7 +1202,7 @@ void CQueueView::SendNextCommand(t_EngineData& engineData)
 		}
 
 		if (engineData.state == t_EngineData::connect) {
-			engineData.pItem->SetStatusMessage(CFileItem::Status::connecting);
+			engineData.pItem->SetStatusMessage(CFileItem::connecting);
 			RefreshItem(engineData.pItem);
 
 			int res = engineData.pEngine->Execute(CConnectCommand(engineData.lastServer.server, engineData.lastServer.credentials, false));
@@ -1242,7 +1238,7 @@ void CQueueView::SendNextCommand(t_EngineData& engineData)
 		if (engineData.state == t_EngineData::transfer) {
 			CFileItem* fileItem = engineData.pItem;
 
-			fileItem->SetStatusMessage(CFileItem::Status::transferring);
+			fileItem->SetStatusMessage(CFileItem::transferring);
 			RefreshItem(engineData.pItem);
 
 			CFileTransferCommand::t_transferSettings transferSettings;
@@ -1256,7 +1252,7 @@ void CQueueView::SendNextCommand(t_EngineData& engineData)
 
 			if (res == FZ_REPLY_NOTCONNECTED) {
 				if (engineData.transient) {
-					ResetEngine(engineData, ResetReason::retry);
+					ResetEngine(engineData, retry);
 					return;
 				}
 
@@ -1265,7 +1261,7 @@ void CQueueView::SendNextCommand(t_EngineData& engineData)
 			}
 
 			if (res == FZ_REPLY_OK) {
-				ResetEngine(engineData, ResetReason::success);
+				ResetEngine(engineData, success);
 				return;
 			}
 
@@ -1278,7 +1274,7 @@ void CQueueView::SendNextCommand(t_EngineData& engineData)
 		if (engineData.state == t_EngineData::mkdir) {
 			CFileItem* fileItem = engineData.pItem;
 
-			fileItem->SetStatusMessage(CFileItem::Status::creating_dir);
+			fileItem->SetStatusMessage(CFileItem::creating_dir);
 			RefreshItem(engineData.pItem);
 
 			int res = engineData.pEngine->Execute(CMkdirCommand(fileItem->GetRemotePath()));
@@ -1290,7 +1286,7 @@ void CQueueView::SendNextCommand(t_EngineData& engineData)
 
 			if (res == FZ_REPLY_NOTCONNECTED) {
 				if (engineData.transient) {
-					ResetEngine(engineData, ResetReason::retry);
+					ResetEngine(engineData, retry);
 					return;
 				}
 
@@ -1299,12 +1295,12 @@ void CQueueView::SendNextCommand(t_EngineData& engineData)
 			}
 
 			if (res == FZ_REPLY_OK) {
-				ResetEngine(engineData, ResetReason::success);
+				ResetEngine(engineData, success);
 				return;
 			}
 
 			// Pointless to retry
-			ResetEngine(engineData, ResetReason::failure);
+			ResetEngine(engineData, failure);
 			return;
 		}
 	}
@@ -1348,9 +1344,9 @@ bool CQueueView::SetActive(bool active)
 
 			if (pEngineData->state == t_EngineData::waitprimary) {
 				if (pEngineData->pItem) {
-					pEngineData->pItem->SetStatusMessage(CFileItem::Status::interrupted);
+					pEngineData->pItem->SetStatusMessage(CFileItem::interrupted);
 				}
-				ResetEngine(*pEngineData, ResetReason::reset);
+				ResetEngine(*pEngineData, reset);
 			}
 			else {
 				wxASSERT(pEngineData->pEngine);
@@ -1397,13 +1393,11 @@ bool CQueueView::Quit()
 #endif
 
 	bool canQuit = true;
-	if (!SetActive(false)) {
+	if (!SetActive(false))
 		canQuit = false;
-	}
 
-	if (!canQuit) {
+	if (!canQuit)
 		return false;
-	}
 
 	DeleteEngines();
 
@@ -1471,7 +1465,7 @@ bool CQueueView::IncreaseErrorCount(t_EngineData& engineData)
 		return true;
 	}
 
-	ResetEngine(engineData, ResetReason::failure);
+	ResetEngine(engineData, failure);
 
 	return false;
 }
@@ -1533,7 +1527,7 @@ void CQueueView::DisplayQueueSize()
 	pStatusBar->DisplayQueueSize(m_totalQueueSize, m_filesWithUnknownSize != 0);
 }
 
-void CQueueView::SaveQueue(bool silent)
+void CQueueView::SaveQueue()
 {
 	// Kiosk mode 2 doesn't save queue
 	if (COptions::Get()->GetOptionVal(OPTION_DEFAULT_KIOSKMODE) == 2) {
@@ -1544,7 +1538,7 @@ void CQueueView::SaveQueue(bool silent)
 	// just as extra precaution. Better 'save' than sorry.
 	CInterProcessMutex mutex(MUTEX_QUEUE);
 
-	if (!m_queue_storage.SaveQueue(m_serverList) && !silent) {
+	if (!m_queue_storage.SaveQueue(m_serverList)) {
 		wxString msg = wxString::Format(_("An error occurred saving the transfer queue to \"%s\".\nSome queue items might not have been saved."), m_queue_storage.GetDatabaseFilename());
 		wxMessageBoxEx(msg, _("Error saving queue"), wxICON_ERROR);
 	}
@@ -1563,17 +1557,15 @@ void CQueueView::LoadQueueFromXML()
 	}
 
 	auto queue = document.child("Queue");
-	if (!queue) {
+	if (!queue)
 		return;
-	}
 
 	ImportQueue(queue, false);
 
 	document.remove_child(queue);
 
-	if (COptions::Get()->GetOptionVal(OPTION_DEFAULT_KIOSKMODE) == 2) {
+	if (COptions::Get()->GetOptionVal(OPTION_DEFAULT_KIOSKMODE) == 2)
 		return;
-	}
 
 	if (!xml.Save(false)) {
 		wxString msg = wxString::Format(_("Could not write \"%s\", the queue could not be saved.\n%s"), xml.GetFileName(), xml.GetError());
@@ -1591,9 +1583,8 @@ void CQueueView::LoadQueue()
 
 	bool error = false;
 
-	if (!m_queue_storage.BeginTransaction()) {
+	if (!m_queue_storage.BeginTransaction())
 		error = true;
-	}
 	else {
 		ServerWithCredentials server;
 		int64_t const first_id = m_queue_storage.GetServer(server, true);
@@ -1799,7 +1790,6 @@ void CQueueView::OnContextMenu(wxContextMenuEvent&)
 	pMenu->Check(XRCID("ID_ACTIONAFTER_SHOW_NOTIFICATION_BUBBLE"), IsActionAfter(ActionAfterState::ShowNotification));
 	pMenu->Check(XRCID("ID_ACTIONAFTER_REQUEST_ATTENTION"), IsActionAfter(ActionAfterState::RequestAttention));
 	pMenu->Check(XRCID("ID_ACTIONAFTER_CLOSE"), IsActionAfter(ActionAfterState::Close));
-	pMenu->Check(XRCID("ID_ACTIONAFTER_CLOSE_ONCE"), IsActionAfter(ActionAfterState::CloseOnce));
 	pMenu->Check(XRCID("ID_ACTIONAFTER_RUNCOMMAND"), IsActionAfter(ActionAfterState::RunCommand));
 	pMenu->Check(XRCID("ID_ACTIONAFTER_PLAYSOUND"), IsActionAfter(ActionAfterState::PlaySound));
 #if defined(__WXMSW__) || defined(__WXMAC__)
@@ -1856,8 +1846,8 @@ void CQueueView::OnActionAfter(wxCommandEvent& event)
 	else if (event.GetId() == XRCID("ID_ACTIONAFTER_CLOSE")) {
 		m_actionAfterState = ActionAfterState::Close;
 	}
-	else if (event.GetId() == XRCID("ID_ACTIONAFTER_CLOSE_ONCE")) {
-		m_actionAfterState = ActionAfterState::CloseOnce;
+	else if (event.GetId() == XRCID("ID_ACTIONAFTER_CLOSE")) {
+		m_actionAfterState = ActionAfterState::Close;
 	}
 	else if (event.GetId() == XRCID("ID_ACTIONAFTER_PLAYSOUND")) {
 		m_actionAfterState = ActionAfterState::PlaySound;
@@ -1886,7 +1876,7 @@ void CQueueView::OnActionAfter(wxCommandEvent& event)
 		m_actionAfterState = ActionAfterState::Sleep;
 #endif
 
-	if (m_actionAfterState != ActionAfterState::Reboot && m_actionAfterState != ActionAfterState::Shutdown && m_actionAfterState != ActionAfterState::Sleep && m_actionAfterState != ActionAfterState::CloseOnce) {
+	if (m_actionAfterState != ActionAfterState::Reboot && m_actionAfterState != ActionAfterState::Shutdown && m_actionAfterState != ActionAfterState::Sleep) {
 		COptions::Get()->SetOption(OPTION_QUEUE_COMPLETION_ACTION, m_actionAfterState);
 	}
 }
@@ -2036,13 +2026,13 @@ bool CQueueView::StopItem(CFileItem* item)
 	if (item->m_pEngineData->state == t_EngineData::waitprimary) {
 		ResetReason reason;
 		if (item->m_pEngineData->pItem && item->m_pEngineData->pItem->pending_remove()) {
-			reason = ResetReason::remove;
+			reason = remove;
 		}
 		else {
-			reason = ResetReason::reset;
+			reason = reset;
 		}
 		if (item->m_pEngineData->pItem) {
-			item->m_pEngineData->pItem->SetStatusMessage(CFileItem::Status::none);
+			item->m_pEngineData->pItem->SetStatusMessage(CFileItem::none);
 		}
 		ResetEngine(*item->m_pEngineData, reason);
 		return true;
@@ -2356,13 +2346,12 @@ void CQueueView::OnAskPassword()
 			continue;
 		}
 
-		if (m_activeMode && CLoginManager::Get().GetPassword(pEngineData->lastServer, false)) {
+		if (CLoginManager::Get().GetPassword(pEngineData->lastServer, false)) {
 			pEngineData->state = t_EngineData::connect;
 			SendNextCommand(*pEngineData);
 		}
 		else {
-			SetActive(false);
-			ResetEngine(*pEngineData, ResetReason::reset);
+			ResetEngine(*pEngineData, remove);
 		}
 
 		m_waitingForPassword.pop_front();
@@ -2604,7 +2593,7 @@ void CQueueView::OnExclusiveEngineRequestGranted(wxCommandEvent& event)
 		if (pState->m_pCommandQueue) {
 			pState->m_pCommandQueue->ReleaseEngine();
 		}
-		ResetEngine(*pEngineData, ResetReason::retry);
+		ResetEngine(*pEngineData, retry);
 		return;
 	}
 
@@ -2671,7 +2660,6 @@ void CQueueView::ActionAfter(bool warned)
 			break;
 		}
 		case ActionAfterState::Close:
-		case ActionAfterState::CloseOnce:
 		{
 			m_pMainFrame->Close();
 			break;
@@ -3136,39 +3124,35 @@ CActionAfterBlocker::~CActionAfterBlocker()
 
 void CQueueView::OnStateChange(CState*, t_statechange_notifications notification, wxString const&, const void* data2)
 {
-	if (notification == STATECHANGE_REWRITE_CREDENTIALS) {
-		auto * loginManager = const_cast<CLoginManager*>(reinterpret_cast<CLoginManager const*>(data2));
-		if (!loginManager) {
-			return;
-		}
-
-
-		for (auto it = m_serverList.begin(); it != m_serverList.end(); ) {
-			ServerWithCredentials server = (*it)->GetServer();
-			loginManager->AskDecryptor(server.credentials.encrypted_, true, false);
-
-			// Since the queue may be running and AskDecryptor uses the GUI, re-find matching server item
-			for (it = m_serverList.begin(); it != m_serverList.end(); ++it) {
-				if ((*it)->GetServer() == server) {
-					server = (*it)->GetServer(); // Credentials aren't in ==
-					server.credentials.Unprotect(loginManager->GetDecryptor(server.credentials.encrypted_), true);
-					(*it)->GetCredentials() = server.credentials;
-					break;
-				}
-			}
-			if (it == m_serverList.end()) {
-				// Server has vanished, start over.
-				it = m_serverList.begin();
-			}
-			else {
-				++it;
-			}
-		}
+	if (notification != STATECHANGE_REWRITE_CREDENTIALS) {
+		return;
 	}
-	else if (notification == STATECHANGE_QUITNOW) {
-		if (m_quit != 2) {
-			SaveQueue(false);
-			SaveColumnSettings(OPTION_QUEUE_COLUMN_WIDTHS, -1, -1);
+
+	auto * loginManager = const_cast<CLoginManager*>(reinterpret_cast<CLoginManager const*>(data2));
+	if (!loginManager) {
+		return;
+	}
+
+
+	for (auto it = m_serverList.begin(); it != m_serverList.end(); ) {
+		ServerWithCredentials server = (*it)->GetServer();
+		loginManager->AskDecryptor(server.credentials.encrypted_, true, false);
+
+		// Since the queue may be running and AskDecryptor uses the GUI, re-find matching server item
+		for (it = m_serverList.begin(); it != m_serverList.end(); ++it) {
+			if ((*it)->GetServer() == server) {
+				server = (*it)->GetServer(); // Credentials aren't in ==
+				server.credentials.Unprotect(loginManager->GetDecryptor(server.credentials.encrypted_), true);
+				(*it)->GetCredentials() = server.credentials;
+				break;
+			}
+		}
+		if (it == m_serverList.end()) {
+			// Server has vanished, start over.
+			it = m_serverList.begin();
+		}
+		else {
+			++it;
 		}
 	}
 }

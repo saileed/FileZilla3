@@ -27,10 +27,10 @@ CExternalIPResolver::~CExternalIPResolver()
 	remove_handler();
 
 	delete [] m_pRecvBuffer;
-	m_pRecvBuffer = nullptr;
+	m_pRecvBuffer = 0;
 
 	delete socket_;
-	socket_ = nullptr;
+	socket_ = 0;
 }
 
 void CExternalIPResolver::GetExternalIP(std::wstring const& address, fz::address_type protocol, bool force)
@@ -135,9 +135,8 @@ void CExternalIPResolver::OnClose()
 {
 	if (m_data.empty())
 		Close(false);
-	else {
-		OnData(nullptr, 0);
-	}
+	else
+		OnData(0, 0);
 }
 
 void CExternalIPResolver::OnReceive()
@@ -214,10 +213,10 @@ void CExternalIPResolver::Close(bool successful)
 	m_sendBuffer.clear();
 
 	delete [] m_pRecvBuffer;
-	m_pRecvBuffer = nullptr;
+	m_pRecvBuffer = 0;
 
 	delete socket_;
-	socket_ = nullptr;
+	socket_ = 0;
 
 	if (m_done) {
 		return;
@@ -235,7 +234,7 @@ void CExternalIPResolver::Close(bool successful)
 
 	if (m_handler) {
 		m_handler->send_event<CExternalIPResolveEvent>();
-		m_handler = nullptr;
+		m_handler = 0;
 	}
 }
 
@@ -306,10 +305,10 @@ void CExternalIPResolver::OnHeader()
 				// Redirect if neccessary
 				if (m_responseCode >= 300) {
 					delete socket_;
-					socket_ = nullptr;
+					socket_ = 0;
 
 					delete [] m_pRecvBuffer;
-					m_pRecvBuffer = nullptr;
+					m_pRecvBuffer = 0;
 
 					std::wstring location = m_location;
 

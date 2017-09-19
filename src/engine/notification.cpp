@@ -74,7 +74,7 @@ char* CDataNotification::Detach(int& len)
 {
 	len = m_len;
 	char* pData = m_pData;
-	m_pData = nullptr;
+	m_pData = 0;
 	return pData;
 }
 

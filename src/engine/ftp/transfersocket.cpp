@@ -32,7 +32,7 @@ CTransferSocket::~CTransferSocket()
 			if (m_transferMode == TransferMode::download) {
 				FinalizeWrite();
 			}
-			ioThread_->SetEventHandler(nullptr);
+			ioThread_->SetEventHandler(0);
 		}
 	}
 }
@@ -41,15 +41,15 @@ void CTransferSocket::ResetSocket()
 {
 	delete m_pProxyBackend;
 	if (m_pBackend == m_pTlsSocket) {
-		m_pBackend = nullptr;
+		m_pBackend = 0;
 	}
 	delete m_pTlsSocket;
 	delete m_pBackend;
 	socketServer_.reset();
 	socket_.reset();
-	m_pProxyBackend = nullptr;
-	m_pTlsSocket = nullptr;
-	m_pBackend = nullptr;
+	m_pProxyBackend = 0;
+	m_pTlsSocket = 0;
+	m_pBackend = 0;
 }
 
 std::wstring CTransferSocket::SetupActiveTransfer(std::string const& ip)
@@ -105,7 +105,7 @@ void CTransferSocket::OnSocketEvent(fz::socket_event_source*, fz::socket_event_f
 				}
 				else {
 					delete m_pProxyBackend;
-					m_pProxyBackend = nullptr;
+					m_pProxyBackend = 0;
 					OnConnect();
 				}
 			}
@@ -760,7 +760,7 @@ bool CTransferSocket::InitTls(const CTlsSocket* pPrimaryTlsSocket)
 
 	if (!m_pTlsSocket->Init()) {
 		delete m_pTlsSocket;
-		m_pTlsSocket = nullptr;
+		m_pTlsSocket = 0;
 		return false;
 	}
 
@@ -769,7 +769,7 @@ bool CTransferSocket::InitTls(const CTlsSocket* pPrimaryTlsSocket)
 	int res = m_pTlsSocket->Handshake(pPrimaryTlsSocket, try_resume);
 	if (res && res != FZ_REPLY_WOULDBLOCK) {
 		delete m_pTlsSocket;
-		m_pTlsSocket = nullptr;
+		m_pTlsSocket = 0;
 		return false;
 	}
 

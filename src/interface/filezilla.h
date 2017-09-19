@@ -1,5 +1,5 @@
-#ifndef FILEZILLA_INTERFACE_FILEZILLA_HEADER
-#define FILEZILLA_INTERFACE_FILEZILLA_HEADER
+#ifndef __FILEZILLA_H__
+#define __FILEZILLA_H__
 
 #include <libfilezilla_engine.h>
 

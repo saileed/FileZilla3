@@ -1,5 +1,5 @@
-#ifndef FILEZILLA_INTERFACE_INPUTDIALOG_HEADER
-#define FILEZILLA_INTERFACE_INPUTDIALOG_HEADER
+#ifndef __INPUTDIALOG_H__
+#define __INPUTDIALOG_H__
 
 #include "dialogex.h"
 
@@ -29,4 +29,4 @@ protected:
 	wxTextCtrl* m_pTextCtrl;
 };
 
-#endif
+#endif //__INPUTDIALOG_H__

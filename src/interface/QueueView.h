@@ -1,5 +1,5 @@
-#ifndef FILEZILLA_INTERFACE_QUEUEVIEW_HEADER
-#define FILEZILLA_INTERFACE_QUEUEVIEW_HEADER
+#ifndef __QUEUEVIEW_H__
+#define __QUEUEVIEW_H__
 
 #include "dndobjects.h"
 #include "queue.h"
@@ -28,7 +28,6 @@ enum type {
 	Reboot,
 	Shutdown,
 	Sleep,
-	CloseOnce,
 
 	Count
 };
@@ -180,7 +179,7 @@ protected:
 	void ProcessReply(t_EngineData* pEngineData, COperationNotification const& notification);
 	void SendNextCommand(t_EngineData& engineData);
 
-	enum class ResetReason
+	enum ResetReason
 	{
 		success,
 		failure,
@@ -204,7 +203,7 @@ protected:
 	void UpdateStatusLinePositions();
 	void CalculateQueueSize();
 	void DisplayQueueSize();
-	void SaveQueue(bool silent = false);
+	void SaveQueue();
 
 	bool IsActionAfter(ActionAfterState::type);
 	void ActionAfter(bool warned = false);

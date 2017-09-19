@@ -158,7 +158,7 @@ bool CQueueViewFailed::RequeueFileItem(CFileItem* pFileItem, CServerItem* pServe
 	CQueueView* pQueueView = m_pQueue->GetQueueView();
 
 	pFileItem->m_errorCount = 0;
-	pFileItem->SetStatusMessage(CFileItem::Status::none);
+	pFileItem->SetStatusMessage(CFileItem::none);
 
 	if (!pFileItem->Download() && pFileItem->GetType() != QueueItemType::Folder && !wxFileName::FileExists(pFileItem->GetLocalPath().GetPath() + pFileItem->GetLocalFile())) {
 		delete pFileItem;

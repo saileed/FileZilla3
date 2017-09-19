@@ -1,5 +1,5 @@
-#ifndef FILEZILLA_INTERFACE_LISTINGCOMPARISON_HEADER
-#define FILEZILLA_INTERFACE_LISTINGCOMPARISON_HEADER
+#ifndef __LISTINGCOMPARISON_H__
+#define __LISTINGCOMPARISON_H__
 
 class CComparisonManager;
 class CComparableListing
@@ -70,4 +70,4 @@ protected:
 	bool m_isComparing{};
 };
 
-#endif
+#endif //__LISTINGCOMPARISON_H__

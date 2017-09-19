@@ -1,5 +1,5 @@
-#ifndef FILEZILLA_INTERFACE_REMOTELISTVIEW_HEADER
-#define FILEZILLA_INTERFACE_REMOTELISTVIEW_HEADER
+#ifndef __REMOTELISTVIEW_H__
+#define __REMOTELISTVIEW_H__
 
 #include "state.h"
 #include "listctrlex.h"

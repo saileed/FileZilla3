@@ -106,7 +106,7 @@ void CFileZillaEnginePrivate::OnEngineEvent(EngineNotificationType type)
 bool CFileZillaEnginePrivate::IsBusy() const
 {
 	fz::scoped_lock lock(mutex_);
-	return m_pCurrentCommand != nullptr;
+	return m_pCurrentCommand != 0;
 }
 
 bool CFileZillaEnginePrivate::IsConnected() const
@@ -540,7 +540,7 @@ int CFileZillaEnginePrivate::ContinueConnect()
 		break;
 #endif
 	default:
-		m_pLogging->LogMessage(MessageType::Error, _("'%s' is not a supported protocol."), CServer::GetProtocolName(server.GetProtocol()));
+		m_pLogging->LogMessage(MessageType::Debug_Warning, L"Not a valid protocol: %d", server.GetProtocol());
 		return FZ_REPLY_SYNTAXERROR|FZ_REPLY_DISCONNECTED;
 	}
 
@@ -753,7 +753,7 @@ std::unique_ptr<CNotification> CFileZillaEnginePrivate::GetNextNotification()
 
 	if (m_NotificationList.empty()) {
 		m_maySendNotificationEvent = true;
-		return nullptr;
+		return 0;
 	}
 	std::unique_ptr<CNotification> pNotification(m_NotificationList.front());
 	m_NotificationList.pop_front();
@@ -904,7 +904,7 @@ void CTransferStatusManager::SetMadeProgress()
 
 void CTransferStatusManager::Update(int64_t transferredBytes)
 {
-	CNotification* notification = nullptr;
+	CNotification* notification = 0;
 
 	{
 		int64_t oldOffset = currentOffset_.fetch_add(transferredBytes);

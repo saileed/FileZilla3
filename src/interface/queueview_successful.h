@@ -1,9 +1,9 @@
-#ifndef FILEZILLA_INTERFACE_QUEUEVIEW_SUCCESSFUL_HEADER
-#define FILEZILLA_INTERFACE_QUEUEVIEW_SUCCESSFUL_HEADER
+#ifndef __QUEUEVIEW_SUCCESSFUL_H__
+#define __QUEUEVIEW_SUCCESSFUL_H__
 
 #include "queueview_failed.h"
 
-class CQueueViewSuccessful final : public CQueueViewFailed
+class CQueueViewSuccessful : public CQueueViewFailed
 {
 public:
 	CQueueViewSuccessful(CQueue* parent, int index);
@@ -12,11 +12,11 @@ public:
 
 protected:
 
-	bool m_autoClear{};
+	bool m_autoClear;
 
 	DECLARE_EVENT_TABLE()
 	void OnContextMenu(wxContextMenuEvent& event);
 	void OnMenuAutoClear(wxCommandEvent& event);
 };
 
-#endif
+#endif //__QUEUEVIEW_SUCCESSFUL_H__

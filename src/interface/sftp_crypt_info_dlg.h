@@ -1,5 +1,5 @@
-#ifndef FILEZILLA_INTERFACE_SFTP_CRYPT_INFO_DLG_HEADER
-#define FILEZILLA_INTERFACE_SFTP_CRYPT_INFO_DLG_HEADER
+#ifndef __SFTP_CRYPT_INFO_DLG_H__
+#define __SFTP_CRYPT_INFO_DLG_H__
 
 class wxDialogEx;
 class CSftpEncryptioInfoDialog
@@ -11,4 +11,4 @@ protected:
 	void SetLabel(wxDialogEx& dlg, int id, const wxString& text);
 };
 
-#endif
+#endif //__SFTP_CRYPT_INFO_DLG_H__
