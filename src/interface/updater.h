@@ -89,7 +89,7 @@ protected:
 	int ContinueDownload();
 
 	void AutoRunIfNeeded();
-	bool Run(bool manual);
+	bool Run();
 
 	bool CreateConnectCommand(std::wstring const& url);
 	bool CreateTransferCommand(std::wstring const& url, std::wstring const& local_file);
@@ -134,8 +134,6 @@ protected:
 	std::deque<std::unique_ptr<CCommand>> pending_commands_;
 
 	std::function<void(CActiveNotification const&)> activityNotificationHandler_;
-
-	bool manual_{};
 };
 
 #endif //FZ_MANUALUPDATECHECK

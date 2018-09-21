@@ -23,18 +23,17 @@ public:
 	void AddObject(CRateLimiterObject* pObject);
 	void RemoveObject(CRateLimiterObject* pObject);
 
-private:
-	void UpdateLimits();
+protected:
+	int64_t GetLimit(rate_direction direction) const;
+
+	int GetBucketSize() const;
 
 	std::vector<CRateLimiterObject*> objects_;
 	std::vector<CRateLimiterObject*> wakeupList_[2];
-	std::vector<CRateLimiterObject*> scratchBuf_;
 
-	fz::timer_id timer_{};
+	fz::timer_id m_timer{};
 
-	int64_t limits_[2]{0, 0};
-	int64_t bucketSize_{};
-	int64_t tokenDebt_[2]{0, 0};
+	int64_t m_tokenDebt[2];
 
 	COptionsBase& options_;
 
@@ -57,9 +56,9 @@ class CRateLimiterObject
 	friend class CRateLimiter;
 
 public:
-	CRateLimiterObject() = default;
+	CRateLimiterObject();
 	virtual ~CRateLimiterObject() = default;
-	int64_t GetAvailableBytes(CRateLimiter::rate_direction direction) const { return bytesAvailable_[direction]; }
+	int64_t GetAvailableBytes(CRateLimiter::rate_direction direction) const { return m_bytesAvailable[direction]; }
 
 	bool IsWaiting(CRateLimiter::rate_direction direction) const;
 
@@ -70,8 +69,8 @@ protected:
 	virtual void OnRateAvailable(CRateLimiter::rate_direction) {}
 
 private:
-	bool waiting_[2]{};
-	int64_t bytesAvailable_[2]{-1, -1};
+	bool m_waiting[2];
+	int64_t m_bytesAvailable[2];
 };
 
 #endif
