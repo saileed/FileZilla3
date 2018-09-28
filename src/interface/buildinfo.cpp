@@ -32,14 +32,14 @@ std::wstring GetDependencyName(gui_lib_dependency d)
 
 std::wstring CBuildInfo::GetVersion()
 {
-	return fz::to_wstring(PACKAGE_VERSION);
+	return fz::to_wstring(std::string(PACKAGE_VERSION));
 }
 
 std::wstring CBuildInfo::GetBuildDateString()
 {
 	// Get build date. Unfortunately it is in the ugly Mmm dd yyyy format.
 	// Make a good yyyy-mm-dd out of it
-	std::wstring date = fz::to_wstring(__DATE__);
+	std::wstring date = fz::to_wstring(std::string(__DATE__));
 	while (date.find(L"  ") != std::wstring::npos) {
 		fz::replace_substrings(date, L"  ", L" ");
 	}
@@ -86,7 +86,7 @@ std::wstring CBuildInfo::GetBuildDateString()
 
 std::wstring CBuildInfo::GetBuildTimeString()
 {
-	return fz::to_wstring(__TIME__);
+	return fz::to_wstring(std::string(__TIME__));
 }
 
 fz::datetime CBuildInfo::GetBuildDate()
@@ -98,7 +98,7 @@ fz::datetime CBuildInfo::GetBuildDate()
 std::wstring CBuildInfo::GetCompiler()
 {
 #ifdef USED_COMPILER
-	return fz::to_wstring(USED_COMPILER);
+	return fz::to_wstring(std::string(USED_COMPILER));
 #elif defined __VISUALC__
 	int version = __VISUALC__;
 	return fz::sprintf(L"Visual C++ %d", version);
@@ -112,14 +112,14 @@ std::wstring CBuildInfo::GetCompilerFlags()
 #ifndef USED_CXXFLAGS
 	return std::wstring();
 #else
-	return fz::to_wstring(USED_CXXFLAGS);
+	return fz::to_wstring(std::string(USED_CXXFLAGS));
 #endif
 }
 
 std::wstring CBuildInfo::GetBuildType()
 {
 #ifdef BUILDTYPE
-	std::wstring buildtype = fz::to_wstring(BUILDTYPE);
+	std::wstring buildtype = fz::to_wstring(std::string(BUILDTYPE));
 	if (buildtype == L"official" || buildtype == L"nightly") {
 		return buildtype;
 	}
@@ -190,7 +190,7 @@ std::wstring CBuildInfo::GetHostname()
 #ifndef USED_HOST
 	return std::wstring();
 #else
-	return fz::to_wstring(USED_HOST);
+	return fz::to_wstring(std::string(USED_HOST));
 #endif
 }
 
@@ -199,7 +199,7 @@ std::wstring CBuildInfo::GetBuildSystem()
 #ifndef USED_BUILD
 	return std::wstring();
 #else
-	return fz::to_wstring(USED_BUILD);
+	return fz::to_wstring(std::string(USED_BUILD));
 #endif
 }
 
