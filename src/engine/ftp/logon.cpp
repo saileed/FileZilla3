@@ -44,7 +44,7 @@ int CFtpLogonOpData::Send()
 	    {
 			// Do not use FTP proxy if generic proxy is set
 			int const generic_proxy_type = engine_.GetOptions().GetOptionVal(OPTION_PROXY_TYPE);
-			if ((generic_proxy_type <= static_cast<int>(ProxyType::NONE) || generic_proxy_type >= static_cast<int>(ProxyType::count)) && !currentServer_.GetBypassProxy()) {
+			if ((generic_proxy_type <= CProxySocket::unknown || generic_proxy_type >= CProxySocket::proxytype_count) && !currentServer_.GetBypassProxy()) {
 				ftp_proxy_type_ = engine_.GetOptions().GetOptionVal(OPTION_FTP_PROXY_TYPE);
 			}
 		
@@ -99,18 +99,7 @@ int CFtpLogonOpData::Send()
 			}
 
 			opState = LOGON_WELCOME;
-			int ret = controlSocket_.DoConnect(host_, port_);
-			if (ret == FZ_REPLY_WOULDBLOCK) {
-				// Enable TCP_NODELAY, speeds things up a bit.
-				controlSocket_.socket_->set_flags(fz::socket::flag_nodelay | fz::socket::flag_keepalive);
-
-				// Enable SO_KEEPALIVE, lots of clueless users have broken routers and
-				// firewalls which terminate the control connection on long transfers.
-				int v = engine_.GetOptions().GetOptionVal(OPTION_TCP_KEEPALIVE_INTERVAL);
-				if (v >= 1 && v < 10000) {
-					controlSocket_.socket_->set_keepalive_interval(fz::duration::from_minutes(v));
-				}
-			}
+			return controlSocket_.DoConnect(host_, port_);
 	    }
 	case LOGON_AUTH_WAIT:
 		LogMessage(MessageType::Debug_Info, L"LogonSend() called during LOGON_AUTH_WAIT, ignoring");
@@ -258,11 +247,15 @@ int CFtpLogonOpData::ParseResponse()
 
 			LogMessage(MessageType::Status, _("Initializing TLS..."));
 
-			controlSocket_.tls_layer_ = std::make_unique<CTlsSocket>(&controlSocket_, *controlSocket_.active_layer_, &controlSocket_);
-			controlSocket_.active_layer_ = controlSocket_.tls_layer_.get();
+			assert(!controlSocket_.m_pTlsSocket);
+			delete controlSocket_.m_pBackend;
 
-			if (!controlSocket_.tls_layer_->client_handshake()) {
-				return FZ_REPLY_ERROR | FZ_REPLY_DISCONNECTED;
+			controlSocket_.m_pTlsSocket = new CTlsSocket(&controlSocket_, *controlSocket_.socket_, &controlSocket_);
+			controlSocket_.m_pBackend = controlSocket_.m_pTlsSocket;
+
+			int res = controlSocket_.m_pTlsSocket->Handshake();
+			if (res & FZ_REPLY_ERROR) {
+				return res | FZ_REPLY_DISCONNECTED;
 			}
 
 			neededCommands[LOGON_AUTH_SSL] = 0;

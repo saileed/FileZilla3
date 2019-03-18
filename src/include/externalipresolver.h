@@ -69,7 +69,7 @@ protected:
 		unknown
 	};
 
-	transferEncodings m_transferEncoding{unknown};
+	transferEncodings m_transferEncoding;
 
 	struct t_chunkData {
 		bool getTrailer{};

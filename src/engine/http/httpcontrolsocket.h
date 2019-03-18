@@ -260,7 +260,7 @@ protected:
 
 	virtual bool SetAsyncRequestReply(CAsyncRequestNotification *pNotification) override;
 
-	std::unique_ptr<CTlsSocket> tls_layer_;
+	CTlsSocket* m_pTlsSocket{};
 
 	virtual void OnConnect() override;
 	virtual void OnSocketError(int error) override;

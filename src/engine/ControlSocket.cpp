@@ -678,21 +678,33 @@ void CControlSocket::SendAsyncRequest(CAsyncRequestNotification* pNotification)
 CRealControlSocket::CRealControlSocket(CFileZillaEnginePrivate & engine)
 	: CControlSocket(engine)
 {
+	socket_ = new fz::socket(engine.GetThreadPool(), this);
+
+	m_pBackend = new CSocketBackend(this, *socket_, engine_.GetRateLimiter());
 }
 
 CRealControlSocket::~CRealControlSocket()
 {
-	ResetSocket();
+	if (socket_) {
+		socket_->close();
+	}
+	if (m_pProxyBackend && m_pProxyBackend != m_pBackend) {
+		delete m_pProxyBackend;
+	}
+	delete m_pBackend;
+	m_pBackend = nullptr;
+
+	delete socket_;
 }
 
 bool CRealControlSocket::Connected() const
 {
-	return socket_ ? socket_->is_connected() : false;
+	return socket_ ? (socket_->get_state() == fz::socket::connected) : false;
 }
 
 int CRealControlSocket::Send(unsigned char const* buffer, unsigned int len)
 {
-	if (!active_layer_) {
+	if (!m_pBackend) {
 		LogMessage(MessageType::Debug_Warning, L"Called internal CRealControlSocket::Send without m_pBackend");
 		return FZ_REPLY_INTERNALERROR;
 	}
@@ -703,7 +715,7 @@ int CRealControlSocket::Send(unsigned char const* buffer, unsigned int len)
 	}
 	else {
 		int error;
-		int written = active_layer_->write(buffer, len, error);
+		int written = m_pBackend->Write(buffer, len, error);
 		if (written < 0) {
 			if (error != EAGAIN) {
 				LogMessage(MessageType::Error, _("Could not write to socket: %s"), fz::socket_error_description(error));
@@ -735,9 +747,9 @@ void CRealControlSocket::operator()(fz::event_base const& ev)
 	}
 }
 
-void CRealControlSocket::OnSocketEvent(fz::socket_event_source* source, fz::socket_event_flag t, int error)
+void CRealControlSocket::OnSocketEvent(fz::socket_event_source*, fz::socket_event_flag t, int error)
 {
-	if (!active_layer_) {
+	if (!m_pBackend) {
 		return;
 	}
 
@@ -755,6 +767,10 @@ void CRealControlSocket::OnSocketEvent(fz::socket_event_source* source, fz::sock
 			OnSocketError(error);
 		}
 		else {
+			if (m_pProxyBackend && !m_pProxyBackend->Detached()) {
+				m_pProxyBackend->Detach();
+				m_pBackend = new CSocketBackend(this, *socket_, engine_.GetRateLimiter());
+			}
 			OnConnect();
 		}
 		break;
@@ -782,7 +798,7 @@ void CRealControlSocket::OnSocketEvent(fz::socket_event_source* source, fz::sock
 
 void CRealControlSocket::OnHostAddress(fz::socket_event_source*, std::string const& address)
 {
-	if (!active_layer_) {
+	if (!m_pBackend) {
 		return;
 	}
 
@@ -801,7 +817,7 @@ int CRealControlSocket::OnSend()
 {
 	while (sendBuffer_) {
 		int error;
-		int written = active_layer_->write(sendBuffer_.get(), sendBuffer_.size(), error);
+		int written = m_pBackend->Write(sendBuffer_.get(), sendBuffer_.size(), error);
 		if (written < 0) {
 			if (error != EAGAIN) {
 				LogMessage(MessageType::Error, _("Could not write to socket: %s"), fz::socket_error_description(error));
@@ -844,38 +860,44 @@ int CRealControlSocket::DoConnect(std::wstring const& host, unsigned int port)
 		LogMessage(MessageType::Debug_Info, L"Using custom encoding: %s", currentServer_.GetCustomEncoding());
 	}
 
-	ResetSocket();
-	socket_ = std::make_unique<fz::socket>(engine_.GetThreadPool(), nullptr);
-	ratelimit_layer_ = std::make_unique<CSocketBackend>(this, *socket_, engine_.GetRateLimiter());
-	active_layer_ = ratelimit_layer_.get();
+	std::wstring real_host;
+	unsigned int real_port = 0;
 
 	const int proxy_type = engine_.GetOptions().GetOptionVal(OPTION_PROXY_TYPE);
-	if (proxy_type > static_cast<int>(ProxyType::NONE) && proxy_type < static_cast<int>(ProxyType::count) && !currentServer_.GetBypassProxy()) {
-		LogMessage(MessageType::Status, _("Connecting to %s through %s proxy"), currentServer_.Format(ServerFormat::with_optional_port), CProxySocket::Name(static_cast<ProxyType>(proxy_type)));
+	if (proxy_type > CProxySocket::unknown && proxy_type < CProxySocket::proxytype_count && !currentServer_.GetBypassProxy()) {
+		LogMessage(MessageType::Status, _("Connecting to %s through %s proxy"), currentServer_.Format(ServerFormat::with_optional_port), CProxySocket::Name(static_cast<CProxySocket::ProxyType>(proxy_type)));
 
-		fz::native_string proxy_host = fz::to_native(engine_.GetOptions().GetOption(OPTION_PROXY_HOST));
+		real_host = engine_.GetOptions().GetOption(OPTION_PROXY_HOST);
+		real_port = engine_.GetOptions().GetOptionVal(OPTION_PROXY_PORT);
 
-		proxy_layer_ = std::make_unique<CProxySocket>(this, *active_layer_, this, static_cast<ProxyType>(proxy_type),
-			proxy_host, engine_.GetOptions().GetOptionVal(OPTION_PROXY_PORT),
-			engine_.GetOptions().GetOption(OPTION_PROXY_USER),
-			engine_.GetOptions().GetOption(OPTION_PROXY_PASS));
-		active_layer_ = proxy_layer_.get();
+		delete m_pBackend;
+		m_pProxyBackend = new CProxySocket(this, socket_, this);
+		m_pBackend = m_pProxyBackend;
+		int res = m_pProxyBackend->Handshake(static_cast<CProxySocket::ProxyType>(proxy_type),
+											ConvertDomainName(host), port,
+											engine_.GetOptions().GetOption(OPTION_PROXY_USER),
+											engine_.GetOptions().GetOption(OPTION_PROXY_PASS));
 
-		if (fz::get_address_type(proxy_host) == fz::address_type::unknown) {
-			LogMessage(MessageType::Status, _("Resolving address of %s"), proxy_host);
+		if (res != EINPROGRESS) {
+			LogMessage(MessageType::Error, _("Could not start proxy handshake: %s"), fz::socket_error_description(res));
+			return FZ_REPLY_DISCONNECTED | FZ_REPLY_ERROR;
 		}
 	}
 	else {
-		if (fz::get_address_type(host) == fz::address_type::unknown) {
-			LogMessage(MessageType::Status, _("Resolving address of %s"), host);
-		}
+		real_host = host;
+		real_port = port;
+	}
+	if (fz::get_address_type(host) == fz::address_type::unknown) {
+		LogMessage(MessageType::Status, _("Resolving address of %s"), real_host);
 	}
 
 	m_closed = false;
 
-	int res = active_layer_->connect(fz::to_native(ConvertDomainName(host)), port);
+	real_host = ConvertDomainName(real_host);
+	int res = socket_->connect(fz::to_native(real_host), real_port);
 
-	if (res) {
+	// Treat success same as EINPROGRESS, we wait for connect notification in any case
+	if (res && res != EINPROGRESS) {
 		LogMessage(MessageType::Error, _("Could not connect to server: %s"), fz::socket_error_description(res));
 		return FZ_REPLY_DISCONNECTED | FZ_REPLY_ERROR; 
 	}
@@ -893,12 +915,18 @@ int CRealControlSocket::DoClose(int nErrorCode)
 
 void CRealControlSocket::ResetSocket()
 {
-	active_layer_ = nullptr;
+	socket_->close();
 
-	// Destroy in reverse order
-	proxy_layer_.reset();
-	ratelimit_layer_.reset();
-	socket_.reset();
+	sendBuffer_.clear();
+
+	if (m_pProxyBackend) {
+		if (m_pProxyBackend != m_pBackend) {
+			delete m_pProxyBackend;
+		}
+		m_pProxyBackend = nullptr;
+	}
+	delete m_pBackend;
+	m_pBackend = nullptr;
 }
 
 bool CControlSocket::SetFileExistsAction(CFileExistsNotification *pFileExistsNotification)

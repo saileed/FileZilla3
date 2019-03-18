@@ -6,61 +6,70 @@
 
 #include <libfilezilla/buffer.hpp>
 
-enum class ProxyType {
-	NONE,
-	HTTP,
-	SOCKS5,
-	SOCKS4,
-
-	count
-};
-
 class CControlSocket;
-class CProxySocket final : protected fz::event_handler, public SocketLayer
+class CProxySocket final : protected fz::event_handler, public CBackend
 {
 public:
-	CProxySocket(event_handler* pEvtHandler, fz::socket_interface & next_layer, CControlSocket* pOwner,
-		ProxyType t, fz::native_string const& proxy_host, unsigned int proxy_port, std::wstring const& user, std::wstring const& pass);
+	CProxySocket(event_handler* pEvtHandler, fz::socket* pSocket, CControlSocket* pOwner);
 	virtual ~CProxySocket();
 
+	enum ProxyState {
+		noconn,
+		handshake,
+		conn
+	};
+
+	enum ProxyType {
+		unknown,
+		HTTP,
+		SOCKS5,
+		SOCKS4,
+
+		proxytype_count
+	};
 	static std::wstring Name(ProxyType t);
 
-	virtual int connect(fz::native_string const& host, unsigned int port, fz::address_type family = fz::address_type::unknown) override;
+	int Handshake(ProxyType type, std::wstring const& host, unsigned int port, std::wstring const& user, std::wstring const& pass);
 
-	fz::socket_state get_state() const override { return state_; }
+	ProxyState GetState() const { return m_proxyState; }
 
-	virtual int read(void *buffer, unsigned int size, int& error) override;
-	virtual int write(void const* buffer, unsigned int size, int& error) override;
+	// Past the initial handshake, proxies are transparent.
+	// Class users should detach socket and use a normal socket backend instead.
+	virtual void OnRateAvailable(CRateLimiter::rate_direction) override {};
+	virtual int Read(void *buffer, unsigned int size, int& error) override;
+	virtual int Peek(void *buffer, unsigned int size, int& error) override;
+	virtual int Write(const void *buffer, unsigned int size, int& error) override;
 
-	ProxyType GetProxyType() const { return type_; }
+	void Detach();
+	bool Detached() const { return socket_ == nullptr; }
+
+	ProxyType GetProxyType() const { return m_proxyType; }
 	std::wstring GetUser() const;
 	std::wstring GetPass() const;
 
-	virtual fz::native_string peer_host() const override;
-	virtual int peer_port(int& error)  const override;
-
 protected:
+	fz::socket* socket_;
 	CControlSocket* m_pOwner;
 
-	ProxyType type_{};
-	fz::native_string proxy_host_;
-	unsigned int proxy_port_{};
-	std::string user_;
-	std::string pass_;
+	ProxyType m_proxyType{unknown};
+	std::wstring m_host;
+	int m_port{};
+	std::string m_user;
+	std::string m_pass;
 
-	fz::native_string host_;
-	unsigned int port_{};
-	fz::address_type family_{};
-
-	fz::socket_state state_{};
+	ProxyState m_proxyState{noconn};
 
 	int m_handshakeState{};
 
 	fz::buffer sendBuffer_;
-	fz::buffer receiveBuffer_;
+
+	char* m_pRecvBuffer{};
+	int m_recvBufferPos{};
+	int m_recvBufferLen{};
 
 	virtual void operator()(fz::event_base const& ev) override;
 	void OnSocketEvent(socket_event_source* source, fz::socket_event_flag t, int error);
+	void OnHostAddress(socket_event_source* source, std::string const& address);
 
 	void OnReceive();
 	void OnSend();

@@ -6,40 +6,33 @@
 class CControlSocket;
 class CTlsSocketImpl;
 
-class CTlsSocket final : protected fz::event_handler, public SocketLayer
+class CTlsSocket final : protected fz::event_handler, public CBackend
 {
 public:
-	CTlsSocket(fz::event_handler* pEvtHandler, fz::socket_interface& layer, CControlSocket* pOwner);
+	enum class TlsState
+	{
+		noconn,
+		handshake,
+		verifycert,
+		conn,
+		closing,
+		closed
+	};
+
+	CTlsSocket(fz::event_handler* pEvtHandler, fz::socket& pSocket, CControlSocket* pOwner);
 	virtual ~CTlsSocket();
 
-	/**
-	 * \brief Starts shaking hand for a new TLS session as client.
-	 *
-	 * Returns true if the handshake has started, false on error.
-	 *
-	 * If the handshake is started, wait for a connection event for the result.
-	 *
-	 * If a required certificate is passed, either in DER or PEM, the session's certificate
-	 * must match the passed certificate or the handshake will fail.
-	 */
-	bool client_handshake(std::vector<uint8_t> const& session_to_resume = std::vector<uint8_t>(), std::vector<uint8_t> const& required_certificate = std::vector<uint8_t>());
+	int Handshake(const CTlsSocket* pPrimarySocket = nullptr, bool try_resume = 0);
 
-	/// Gets session parameters for resumption
-	std::vector<uint8_t> get_session_parameters() const;
-
-	/// Gets the session's certificate in DER
-	std::vector<uint8_t> get_raw_certificate() const;
-
-	virtual int connect(fz::native_string const& host, unsigned int port, fz::address_type family = fz::address_type::unknown) override;
-
-	virtual int read(void *buffer, unsigned int size, int& error) override;
-	virtual int write(void const* buffer, unsigned int size, int& error) override;
+	virtual int Read(void *buffer, unsigned int size, int& error) override;
+	virtual int Peek(void *buffer, unsigned int size, int& error) override;
+	virtual int Write(const void *buffer, unsigned int size, int& error) override;
 
 	int Shutdown(bool silenceReadErrors);
 
 	void TrustCurrentCert(bool trusted);
 
-	fz::socket_state get_state() const;
+	TlsState GetState() const;
 
 	std::wstring GetProtocolName();
 	std::wstring GetKeyExchange();
@@ -56,6 +49,7 @@ public:
 	static std::wstring GetGnutlsVersion();
 private:
 	virtual void operator()(fz::event_base const& ev) override;
+	virtual void OnRateAvailable(CRateLimiter::rate_direction direction) override;
 
 	friend class CTlsSocketImpl;
 	std::unique_ptr<CTlsSocketImpl> impl_;

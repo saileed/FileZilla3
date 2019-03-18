@@ -4,12 +4,11 @@
 #include "tlssocket.h"
 #include "tlssocket_impl.h"
 
-CTlsSocket::CTlsSocket(fz::event_handler* pEvtHandler, fz::socket_interface & next_layer, CControlSocket* pOwner)
+CTlsSocket::CTlsSocket(fz::event_handler* pEvtHandler, fz::socket& pSocket, CControlSocket* pOwner)
 	: event_handler(pOwner->event_loop_)
-	, SocketLayer(pEvtHandler, next_layer, false)
+	, CBackend(pEvtHandler)
 {
-	impl_ = std::make_unique<CTlsSocketImpl>(*this, pOwner);
-	next_layer.set_event_handler(this);
+	impl_ = std::make_unique<CTlsSocketImpl>(*this, pSocket, pOwner);
 }
 
 CTlsSocket::~CTlsSocket()
@@ -17,19 +16,24 @@ CTlsSocket::~CTlsSocket()
 	remove_handler();
 }
 
-bool CTlsSocket::client_handshake(std::vector<uint8_t> const& session_to_resume, std::vector<uint8_t> const& required_certificate)
+int CTlsSocket::Handshake(CTlsSocket const* pPrimarySocket, bool try_resume)
 {
-	return impl_->client_handshake(session_to_resume, required_certificate);
+	return impl_->Handshake(pPrimarySocket ? pPrimarySocket->impl_.get() : nullptr, try_resume);
 }
 
-int CTlsSocket::read(void *buffer, unsigned int size, int& error)
+int CTlsSocket::Read(void *buffer, unsigned int size, int& error)
 {
-	return impl_->read(buffer, size, error);
+	return impl_->Read(buffer, size, error);
 }
 
-int CTlsSocket::write(void const* buffer, unsigned int size, int& error)
+int CTlsSocket::Peek(void *buffer, unsigned int size, int& error)
 {
-	return impl_->write(buffer, size, error);
+	return impl_->Peek(buffer, size, error);
+}
+
+int CTlsSocket::Write(const void *buffer, unsigned int size, int& error)
+{
+	return impl_->Write(buffer, size, error);
 }
 
 int CTlsSocket::Shutdown(bool silenceReadErrors)
@@ -42,9 +46,9 @@ void CTlsSocket::TrustCurrentCert(bool trusted)
 	return impl_->TrustCurrentCert(trusted);
 }
 
-fz::socket_state CTlsSocket::get_state() const
+CTlsSocket::TlsState CTlsSocket::GetState() const
 {
-	return impl_->get_state();
+	return impl_->GetState();
 }
 
 std::wstring CTlsSocket::GetProtocolName()
@@ -92,22 +96,12 @@ void CTlsSocket::operator()(fz::event_base const& ev)
 	return impl_->operator()(ev);
 }
 
+void CTlsSocket::OnRateAvailable(CRateLimiter::rate_direction direction)
+{
+	return impl_->OnRateAvailable(direction);
+}
+
 std::wstring CTlsSocket::GetGnutlsVersion()
 {
 	return CTlsSocketImpl::GetGnutlsVersion();
-}
-
-std::vector<uint8_t> CTlsSocket::get_session_parameters() const
-{
-	return impl_->get_session_parameters();
-}
-
-std::vector<uint8_t> CTlsSocket::get_raw_certificate() const
-{
-	return impl_->get_raw_certificate();
-}
-
-int CTlsSocket::connect(fz::native_string const& host, unsigned int port, fz::address_type family)
-{
-	return impl_->connect(host, port, family);
 }

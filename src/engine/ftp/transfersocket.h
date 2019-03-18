@@ -45,7 +45,8 @@ protected:
 
 	void TransferEnd(TransferEndReason reason);
 
-	bool InitLayers(bool active);
+	bool InitBackend();
+	bool InitTls(const CTlsSocket* pPrimaryTlsSocket);
 
 	void ResetSocket();
 
@@ -66,6 +67,8 @@ protected:
 	virtual void operator()(fz::event_base const& ev);
 	void OnIOThreadEvent();
 
+	std::unique_ptr<fz::socket> socket_{};
+
 	// Will be set only while creating active mode connections
 	std::unique_ptr<fz::listen_socket> socketServer_;
 
@@ -84,13 +87,11 @@ protected:
 	bool m_postponedSend{};
 	void TriggerPostponedEvents();
 
-	std::unique_ptr<fz::socket> socket_;
-	std::unique_ptr<CSocketBackend> ratelimit_layer_;
-	std::unique_ptr<CProxySocket> proxy_layer_;
-	std::unique_ptr<CTlsSocket> tls_layer_;
+	CBackend* m_pBackend{};
 
-	SocketLayer* active_layer_{};
+	CProxySocket* m_pProxyBackend{};
 
+	CTlsSocket* m_pTlsSocket{};
 
 	// Needed for the madeProgress field in CTransferStatus
 	// Initially 0, 2 if made progress

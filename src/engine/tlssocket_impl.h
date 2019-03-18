@@ -16,26 +16,20 @@ class CTlsSocket;
 class CTlsSocketImpl final
 {
 public:
-	CTlsSocketImpl(CTlsSocket& tlsSocket, CControlSocket* pOwner);
+	CTlsSocketImpl(CTlsSocket& tlsSocket, fz::socket& pSocket, CControlSocket* pOwner);
 	~CTlsSocketImpl();
 
-	bool client_handshake(std::vector<uint8_t> const& session_to_resume, std::vector<uint8_t> const& required_certificate);
+	int Handshake(const CTlsSocketImpl* pPrimarySocket = nullptr, bool try_resume = 0);
 
-	int connect(fz::native_string const& host, unsigned int port, fz::address_type family);
-
-	int read(void *buffer, unsigned int size, int& error);
-	int write(void const* buffer, unsigned int size, int& error);
+	int Read(void *buffer, unsigned int size, int& error);
+	int Peek(void *buffer, unsigned int size, int& error);
+	int Write(const void *buffer, unsigned int size, int& error);
 
 	int Shutdown(bool silenceReadErrors);
 
 	void TrustCurrentCert(bool trusted);
 
-	fz::socket_state get_state() const {
-		return state_;
-	}
-
-	std::vector<uint8_t> get_session_parameters() const;
-	std::vector<uint8_t> get_raw_certificate() const;
+	CTlsSocket::TlsState GetState() const { return m_tlsState; }
 
 	std::wstring GetProtocolName();
 	std::wstring GetKeyExchange();
@@ -51,13 +45,16 @@ public:
 
 	static std::wstring GetGnutlsVersion();
 
-private:
+protected:
 	bool Init();
 	void Uninit();
 
 	bool InitSession();
 	void UninitSession();
-	
+	bool CopySessionData(CTlsSocketImpl const* pPrimarySocket);
+
+	void OnRateAvailable(CRateLimiter::rate_direction direction);
+
 	void ContinueWrite();
 	int ContinueHandshake();
 	void ContinueShutdown();
@@ -73,14 +70,15 @@ private:
 
 	static ssize_t PushFunction(gnutls_transport_ptr_t ptr, const void* data, size_t len);
 	static ssize_t PullFunction(gnutls_transport_ptr_t ptr, void* data, size_t len);
-	ssize_t PushFunction(void const* data, size_t len);
+	ssize_t PushFunction(const void* data, size_t len);
 	ssize_t PullFunction(void* data, size_t len);
 
 	int DoCallGnutlsRecordRecv(void* data, size_t len);
 
+	void TriggerEvents();
+
 	void operator()(fz::event_base const& ev);
 	void OnSocketEvent(fz::socket_event_source* source, fz::socket_event_flag t, int error);
-	void forward_hostaddress_event(fz::socket_event_source* source, std::string const& address);
 
 	void OnRead();
 	void OnSend();
@@ -92,11 +90,9 @@ private:
 
 	void PrintVerificationError(int status);
 
-	void set_hostname(fz::native_string const& host);
-
 	CTlsSocket& tlsSocket_;
 
-	fz::socket_state state_{};
+	CTlsSocket::TlsState m_tlsState{ CTlsSocket::TlsState::noconn };
 
 	CControlSocket* m_pOwner{};
 
@@ -104,11 +100,14 @@ private:
 	gnutls_session_t m_session{};
 
 	gnutls_certificate_credentials_t m_certCredentials{};
-	bool handshake_successful_{};
 
-	bool m_canReadFromSocket{false};
-	bool m_canWriteToSocket{false};
+	bool m_canReadFromSocket{true};
+	bool m_canWriteToSocket{true};
 
+	fz::socket& m_socket;
+	std::unique_ptr<CSocketBackend> socketBackend_;
+
+	bool shutdown_requested_{};
 	bool shutdown_silence_read_errors_{};
 
 	// Due to the strange gnutls_record_send semantics, call it again
@@ -117,10 +116,13 @@ private:
 	// application.
 	// This avoids the rule to call it again with the -same- data after
 	// GNUTLS_E_AGAIN.
+	bool m_lastReadFailed{false};
 	bool m_lastWriteFailed{false};
 	unsigned int m_writeSkip{};
 
-	std::vector<uint8_t> required_certificate_;
+	fz::buffer peekBuffer_;
+
+	gnutls_datum_t m_implicitTrustedCert{};
 
 	bool m_socket_eof{};
 	int m_socket_error{ECONNABORTED}; // Set in the push and pull functions if reading/writing fails fatally
@@ -129,6 +131,8 @@ private:
 	friend class CTlsSocketCallbacks;
 
 	fz::native_string hostname_;
+	unsigned int port_{};
+
 };
 
 #endif

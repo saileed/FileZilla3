@@ -34,6 +34,15 @@
 CFtpControlSocket::CFtpControlSocket(CFileZillaEnginePrivate & engine)
 	: CRealControlSocket(engine)
 {
+	// Enable TCP_NODELAY, speeds things up a bit.
+	socket_->set_flags(fz::socket::flag_nodelay | fz::socket::flag_keepalive);
+
+	// Enable SO_KEEPALIVE, lots of clueless users have broken routers and
+	// firewalls which terminate the control connection on long transfers.
+	int v = engine_.GetOptions().GetOptionVal(OPTION_TCP_KEEPALIVE_INTERVAL);
+	if (v >= 1 && v < 10000) {
+		socket_->set_keepalive_interval(fz::duration::from_minutes(v));
+	}
 }
 
 CFtpControlSocket::~CFtpControlSocket()
@@ -49,7 +58,7 @@ void CFtpControlSocket::OnReceive()
 
 	for (;;) {
 		int error;
-		int read = active_layer_->read(m_receiveBuffer + m_bufferLen, RECVBUFFERSIZE - m_bufferLen, error);
+		int read = m_pBackend->Read(m_receiveBuffer + m_bufferLen, RECVBUFFERSIZE - m_bufferLen, error);
 
 		if (read < 0) {
 			if (error != EAGAIN) {
@@ -173,13 +182,16 @@ void CFtpControlSocket::OnConnect()
 	SetAlive();
 
 	if (currentServer_.GetProtocol() == FTPS) {
-		if (!tls_layer_) {
+		if (!m_pTlsSocket) {
 			LogMessage(MessageType::Status, _("Connection established, initializing TLS..."));
 
-			tls_layer_ = std::make_unique<CTlsSocket>(this, *active_layer_, this);
-			active_layer_ = tls_layer_.get();
+			assert(!m_pTlsSocket);
+			delete m_pBackend;
+			m_pTlsSocket = new CTlsSocket(this, *socket_, this);
+			m_pBackend = m_pTlsSocket;
 
-			if (!tls_layer_->client_handshake()) {
+			int res = m_pTlsSocket->Handshake();
+			if (res == FZ_REPLY_ERROR) {
 				DoClose();
 			}
 
@@ -189,7 +201,7 @@ void CFtpControlSocket::OnConnect()
 			LogMessage(MessageType::Status, _("TLS connection established, waiting for welcome message..."));
 		}
 	}
-	else if ((currentServer_.GetProtocol() == FTPES || currentServer_.GetProtocol() == FTP) && tls_layer_) {
+	else if ((currentServer_.GetProtocol() == FTPES || currentServer_.GetProtocol() == FTP) && m_pTlsSocket) {
 		LogMessage(MessageType::Status, _("TLS connection established."));
 		SendNextCommand();
 		return;
@@ -518,13 +530,13 @@ bool CFtpControlSocket::SetAsyncRequestReply(CAsyncRequestNotification *pNotific
 		break;
 	case reqId_certificate:
 		{
-			if (!tls_layer_ || tls_layer_->get_state() != fz::socket_state::connecting) {
+			if (!m_pTlsSocket || m_pTlsSocket->GetState() != CTlsSocket::TlsState::verifycert) {
 				LogMessage(MessageType::Debug_Info, L"No or invalid operation in progress, ignoring request reply %d", pNotification->GetRequestID());
 				return false;
 			}
 
 			CCertificateNotification* pCertificateNotification = static_cast<CCertificateNotification *>(pNotification);
-			tls_layer_->TrustCurrentCert(pCertificateNotification->m_trusted);
+			m_pTlsSocket->TrustCurrentCert(pCertificateNotification->m_trusted);
 
 			if (!pCertificateNotification->m_trusted) {
 				DoClose(FZ_REPLY_CRITICALERROR);
@@ -711,7 +723,7 @@ void CFtpControlSocket::Transfer(std::wstring const& cmd, CFtpTransferOpData* ol
 	pData->pOldData = oldData;
 	pData->pOldData->transferEndReason = TransferEndReason::successful;
 
-	if (proxy_layer_) {
+	if (m_pProxyBackend) {
 		// Only passive suported
 		// Theoretically could use reverse proxy ability in SOCKS5, but
 		// it is too fragile to set up with all those broken routers and
@@ -840,10 +852,4 @@ void CFtpControlSocket::operator()(fz::event_base const& ev)
 	}
 
 	CRealControlSocket::operator()(ev);
-}
-
-void CFtpControlSocket::ResetSocket()
-{
-	tls_layer_.reset();
-	CRealControlSocket::ResetSocket();
 }

@@ -67,7 +67,7 @@ protected:
 	void UpdateUsage(CRateLimiter::rate_direction direction, int usedBytes);
 	void Wait(CRateLimiter::rate_direction direction);
 
-	virtual void OnRateAvailable(CRateLimiter::rate_direction) = 0;
+	virtual void OnRateAvailable(CRateLimiter::rate_direction) {}
 
 private:
 	bool waiting_[2]{};
