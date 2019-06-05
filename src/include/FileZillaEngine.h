@@ -3,8 +3,12 @@
 
 #include "commands.h"
 
+class CAsyncRequestNotification;
 class CFileZillaEngineContext;
 class CFileZillaEnginePrivate;
+class CNotification;
+class EngineNotificationHandler;
+
 class CFileZillaEngine final
 {
 public:

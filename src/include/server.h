@@ -1,6 +1,7 @@
 #ifndef FILEZILLA_ENGINE_SERVER_HEADER
 #define FILEZILLA_ENGINE_SERVER_HEADER
 
+#include <map>
 #include <memory>
 
 enum ServerProtocol

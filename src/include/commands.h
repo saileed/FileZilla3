@@ -1,6 +1,9 @@
 #ifndef FILEZILLA_ENGINE_COMMANDS_HEADER
 #define FILEZILLA_ENGINE_COMMANDS_HEADER
 
+#include "server.h"
+#include "serverpath.h"
+
 #include <libfilezilla/uri.hpp>
 
 // See below for actual commands and their parameters

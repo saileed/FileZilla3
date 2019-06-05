@@ -7,6 +7,8 @@
 #include <libfilezilla/socket.hpp>
 
 #include "oplock_manager.h"
+#include "server.h"
+#include "serverpath.h"
 
 class COpData
 {
@@ -153,6 +155,7 @@ enum class TransferEndReason
 namespace fz {
 class socket_layer;
 }
+class CFileExistsNotification;
 class CTransferStatus;
 class CControlSocket : public fz::event_handler
 {

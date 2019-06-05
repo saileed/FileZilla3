@@ -3,6 +3,8 @@
 
 #include <option_change_event_handler.h>
 
+#include <libfilezilla/event_handler.hpp>
+
 class COptionsBase;
 
 class CRateLimiterObject;

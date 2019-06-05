@@ -32,6 +32,8 @@
  * get concatenated to be parsed again (and discarded if not recognized).
  */
 
+#include <vector>
+
 class CLine;
 class CToken;
 class CControlSocket;
