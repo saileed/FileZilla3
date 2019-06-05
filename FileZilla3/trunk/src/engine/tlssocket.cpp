@@ -28,6 +28,16 @@ bool tls_layer::client_handshake(event_handler* const verification_handler, std:
 	return impl_->client_handshake(session_to_resume, session_hostname, std::vector<uint8_t>(), verification_handler);
 }
 
+bool tls_layer::server_handshake()
+{
+	return impl_->server_handshake(std::vector<uint8_t>());
+}
+
+bool tls_layer::server_handshake(std::vector<uint8_t> const& session_to_resume)
+{
+	return impl_->server_handshake(session_to_resume);
+}
+
 int tls_layer::read(void *buffer, unsigned int size, int& error)
 {
 	return impl_->read(buffer, size, error);
@@ -88,9 +98,14 @@ std::string tls_layer::list_tls_ciphers(std::string const& priority)
 	return tls_layer_impl::list_tls_ciphers(priority);
 }
 
-bool tls_layer::set_client_certificate(native_string const& keyfile, native_string const& certs, native_string const& password)
+bool tls_layer::set_certificate_file(native_string const& keyfile, native_string const& certsfile, native_string const& password, bool pem)
 {
-	return impl_->set_client_certificate(keyfile, certs, password);
+	return impl_->set_certificate_file(keyfile, certsfile, password, pem);
+}
+
+bool tls_layer::set_certificate(std::string const& key, std::string const& certs, native_string const& password, bool pem)
+{
+	return impl_->set_certificate(key, certs, password, pem);
 }
 
 void tls_layer::operator()(event_base const& ev)
@@ -116,6 +131,11 @@ std::vector<uint8_t> tls_layer::get_raw_certificate() const
 int tls_layer::connect(native_string const& host, unsigned int port, address_type family)
 {
 	return impl_->connect(host, port, family);
+}
+
+std::pair<std::string, std::string> tls_layer::generate_selfsigned_certificate(native_string const& password, std::string const& distinguished_name, std::vector<std::string> const& hostnames)
+{
+	return tls_layer_impl::generate_selfsigned_certificate(password, distinguished_name, hostnames);
 }
 
 }

@@ -21,7 +21,7 @@ public:
 	virtual ~tls_layer();
 
 	/**
-	 * \brief Starts shaking hand for a new TLS session as client.
+	 * \brief Starts shaking hands for a new TLS session as client.
 	 *
 	 * Returns true if the handshake has started, false on error.
 	 *
@@ -34,7 +34,7 @@ public:
 	bool client_handshake(std::vector<uint8_t> const& required_certificate, std::vector<uint8_t> const& session_to_resume = std::vector<uint8_t>(), native_string const& session_hostname = native_string());
 
 	/**
-	 * \brief Starts shaking hand for a new TLS session as client.
+	 * \brief Starts shaking hands for a new TLS session as client.
 	 *
 	 * Returns true if the handshake has started, false on error.
 	 *
@@ -48,10 +48,34 @@ public:
 	 */
 	bool client_handshake(event_handler *const verification_handler, std::vector<uint8_t> const& session_to_resume = std::vector<uint8_t>(), native_string const& session_hostname = native_string());
 
+	/**
+	 * \brief Starts shaking hand for a new TLS session as server.
+	 *
+	 * Returns true if the handshake has started, false on error.
+	 *
+	 * If the handshake is started, wait for a connection event for the result.
+	 *
+	 * Before calling server_handshake, a valid certificate and key must be passed
+	 * in through \ref set_certificate.
+	 */ 
+	bool server_handshake();
+
+	/**
+	 * \brief Starts shaking hand for a new TLS session as server.
+	 *
+	 * Returns true if the handshake has started, false on error.
+	 *
+	 * If the handshake is started, wait for a connection event for the result.
+	 *
+	 * Before calling server_handshake, a valid certificate and key must be passed
+	 * in through \ref set_certificate.
+	 */
+	bool server_handshake(std::vector<uint8_t> const& session_to_resume);
+
 	/// Gets session parameters for resumption
 	std::vector<uint8_t> get_session_parameters() const;
 
-	/// Gets the session's certificate in DER
+	/// Gets the session's peer certificate in DER
 	std::vector<uint8_t> get_raw_certificate() const;
 
 	virtual int connect(native_string const& host, unsigned int port, address_type family = address_type::unknown) override;
@@ -61,6 +85,7 @@ public:
 
 	virtual int shutdown() override;
 
+	/// Must be called after having received certificate_verification_event
 	void set_verification_result(bool trusted);
 
 	virtual socket_state get_state() const override;
@@ -73,11 +98,40 @@ public:
 
 	bool resumed_session() const;
 
+	/// Returns a human-readable list of all TLS ciphers available with the passed priority string
 	static std::string list_tls_ciphers(std::string const& priority);
 
-	bool set_client_certificate(native_string const& keyfile, native_string const& certs, native_string const& password);
+	/** \brief Sets the file containing the certificate (and its chain) and the file with the corresponding private key.
+	 *
+	 * For servers a certificate is mandatory, it is presented to the client during the handshake.
+	 *
+	 * For clients it is the optional client certificate.
+	 *
+	 * If the pem flag is set, the input is assumed to be in PEM, otherwise DER.
+	 */
+	bool set_certificate_file(native_string const& keyfile, native_string const& certsfile, native_string const& password, bool pem = true);
+
+	/** \brief Sets the certificate (and its chain) and the private key
+	 *
+	 * For servers it is mandatory and is the certificate the server presents to the client.
+	 *
+	 * For clients it is the optional client certificate.
+	 *
+	 * If the pem flag is set, the input is assumed to be in PEM, otherwise DER.
+	 */
+	bool set_certificate(std::string const& key, std::string const& certs, native_string const& password, bool pem = true);
 
 	static std::string get_gnutls_version();
+
+	/** \brief Creates a new private key and a self-signed certificate.
+	 *
+	 * The distinguished name must be a RFC4514-compliant string.
+	 *
+	 * If the password is non-empty, the private key gets encrypted using it.
+	 *
+	 * The output pair is in PEM, first element is the key and the second the certificate.
+	 */
+	static std::pair<std::string, std::string> generate_selfsigned_certificate(native_string const& password, std::string const& distinguished_name, std::vector<std::string> const& hostnames);
 
 private:
 	virtual void operator()(event_base const& ev) override;

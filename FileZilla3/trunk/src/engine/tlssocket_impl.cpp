@@ -6,7 +6,9 @@
 #include "tls_system_trust_store_impl.h"
 #include "logging_private.h"
 
+#include <libfilezilla/file.hpp>
 #include <libfilezilla/iputils.hpp>
+#include <libfilezilla/util.hpp>
 
 #include <gnutls/x509.h>
 
@@ -230,7 +232,52 @@ bool tls_layer_impl::init()
 	return true;
 }
 
-bool tls_layer_impl::set_client_certificate(native_string const& keyfile, native_string const& certs, native_string const& password)
+bool tls_layer_impl::set_certificate_file(native_string const& keyfile, native_string const& certsfile, native_string const& password, bool pem)
+{
+	// Load the files ourselves instead of calling gnutls_certificate_set_x509_key_file2
+	// as it takes narrow strings on MSW, thus being unable to open all files.
+
+	file kf(keyfile, file::reading, file::existing);
+	if (!kf.opened()) {
+		logger_.log(logmsg::error, fztranslate("Could not open key file."));
+		return false;
+	}
+	int64_t const ks = kf.size();
+	if (ks < 0 || ks > 1024 * 1024) {
+		logger_.log(logmsg::error, fztranslate("Key file too big."));
+		return false;
+	}
+	std::string k;
+	k.resize(ks);
+	int read = kf.read(k.data(), ks);
+	if (read != ks) {
+		logger_.log(logmsg::error, fztranslate("Could not read key file."));
+		return false;
+	}
+
+
+	file cf(keyfile, file::reading, file::existing);
+	if (!cf.opened()) {
+		logger_.log(logmsg::error, fztranslate("Could not open certificate file."));
+		return false;
+	}
+	int64_t const cs = cf.size();
+	if (cs < 0 || cs > 1024 * 1024) {
+		logger_.log(logmsg::error, fztranslate("Certificate file too big."));
+		return false;
+	}
+	std::string c;
+	c.resize(cs);
+	read = cf.read(c.data(), cs);
+	if (read != cs) {
+		logger_.log(logmsg::error, fztranslate("Could not read certificate file."));
+		return false;
+	}
+
+	return set_certificate(k, c, password, pem);
+}
+
+bool tls_layer_impl::set_certificate(std::string const& key, std::string const& certs, native_string const& password, bool pem)
 {
 	if (!init()) {
 		return false;
@@ -240,10 +287,18 @@ bool tls_layer_impl::set_client_certificate(native_string const& keyfile, native
 		return false;
 	}
 
-	int res = gnutls_certificate_set_x509_key_file2(cert_credentials_, to_string(certs).c_str(),
-		to_string(keyfile).c_str(), GNUTLS_X509_FMT_PEM, password.empty() ? nullptr : to_utf8(password).c_str(), 0);
+	gnutls_datum_t c;
+	c.data = const_cast<unsigned char*>(reinterpret_cast<unsigned char const*>(certs.data()));
+	c.size = certs.size();
+
+	gnutls_datum_t k;
+	k.data = const_cast<unsigned char*>(reinterpret_cast<unsigned char const*>(key.data()));
+	k.size = key.size();
+
+	int res = gnutls_certificate_set_x509_key_mem2(cert_credentials_, &c,
+		&k, pem ? GNUTLS_X509_FMT_PEM : GNUTLS_X509_FMT_DER, password.empty() ? nullptr : to_utf8(password).c_str(), 0);
 	if (res < 0) {
-		log_error(res, L"gnutls_certificate_set_x509_key_file2");
+		log_error(res, L"gnutls_certificate_set_x509_key_mem2");
 		deinit();
 		return false;
 	}
@@ -251,18 +306,41 @@ bool tls_layer_impl::set_client_certificate(native_string const& keyfile, native
 	return true;
 }
 
-bool tls_layer_impl::init_session()
+bool tls_layer_impl::init_session(bool client)
 {
 	if (!cert_credentials_) {
 		deinit();
 		return false;
 	}
 
-	int res = gnutls_init(&session_, GNUTLS_CLIENT);
+	int res = gnutls_init(&session_, client ? GNUTLS_CLIENT : GNUTLS_SERVER);
 	if (res) {
 		log_error(res, L"gnutls_init");
 		deinit();
 		return false;
+	}
+
+	if (!client) {
+		if (ticket_key_.empty()) {
+			datum_holder h;
+			res = gnutls_session_ticket_key_generate(&h);
+			if (res) {
+				log_error(res, L"gnutls_session_ticket_key_generate");
+				deinit();
+				return false;
+			}
+			ticket_key_.assign(h.data, h.data + h.size);
+		}
+
+		gnutls_datum_t k;
+		k.data = ticket_key_.data();
+		k.size = ticket_key_.size();
+		res = gnutls_session_ticket_enable_server(session_, &k);
+		if (res) {
+			log_error(res, L"gnutls_session_ticket_enable_server");
+			deinit();
+			return false;
+		}
 	}
 
 	// For use in callbacks
@@ -306,6 +384,8 @@ void tls_layer_impl::deinit()
 		initialized_ = false;
 		gnutls_global_deinit();
 	}
+
+	ticket_key_.clear();
 
 	state_ = socket_state::failed;
 
@@ -587,7 +667,7 @@ bool tls_layer_impl::client_handshake(std::vector<uint8_t> const& session_to_res
 		return false;
 	}
 
-	if (!init() || !init_session()) {
+	if (!init() || !init_session(true)) {
 		return false;
 	}
 
@@ -601,7 +681,7 @@ bool tls_layer_impl::client_handshake(std::vector<uint8_t> const& session_to_res
 		if (res) {
 			logger_.log(logmsg::debug_info, L"gnutls_session_set_data failed: %d. Going to reinitialize session.", res);
 			deinit_session();
-			if (!init_session()) {
+			if (!init_session(true)) {
 				return false;
 			}
 		}
@@ -625,6 +705,34 @@ bool tls_layer_impl::client_handshake(std::vector<uint8_t> const& session_to_res
 	if (hostname_.empty()) {
 		set_hostname(tls_layer_.next_layer_.peer_host());
 	}
+	return continue_handshake() == EAGAIN;
+}
+
+bool tls_layer_impl::server_handshake(std::vector<uint8_t> const& session_to_resume)
+{
+	logger_.log(logmsg::debug_verbose, L"tls_layer_impl::server_handshake()");
+
+	if (state_ != socket_state::none) {
+		logger_.log(logmsg::debug_warning, L"Called tls_layer_impl::server_handshake on a socket that isn't idle");
+		return false;
+	}
+
+	ticket_key_ = session_to_resume;
+
+	if (!init() || !init_session(false)) {
+		return false;
+	}
+
+	state_ = socket_state::connecting;
+
+	if (logger_.should_log(logmsg::debug_debug)) {
+		gnutls_handshake_set_hook_function(session_, GNUTLS_HANDSHAKE_ANY, GNUTLS_HOOK_BOTH, &handshake_hook_func);
+	}
+
+	if (tls_layer_.next_layer_.get_state() != socket_state::connected) {
+		return true;
+	}
+
 	return continue_handshake() == EAGAIN;
 }
 
@@ -656,7 +764,11 @@ int tls_layer_impl::continue_handshake()
 
 		logger_.log(logmsg::debug_info, L"Protocol: %s, Key exchange: %s, Cipher: %s, MAC: %s", protocol, keyExchange, cipherName, macName);
 
-		return verify_certificate();
+		if (is_client()) {
+			return verify_certificate();
+		}
+
+		return 0;
 	}
 	else if (res == GNUTLS_E_AGAIN || res == GNUTLS_E_INTERRUPTED) {
 		return EAGAIN;
@@ -1550,13 +1662,18 @@ std::vector<uint8_t> tls_layer_impl::get_session_parameters() const
 {
 	std::vector<uint8_t> ret;
 
-	datum_holder d;
-	int res = gnutls_session_get_data2(session_, &d);
-	if (res) {
-		logger_.log(logmsg::debug_warning, L"gnutls_session_get_data2 failed: %d", res);
+	if (is_client()) {
+		datum_holder d;
+		int res = gnutls_session_get_data2(session_, &d);
+		if (res) {
+			logger_.log(logmsg::debug_warning, L"gnutls_session_get_data2 failed: %d", res);
+		}
+		else {
+			ret.assign(d.data, d.data + d.size);
+		}
 	}
 	else {
-		ret.assign(d.data, d.data + d.size);
+		ret = ticket_key_;
 	}
 	
 	return ret;
@@ -1572,6 +1689,136 @@ std::vector<uint8_t> tls_layer_impl::get_raw_certificate() const
 	if (cert_list && cert_list_size) {
 		ret.assign(cert_list[0].data, cert_list[0].data + cert_list[0].size);
 	}
+
+	return ret;
+}
+
+std::pair<std::string, std::string> tls_layer_impl::generate_selfsigned_certificate(native_string const& password, std::string const& distinguished_name, std::vector<std::string> const& hostnames)
+{
+	std::pair<std::string, std::string> ret;
+
+	gnutls_x509_privkey_t priv;
+	int res = gnutls_x509_privkey_init(&priv);
+	if (res) {
+		return ret;
+	}
+
+	unsigned int bits = gnutls_sec_param_to_pk_bits(GNUTLS_PK_RSA, GNUTLS_SEC_PARAM_HIGH);
+	if (bits < 2048) {
+		bits = 2048;
+	}
+	res = gnutls_x509_privkey_generate(priv, GNUTLS_PK_RSA, bits, 0);
+	if (res) {
+		gnutls_x509_privkey_deinit(priv);
+		return ret;
+	}
+
+	datum_holder kh;
+
+	if (password.empty()) {
+		res = gnutls_x509_privkey_export2(priv, GNUTLS_X509_FMT_PEM, &kh);
+	}
+	else {
+		res = gnutls_x509_privkey_export2_pkcs8(priv, GNUTLS_X509_FMT_PEM, to_utf8(password).c_str(), 0, &kh);
+	}
+	if (res) {
+		gnutls_x509_privkey_deinit(priv);
+		return ret;
+	}
+
+	gnutls_x509_crt_t crt;
+	res = gnutls_x509_crt_init(&crt);
+	if (res) {
+		gnutls_x509_privkey_deinit(priv);
+		return ret;
+	}
+
+	res = gnutls_x509_crt_set_version(crt, 3);
+	if (res) {
+		gnutls_x509_privkey_deinit(priv);
+		gnutls_x509_crt_deinit(crt);
+		return ret;
+	}
+
+	res = gnutls_x509_crt_set_key(crt, priv);
+	if (res) {
+		gnutls_x509_privkey_deinit(priv);
+		gnutls_x509_crt_deinit(crt);
+		return ret;
+	}
+
+	char const* out{};
+	res = gnutls_x509_crt_set_dn(crt, distinguished_name.c_str(), &out);
+	if (res) {
+		gnutls_x509_privkey_deinit(priv);
+		gnutls_x509_crt_deinit(crt);
+		return ret;
+	}
+
+	for (auto const& hostname : hostnames) {
+		res = gnutls_x509_crt_set_subject_alt_name(crt, GNUTLS_SAN_DNSNAME, hostname.c_str(), hostname.size(), GNUTLS_FSAN_APPEND);
+		if (res) {
+			gnutls_x509_privkey_deinit(priv);
+			gnutls_x509_crt_deinit(crt);
+			return ret;
+		}
+	}
+
+	res = gnutls_x509_crt_set_serial(crt, random_bytes(20).data(), 20);
+	if (res) {
+		gnutls_x509_privkey_deinit(priv);
+		gnutls_x509_crt_deinit(crt);
+		return ret;
+	}
+
+	auto const now = datetime::now();
+
+	res = gnutls_x509_crt_set_activation_time(crt, (now - duration::from_minutes(5)).get_time_t());
+	if (res) {
+		gnutls_x509_privkey_deinit(priv);
+		gnutls_x509_crt_deinit(crt);
+		return ret;
+	}
+	res = gnutls_x509_crt_set_expiration_time(crt, (now + duration::from_days(366)).get_time_t());
+	if (res) {
+		gnutls_x509_privkey_deinit(priv);
+		gnutls_x509_crt_deinit(crt);
+		return ret;
+	}
+
+	res = gnutls_x509_crt_set_key_usage(crt, GNUTLS_KEY_DIGITAL_SIGNATURE | GNUTLS_KEY_KEY_ENCIPHERMENT);
+	if (res) {
+		gnutls_x509_privkey_deinit(priv);
+		gnutls_x509_crt_deinit(crt);
+		return ret;
+	}
+
+	res = gnutls_x509_crt_set_basic_constraints(crt, 0, -1);
+	if (res) {
+		gnutls_x509_privkey_deinit(priv);
+		gnutls_x509_crt_deinit(crt);
+		return ret;
+	}
+
+	res = gnutls_x509_crt_sign2(crt, crt, priv, GNUTLS_DIG_SHA256, 0);
+	if (res) {
+		gnutls_x509_privkey_deinit(priv);
+		gnutls_x509_crt_deinit(crt);
+		return ret;
+	}
+
+	datum_holder ch;
+	res = gnutls_x509_crt_export2(crt, GNUTLS_X509_FMT_PEM, &ch);
+	if (res) {
+		gnutls_x509_privkey_deinit(priv);
+		gnutls_x509_crt_deinit(crt);
+		return ret;
+	}
+
+	gnutls_x509_privkey_deinit(priv);
+	gnutls_x509_crt_deinit(crt);
+	ret.first = kh.to_string();
+	ret.second = ch.to_string();
 
 	return ret;
 }
