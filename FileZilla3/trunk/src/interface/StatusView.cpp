@@ -183,7 +183,7 @@ void CStatusView::AddToLog(logmsg::type messagetype, std::wstring const& message
 	}
 #endif
 
-	uint64_t const cache_index = fz::bitscan_reverse(messagetype);
+	uint64_t const cache_index = fz::bitscan(messagetype);
 
 	size_t lineLength = m_attributeCache[cache_index].len + messageLength;
 
