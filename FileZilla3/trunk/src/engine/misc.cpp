@@ -1,8 +1,8 @@
 #include <filezilla.h>
-#include "tlssocket.h"
 
 #include <libfilezilla/format.hpp>
 #include <libfilezilla/time.hpp>
+#include <libfilezilla/tls_layer.hpp>
 
 #include <random>
 #include <cstdint>

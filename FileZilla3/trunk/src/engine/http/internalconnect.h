@@ -3,7 +3,7 @@
 
 #include "httpcontrolsocket.h"
 
-#include "tlssocket.h"
+#include <libfilezilla/tls_layer.hpp>
 
 // Connect is special for HTTP: It is done on a per-command basis, so we need
 // to establish a connection before each command.

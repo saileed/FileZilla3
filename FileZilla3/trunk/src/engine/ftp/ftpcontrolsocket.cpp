@@ -21,12 +21,12 @@
 #include "rmd.h"
 #include "servercapabilities.h"
 #include "socket_errors.h"
-#include "tlssocket.h"
 #include "transfersocket.h"
 
 #include <libfilezilla/file.hpp>
 #include <libfilezilla/iputils.hpp>
 #include <libfilezilla/local_filesys.hpp>
+#include <libfilezilla/tls_layer.hpp>
 #include <libfilezilla/util.hpp>
 
 #include <algorithm>
