@@ -7,9 +7,9 @@
 #include "proxy.h"
 #include "servercapabilities.h"
 #include "socket_errors.h"
-#include "tlssocket.h"
 #include "transfersocket.h"
 
+#include "libfilezilla/tls_layer.hpp"
 #include <libfilezilla/util.hpp>
 
 CTransferSocket::CTransferSocket(CFileZillaEnginePrivate & engine, CFtpControlSocket & controlSocket, TransferMode transferMode)
@@ -496,7 +496,7 @@ bool CTransferSocket::InitLayers(bool active)
 		tls_layer_ = std::make_unique<fz::tls_layer>(controlSocket_.event_loop_, nullptr, *active_layer_, nullptr, controlSocket_.logger_);
 		active_layer_ = tls_layer_.get();
 
-		if (!tls_layer_->client_handshake(controlSocket_.tls_layer_->get_session_parameters(), controlSocket_.tls_layer_->get_raw_certificate(), controlSocket_.tls_layer_->peer_host())) {
+		if (!tls_layer_->client_handshake(controlSocket_.tls_layer_->get_raw_certificate(), controlSocket_.tls_layer_->get_session_parameters(), controlSocket_.tls_layer_->peer_host())) {
 			return false;
 		}
 	}

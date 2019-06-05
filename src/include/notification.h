@@ -21,9 +21,9 @@
 
 #include "local_path.h"
 #include "server.h"
-#include "tls_info.h"
 
 #include <libfilezilla/time.hpp>
+#include <libfilezilla/tls_info.hpp>
 
 class CFileZillaEngine;
 

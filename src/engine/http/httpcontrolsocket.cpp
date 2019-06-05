@@ -8,11 +8,11 @@
 #include "internalconnect.h"
 #include "request.h"
 #include "socket_errors.h"
-#include "tlssocket.h"
 
 #include <libfilezilla/file.hpp>
 #include <libfilezilla/iputils.hpp>
 #include <libfilezilla/local_filesys.hpp>
+#include <libfilezilla/tls_layer.hpp>
 #include <libfilezilla/uri.hpp>
 
 #include <string.h>

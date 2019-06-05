@@ -3,7 +3,8 @@
 #include "logon.h"
 #include "../proxy.h"
 #include "../servercapabilities.h"
-#include "../tlssocket.h"
+
+#include <libfilezilla/tls_layer.hpp>
 
 CFtpLogonOpData::CFtpLogonOpData(CFtpControlSocket& controlSocket, Credentials const& credentials)
 	: COpData(Command::connect, L"CFtpLogonOpData")
@@ -47,11 +48,11 @@ int CFtpLogonOpData::Send()
 			if ((generic_proxy_type <= static_cast<int>(ProxyType::NONE) || generic_proxy_type >= static_cast<int>(ProxyType::count)) && !currentServer_.GetBypassProxy()) {
 				ftp_proxy_type_ = engine_.GetOptions().GetOptionVal(OPTION_FTP_PROXY_TYPE);
 			}
-		
+
 			if (!PrepareLoginSequence()) {
 				return FZ_REPLY_INTERNALERROR;
 			}
-			
+
 			if (ftp_proxy_type_) {
 				host_ = engine_.GetOptions().GetOption(OPTION_FTP_PROXY_HOST);
 

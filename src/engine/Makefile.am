@@ -4,7 +4,6 @@ noinst_LIBRARIES = libengine.a
 
 libengine_a_CPPFLAGS = -I$(srcdir)/../include
 libengine_a_CPPFLAGS += $(LIBFILEZILLA_CFLAGS)
-libengine_a_CPPFLAGS += $(LIBGNUTLS_CFLAGS)
 
 libengine_a_SOURCES = \
 		backend.cpp \
@@ -62,10 +61,6 @@ libengine_a_SOURCES = \
 		sftp/sftpcontrolsocket.cpp \
 		sizeformatting_base.cpp \
 		socket_errors.cpp \
-		tls_info.cpp \
-		tlssocket.cpp \
-		tlssocket_impl.cpp \
-		tls_system_trust_store.cpp \
 		xmlutils.cpp
 
 noinst_HEADERS = backend.h \
@@ -112,11 +107,7 @@ noinst_HEADERS = backend.h \
 		sftp/mkd.h \
 		sftp/rename.h \
 		sftp/rmd.h \
-		sftp/sftpcontrolsocket.h \
-		tlssocket.h \
-		tlssocket_impl.h \
-		tls_system_trust_store.h \
-		tls_system_trust_store_impl.h
+		sftp/sftpcontrolsocket.h
 
 if ENABLE_STORJ
 libengine_a_SOURCES += \

@@ -289,8 +289,6 @@ filezilla_CFLAGS = $(WX_CFLAGS_ONLY)
 
 filezilla_LDFLAGS = ../engine/libengine.a $(LIBFILEZILLA_LIBS)
 filezilla_LDFLAGS += $(PUGIXML_LIBS)
-filezilla_LDFLAGS += $(NETTLE_LIBS) $(HOGWEED_LIBS)
-filezilla_LDFLAGS += $(LIBGNUTLS_LIBS)
 
 if HAVE_DBUS
 filezilla_DEPENDENCIES += ../dbus/libfzdbus.a
