@@ -24,6 +24,8 @@ public:
 
 	bool client_handshake(std::vector<uint8_t> const& session_to_resume, native_string const& session_hostname, std::vector<uint8_t> const& required_certificate, event_handler * verification_handler);
 
+	bool server_handshake(std::vector<uint8_t> const& session_to_resume);
+
 	int connect(native_string const& host, unsigned int port, address_type family);
 
 	int read(void *buffer, unsigned int size, int& error);
@@ -50,18 +52,22 @@ public:
 
 	static std::string list_tls_ciphers(std::string const& priority);
 
-	bool set_client_certificate(native_string const& keyfile, native_string const& certs, native_string const& password);
+	bool set_certificate_file(native_string const& keyfile, native_string const& certsfile, native_string const& password, bool pem);
+
+	bool set_certificate(std::string const& key, std::string const& certs, native_string const& password, bool pem);
 
 	static std::string get_gnutls_version();
 
 	ssize_t push_function(void const* data, size_t len);
 	ssize_t pull_function(void* data, size_t len);
 
+	static std::pair<std::string, std::string> generate_selfsigned_certificate(native_string const& password, std::string const& distinguished_name, std::vector<std::string> const& hostnames);
+
 private:
 	bool init();
 	void deinit();
 
-	bool init_session();
+	bool init_session(bool client);
 	void deinit_session();
 	
 	void continue_write();
@@ -95,6 +101,10 @@ private:
 
 	void set_hostname(native_string const& host);
 
+	bool is_client() const {
+		return ticket_key_.empty();
+	}
+
 	tls_layer& tls_layer_;
 
 	socket_state state_{};
@@ -102,7 +112,10 @@ private:
 	logger_interface & logger_;
 
 	bool initialized_{};
+
 	gnutls_session_t session_{};
+
+	std::vector<uint8_t> ticket_key_;
 
 	gnutls_certificate_credentials_t cert_credentials_{};
 	bool handshake_successful_{};
