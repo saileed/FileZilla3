@@ -1,6 +1,8 @@
 #ifndef FILEZILLA_ENGINE_OPLOCK_MANAGER_HEADER
 #define FILEZILLA_ENGINE_OPLOCK_MANAGER_HEADER
 
+#include "serverpath.h"
+
 #include <libfilezilla/mutex.hpp>
 
 #include <memory>
