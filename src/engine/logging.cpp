@@ -30,6 +30,7 @@ fz::mutex CLogging::mutex_(false);
 namespace {
 struct logging_options_changed_event_type;
 typedef fz::simple_event<logging_options_changed_event_type> CLoggingOptionsChangedEvent;
+}
 
 class CLoggingOptionsChanged final : public fz::event_handler, COptionChangeEventHandler
 {
@@ -65,7 +66,6 @@ public:
 	CLogging & logger_;
 	COptionsBase& options_;
 };
-}
 
 CLogging::CLogging(CFileZillaEnginePrivate & engine)
 	: engine_(engine)

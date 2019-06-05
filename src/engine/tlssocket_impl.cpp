@@ -256,7 +256,7 @@ bool tls_layer_impl::set_certificate_file(native_string const& keyfile, native_s
 	}
 
 
-	file cf(keyfile, file::reading, file::existing);
+	file cf(certsfile, file::reading, file::existing);
 	if (!cf.opened()) {
 		logger_.log(logmsg::error, fztranslate("Could not open certificate file."));
 		return false;

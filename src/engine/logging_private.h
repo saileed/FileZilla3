@@ -6,9 +6,7 @@
 #include <libfilezilla/mutex.hpp>
 #include <utility>
 
-namespace {
 class CLoggingOptionsChanged;
-}
 
 class CLogging : public fz::logger_interface
 {
