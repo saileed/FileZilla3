@@ -4,6 +4,8 @@
 #include "serverdata.h"
 #include "Options.h"
 
+#include <libfilezilla/translate.hpp>
+
 bool Bookmark::operator==(Bookmark const& b) const
 {
 	if (m_localDir != b.m_localDir) {

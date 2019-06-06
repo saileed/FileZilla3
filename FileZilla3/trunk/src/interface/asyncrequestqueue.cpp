@@ -10,6 +10,8 @@
 #include "verifycertdialog.h"
 #include "verifyhostkeydialog.h"
 
+#include <libfilezilla/translate.hpp>
+
 DECLARE_EVENT_TYPE(fzEVT_PROCESSASYNCREQUESTQUEUE, -1)
 DEFINE_EVENT_TYPE(fzEVT_PROCESSASYNCREQUESTQUEUE)
 

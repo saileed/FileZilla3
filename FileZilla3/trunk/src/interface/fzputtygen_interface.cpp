@@ -5,6 +5,7 @@
 #include "inputdialog.h"
 
 #include <libfilezilla/process.hpp>
+#include <libfilezilla/translate.hpp>
 
 CFZPuttyGenInterface::CFZPuttyGenInterface(wxWindow* parent)
 	: m_parent(parent)

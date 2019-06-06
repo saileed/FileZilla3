@@ -16,6 +16,7 @@
 #include "xrc_helper.h"
 
 #include <libfilezilla/uri.hpp>
+#include <libfilezilla/translate.hpp>
 
 #include <wx/clipbrd.h>
 

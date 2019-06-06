@@ -13,6 +13,7 @@
 #include "themeprovider.h"
 #include "wxfilesystem_blob_handler.h"
 #include <libfilezilla/local_filesys.hpp>
+#include <libfilezilla/translate.hpp>
 
 #include <wx/evtloop.h>
 

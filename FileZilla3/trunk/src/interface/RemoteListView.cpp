@@ -27,6 +27,7 @@
 
 #include <libfilezilla/file.hpp>
 #include <libfilezilla/local_filesys.hpp>
+#include <libfilezilla/translate.hpp>
 #include <libfilezilla/uri.hpp>
 
 #ifdef __WXMSW__
