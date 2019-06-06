@@ -8,6 +8,8 @@
 #include "Options.h"
 #include "xmlfunctions.h"
 
+#include <libfilezilla/translate.hpp>
+
 namespace {
 struct background_color {
 	wxColour const color;

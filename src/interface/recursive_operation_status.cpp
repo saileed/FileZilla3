@@ -5,6 +5,8 @@
 #include "remote_recursive_operation.h"
 #include "themeprovider.h"
 
+#include <libfilezilla/translate.hpp>
+
 #include <wx/bmpbuttn.h>
 #include <wx/dcclient.h>
 

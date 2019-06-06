@@ -4,6 +4,8 @@
 #include "window_state_manager.h"
 #include "Options.h"
 
+#include <libfilezilla/translate.hpp>
+
 BEGIN_EVENT_TABLE(CFilterEditDialog, CFilterConditionsDialog)
 EVT_BUTTON(XRCID("wxID_OK"), CFilterEditDialog::OnOK)
 EVT_BUTTON(XRCID("wxID_CANCEL"), CFilterEditDialog::OnCancel)

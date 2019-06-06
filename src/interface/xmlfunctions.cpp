@@ -8,6 +8,7 @@
 
 #include <libfilezilla/file.hpp>
 #include <libfilezilla/local_filesys.hpp>
+#include <libfilezilla/translate.hpp>
 
 CXmlFile::CXmlFile(std::wstring const& fileName, std::string const& root)
 {

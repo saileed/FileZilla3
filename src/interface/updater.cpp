@@ -15,6 +15,7 @@
 #include <libfilezilla/file.hpp>
 #include <libfilezilla/hash.hpp>
 #include <libfilezilla/local_filesys.hpp>
+#include <libfilezilla/translate.hpp>
 
 #include <string>
 
