@@ -6,7 +6,6 @@
 #include "engine_context.h"
 #include "netconfwizard.h"
 #include "Options.h"
-#include "socket_errors.h"
 #include "dialogex.h"
 #include "filezillaapp.h"
 #include "externalipresolver.h"

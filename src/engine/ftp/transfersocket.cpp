@@ -6,7 +6,6 @@
 #include "optionsbase.h"
 #include "proxy.h"
 #include "servercapabilities.h"
-#include "socket_errors.h"
 #include "transfersocket.h"
 
 #include "libfilezilla/tls_layer.hpp"

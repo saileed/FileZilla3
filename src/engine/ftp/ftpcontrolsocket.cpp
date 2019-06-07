@@ -20,7 +20,6 @@
 #include "rename.h"
 #include "rmd.h"
 #include "servercapabilities.h"
-#include "socket_errors.h"
 #include "transfersocket.h"
 
 #include <libfilezilla/file.hpp>

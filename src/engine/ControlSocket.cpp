@@ -7,7 +7,6 @@
 #include "proxy.h"
 #include "servercapabilities.h"
 #include "sizeformatting_base.h"
-#include "socket_errors.h"
 
 #include <libfilezilla/event_loop.hpp>
 #include <libfilezilla/iputils.hpp>
