@@ -7,7 +7,6 @@
 #include "httpcontrolsocket.h"
 #include "internalconnect.h"
 #include "request.h"
-#include "socket_errors.h"
 
 #include <libfilezilla/file.hpp>
 #include <libfilezilla/iputils.hpp>

@@ -186,7 +186,6 @@
     <ClCompile Include="sftp\rmd.cpp" />
     <ClCompile Include="sftp\sftpcontrolsocket.cpp" />
     <ClCompile Include="sizeformatting_base.cpp" />
-    <ClCompile Include="socket_errors.cpp">
       <PrecompiledHeader />
     </ClCompile>
     <ClCompile Include="storj\connect.cpp" />
@@ -250,7 +249,6 @@
     <ClInclude Include="servercapabilities.h" />
     <ClInclude Include="..\include\serverpath.h" />
     <ClInclude Include="..\include\sizeformatting_base.h" />
-    <ClInclude Include="..\include\socket_errors.h" />
     <ClInclude Include="sftp\chmod.h" />
     <ClInclude Include="sftp\connect.h" />
     <ClInclude Include="sftp\cwd.h" />

@@ -5,7 +5,6 @@
 #include <string.h>
 
 #include "backend.h"
-#include "socket_errors.h"
 
 #include <libfilezilla/encode.hpp>
 
