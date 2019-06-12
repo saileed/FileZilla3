@@ -449,7 +449,7 @@ std::wstring CControlSocket::ConvToLocal(char const* buffer, size_t len)
 		if (!ret.empty()) {
 			return ret;
 		}
-			
+
 		if (currentServer_.GetEncodingType() != ENCODING_UTF8) {
 			log(logmsg::status, _("Invalid character sequence received, disabling UTF-8. Select UTF-8 option in site manager to force UTF-8."));
 			m_useUTF8 = false;
@@ -697,8 +697,8 @@ int CRealControlSocket::Send(unsigned char const* buffer, unsigned int len)
 	}
 
 	SetWait(true);
-	if (sendBuffer_) {
-		sendBuffer_.append(buffer, len);
+	if (send_buffer_) {
+		send_buffer_.append(buffer, len);
 	}
 	else {
 		int error;
@@ -717,7 +717,7 @@ int CRealControlSocket::Send(unsigned char const* buffer, unsigned int len)
 		}
 
 		if (static_cast<unsigned int>(written) < len) {
-			sendBuffer_.append(buffer + written, len - written);
+			send_buffer_.append(buffer + written, len - written);
 		}
 	}
 
@@ -798,9 +798,9 @@ void CRealControlSocket::OnReceive()
 
 int CRealControlSocket::OnSend()
 {
-	while (sendBuffer_) {
+	while (send_buffer_) {
 		int error;
-		int written = active_layer_->write(sendBuffer_.get(), sendBuffer_.size(), error);
+		int written = active_layer_->write(send_buffer_.get(), send_buffer_.size(), error);
 		if (written < 0) {
 			if (error != EAGAIN) {
 				log(logmsg::error, _("Could not write to socket: %s"), fz::socket_error_description(error));
@@ -816,7 +816,7 @@ int CRealControlSocket::OnSend()
 		if (written) {
 			SetActive(CFileZillaEngine::send);
 
-			sendBuffer_.consume(static_cast<size_t>(written));
+			send_buffer_.consume(static_cast<size_t>(written));
 		}
 	}
 
@@ -898,6 +898,8 @@ void CRealControlSocket::ResetSocket()
 	proxy_layer_.reset();
 	ratelimit_layer_.reset();
 	socket_.reset();
+
+	send_buffer_.clear();
 }
 
 bool CControlSocket::SetFileExistsAction(CFileExistsNotification *pFileExistsNotification)

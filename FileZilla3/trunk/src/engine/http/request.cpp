@@ -201,7 +201,7 @@ int CHttpRequestOpData::Send()
 				}
 
 				auto result = controlSocket_.Send(command.c_str(), command.size());
-				if (result == FZ_REPLY_WOULDBLOCK && !controlSocket_.sendBuffer_) {
+				if (result == FZ_REPLY_WOULDBLOCK && !controlSocket_.send_buffer_) {
 					result = FZ_REPLY_CONTINUE;
 				}
 
@@ -210,13 +210,13 @@ int CHttpRequestOpData::Send()
 			else {
 				int const chunkSize = 65536;
 
-				while (dataToSend_ || controlSocket_.sendBuffer_) {
-					if (!controlSocket_.sendBuffer_) {
+				while (dataToSend_ || controlSocket_.send_buffer_) {
+					if (!controlSocket_.send_buffer_) {
 						unsigned int len = chunkSize;
 						if (chunkSize > dataToSend_) {
 							len = static_cast<unsigned int>(dataToSend_);
 						}
-						int res = req.body_->data_request(controlSocket_.sendBuffer_.get(len), len);
+						int res = req.body_->data_request(controlSocket_.send_buffer_.get(len), len);
 						if (res != FZ_REPLY_CONTINUE) {
 							return res;
 						}
@@ -225,12 +225,12 @@ int CHttpRequestOpData::Send()
 							return FZ_REPLY_INTERNALERROR;
 						}
 
-						controlSocket_.sendBuffer_.add(len);
+						controlSocket_.send_buffer_.add(len);
 						dataToSend_ -= len;
 					}
 
 					int error;
-					int written = controlSocket_.active_layer_->write(controlSocket_.sendBuffer_.get(), controlSocket_.sendBuffer_.size(), error);
+					int written = controlSocket_.active_layer_->write(controlSocket_.send_buffer_.get(), controlSocket_.send_buffer_.size(), error);
 					if (written < 0) {
 						if (error != EAGAIN) {
 							log(logmsg::error, _("Could not write to socket: %s"), fz::socket_error_description(error));
@@ -243,7 +243,7 @@ int CHttpRequestOpData::Send()
 					if (written) {
 						controlSocket_.SetActive(CFileZillaEngine::send);
 
-						controlSocket_.sendBuffer_.consume(static_cast<size_t>(written));
+						controlSocket_.send_buffer_.consume(static_cast<size_t>(written));
 					}
 				}
 
