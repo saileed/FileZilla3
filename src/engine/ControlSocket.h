@@ -320,7 +320,7 @@ protected:
 	std::unique_ptr<CProxySocket> proxy_layer_;
 	fz::socket_layer* active_layer_{};
 
-	fz::buffer sendBuffer_;
+	fz::buffer send_buffer_;
 };
 
 #endif
