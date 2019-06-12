@@ -537,6 +537,7 @@ bool CFileZillaApp::SetLocale(int language)
 	if (!pLocale->AddCatalog(_T("filezilla")) && language != wxLANGUAGE_DEFAULT) {
 		return false;
 	}
+	pLocale->AddCatalog(_T("libfilezilla"));
 
 	if (m_pLocale) {
 		// Now unload old locale
@@ -553,6 +554,7 @@ bool CFileZillaApp::SetLocale(int language)
 		else if (!pLocale->AddCatalog(_T("filezilla")) && language != wxLANGUAGE_DEFAULT) {
 			return false;
 		}
+		pLocale->AddCatalog(_T("libfilezilla"));
 	}
 	m_pLocale = std::move(pLocale);
 
