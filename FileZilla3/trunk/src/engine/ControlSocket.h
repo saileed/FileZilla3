@@ -191,7 +191,7 @@ public:
 	Command GetCurrentCommandId() const;
 
 	void SendAsyncRequest(CAsyncRequestNotification* pNotification);
-	virtual bool SetAsyncRequestReply(CAsyncRequestNotification *pNotification) = 0;
+	void CallSetAsyncRequestReply(CAsyncRequestNotification *pNotification);
 	bool SetFileExistsAction(CFileExistsNotification *pFileExistsNotification);
 
 	CServer const& GetCurrentServer() const;
@@ -232,6 +232,7 @@ public:
 		logger_.log_raw(std::forward<Args>(args)...);
 	}
 protected:
+	virtual bool SetAsyncRequestReply(CAsyncRequestNotification *pNotification) = 0;
 	void SendDirectoryListingNotification(CServerPath const& path, bool failed);
 
 	fz::duration GetTimezoneOffset() const;

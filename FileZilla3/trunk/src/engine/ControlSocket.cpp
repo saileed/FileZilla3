@@ -1143,3 +1143,16 @@ void CControlSocket::SendDirectoryListingNotification(CServerPath const& path, b
 
 	engine_.AddNotification(new CDirectoryListingNotification(path, operations_.size() == 1 && operations_.back()->opId == Command::list, failed));
 }
+
+void CControlSocket::CallSetAsyncRequestReply(CAsyncRequestNotification *pNotification)
+{
+	if (operations_.empty() || !operations_.back()->waitForAsyncRequest) {
+		log(logmsg::debug_info, L"Not waiting for request reply, ignoring request reply %d", pNotification->GetRequestID());
+		return;
+	}
+
+	operations_.back()->waitForAsyncRequest = false;
+
+	SetAlive();
+	SetAsyncRequestReply(pNotification);
+}

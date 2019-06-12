@@ -115,11 +115,7 @@ CHttpControlSocket::~CHttpControlSocket()
 
 bool CHttpControlSocket::SetAsyncRequestReply(CAsyncRequestNotification *pNotification)
 {
-	if (operations_.empty() || !operations_.back()->waitForAsyncRequest) {
-		log(logmsg::debug_info, L"Not waiting for request reply, ignoring request reply %d", pNotification->GetRequestID());
-	}
-
-	operations_.back()->waitForAsyncRequest = false;
+	log(logmsg::debug_verbose, L"CHttpControlSocket::SetAsyncRequestReply");
 
 	switch (pNotification->GetRequestID())
 	{

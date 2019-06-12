@@ -767,8 +767,7 @@ void CFileZillaEnginePrivate::OnSetAsyncRequestReplyEvent(std::unique_ptr<CAsync
 		return;
 	}
 
-	controlSocket_->SetAlive();
-	controlSocket_->SetAsyncRequestReply(reply.get());
+	controlSocket_->CallSetAsyncRequestReply(reply.get());
 }
 
 int CFileZillaEnginePrivate::Execute(const CCommand &command)
