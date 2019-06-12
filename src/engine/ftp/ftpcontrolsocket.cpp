@@ -477,11 +477,7 @@ void CFtpControlSocket::TransferEnd()
 
 bool CFtpControlSocket::SetAsyncRequestReply(CAsyncRequestNotification *pNotification)
 {
-	if (operations_.empty() || !operations_.back()->waitForAsyncRequest) {
-		log(logmsg::debug_info, L"Not waiting for request reply, ignoring request reply %d", pNotification->GetRequestID());
-		return false;
-	}
-	operations_.back()->waitForAsyncRequest = false;
+	log(logmsg::debug_verbose, L"CFtpControlSocket::SetAsyncRequestReply");
 
 	const RequestId requestId = pNotification->GetRequestID();
 	switch (requestId)

@@ -362,12 +362,7 @@ int CSftpControlSocket::AddToStream(std::string const& cmd)
 
 bool CSftpControlSocket::SetAsyncRequestReply(CAsyncRequestNotification *pNotification)
 {
-	if (operations_.empty() || !operations_.back()->waitForAsyncRequest) {
-		log(logmsg::debug_info, L"Not waiting for request reply, ignoring request reply %d", pNotification->GetRequestID());
-		return false;
-	}
-
-	operations_.back()->waitForAsyncRequest = false;
+	log(logmsg::debug_verbose, L"CSftpControlSocket::SetAsyncRequestReply");
 
 	RequestId const requestId = pNotification->GetRequestID();
 	switch(requestId)
