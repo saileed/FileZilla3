@@ -53,7 +53,6 @@ public:
 
 	std::wstring challenge; // Used for interactive logons
 	bool waitChallenge{};
-	bool waitForAsyncRequest{};
 	bool gotFirstWelcomeLine{};
 	Credentials credentials_;
 
