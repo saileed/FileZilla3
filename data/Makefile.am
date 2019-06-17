@@ -33,13 +33,23 @@ dll_install.nsh: Makefile
 installlangfiles.nsh: Makefile
 	rm -f $@
 	for i in @FILEZILLA_LINGUAS@; do\
-	  echo !insertmacro INSTALLLANGFILE $$i >> $@; \
+	  echo !insertmacro INSTALLLANGFILE ..\\locales\\$$i.mo $$i filezilla.mo >> $@; \
+	done
+	lfz_prefix=`$(PKG_CONFIG) --variable=prefix libfilezilla`; \
+	for i in "$${lfz_prefix}"/share/locale/*/LC_MESSAGES/libfilezilla.mo; do \
+	  locale=`echo $$i | sed 's/.*\/\([^\/\]*\)\/LC_MESSAGES\/libfilezilla.mo/\1/'`; \
+	  echo !insertmacro INSTALLLANGFILE "`echo $$i | sed 's/\\//\\\\/g'`" "$$locale" libfilezilla.mo >> $@; \
 	done
 
 uninstalllangfiles.nsh: Makefile
 	rm -f $@
 	for i in @FILEZILLA_LINGUAS@; do\
-	  echo !insertmacro UNINSTALLLANGFILE $$i >> $@; \
+	  echo !insertmacro UNINSTALLLANGFILE $$i filezilla.mo >> $@; \
+	done
+	lfz_prefix=`$(PKG_CONFIG) --variable=prefix libfilezilla`; \
+	for i in "$${lfz_prefix}"/share/locale/*/LC_MESSAGES/libfilezilla.mo; do \
+	  locale=`echo $$i | sed 's/.*\/\([^\/\]*\)\/LC_MESSAGES\/libfilezilla.mo/\1/'`; \
+	  echo !insertmacro UNINSTALLLANGFILE "$$locale" libfilezilla.mo >> $@; \
 	done
 
 # Some versions of libtool create executables as foo.exe

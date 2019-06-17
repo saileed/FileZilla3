@@ -1223,10 +1223,10 @@ ${MementoSectionEnd}
 
 !if "@FILEZILLA_LINGUAS@" != ""
 
-  !macro INSTALLLANGFILE LANG
+  !macro INSTALLLANGFILE FILE LANG OUTFILE
 
      SetOutPath "$INSTDIR\locales\${LANG}"
-     File /oname=filezilla.mo "..\locales\${LANG}.mo"
+     File /oname=${OUTFILE} ${FILE}
 
   !macroend
 
@@ -1501,9 +1501,9 @@ FunctionEnd
 
 !if "@FILEZILLA_LINGUAS@" != ""
 
-  !macro UNINSTALLLANGFILE LANG
+  !macro UNINSTALLLANGFILE LANG FILENAME
 
-    Delete "$INSTDIR\locales\${LANG}\filezilla.mo"
+    Delete "$INSTDIR\locales\${LANG}\${FILENAME}"
     RMDir "$INSTDIR\locales\${LANG}"
 
   !macroend
