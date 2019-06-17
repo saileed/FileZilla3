@@ -399,10 +399,10 @@ void CUpdater::ProcessNotification(std::unique_ptr<CNotification> && notificatio
 			else if (pData->GetRequestID() == reqId_certificate) {
 				auto & certNotification = static_cast<CCertificateNotification &>(*pData.get());
 				if (m_use_internal_rootcert) {
-					auto certs = certNotification.info_.GetCertificates();
+					auto certs = certNotification.info_.get_certificates();
 					if (certs.size() > 1) {
 						auto const& ca = certs.back();
-						std::vector<uint8_t> ca_data = ca.GetRawData();
+						std::vector<uint8_t> ca_data = ca.get_raw_data();
 
 						std::string updater_root = fz::base64_decode(s_update_cert);
 						if (ca_data.size() == updater_root.size() && !memcmp(&ca_data[0], updater_root.c_str(), ca_data.size())) {
