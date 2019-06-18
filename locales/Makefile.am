@@ -113,13 +113,19 @@ if MACAPPBUNDLE
 noinst_DATA = $(top_builddir)/FileZilla.app/Contents/SharedSupport/locales
 
 $(top_builddir)/FileZilla.app/Contents/SharedSupport/locales: allmo
-	mkdir -p $(top_builddir)/FileZilla.app/Contents/SharedSupport/locales
+	mkdir -p "$(top_builddir)/FileZilla.app/Contents/SharedSupport/locales"
 	for i in @FILEZILLA_LINGUAS@ ; do \
-	  mkdir -p $(top_builddir)/FileZilla.app/Contents/Resources/$$i.lproj; \
-	  mkdir -p $(top_builddir)/FileZilla.app/Contents/SharedSupport/locales/$$i; \
-	  cp -f $$i.mo $(top_builddir)/FileZilla.app/Contents/SharedSupport/locales/$$i/filezilla.mo; \
+	  mkdir -p "$(top_builddir)/FileZilla.app/Contents/Resources/$$i.lproj"; \
+	  mkdir -p "$(top_builddir)/FileZilla.app/Contents/SharedSupport/locales/$$i"; \
+	  cp -f "$$i.mo" "$(top_builddir)/FileZilla.app/Contents/SharedSupport/locales/$$i/filezilla.mo"; \
 	done
 	mkdir -p $(top_builddir)/FileZilla.app/Contents/Resources/en.lproj
+	lfz_prefix=`$(PKG_CONFIG) --variable=prefix libfilezilla`; \
+	for i in "$${lfz_prefix}"/share/locale/*/LC_MESSAGES/libfilezilla.mo; do \
+	  locale=`echo $$i | sed 's/.*\/\([^\/\]*\)\/LC_MESSAGES\/libfilezilla.mo/\1/'`; \
+	  mkdir -p "$(top_builddir)/FileZilla.app/Contents/SharedSupport/locales/$$locale"; \
+	  cp -f "$$i" "$(top_builddir)/FileZilla.app/Contents/SharedSupport/locales/$$locale/libfilezilla.mo; \
+	done
 
 endif
 
