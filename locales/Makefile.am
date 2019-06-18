@@ -36,7 +36,7 @@ uninstall-local:
 
 # the programs we use (TODO: use configure to detect them)
 MSGFMT=@msgfmt@ -c --verbose --no-hash
-MSGMERGE=@msgmerge@
+MSGMERGE=@msgmerge@ --no-fuzzy-matching
 XGETTEXT=@xgettext@
 
 # common xgettext args: C++ syntax, use the specified macro names as markers
