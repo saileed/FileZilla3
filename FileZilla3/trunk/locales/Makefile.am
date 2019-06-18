@@ -124,7 +124,7 @@ $(top_builddir)/FileZilla.app/Contents/SharedSupport/locales: allmo
 	for i in "$${lfz_prefix}"/share/locale/*/LC_MESSAGES/libfilezilla.mo; do \
 	  locale=`echo $$i | sed 's/.*\/\([^\/\]*\)\/LC_MESSAGES\/libfilezilla.mo/\1/'`; \
 	  mkdir -p "$(top_builddir)/FileZilla.app/Contents/SharedSupport/locales/$$locale"; \
-	  cp -f "$$i" "$(top_builddir)/FileZilla.app/Contents/SharedSupport/locales/$$locale/libfilezilla.mo; \
+	  cp -f "$$i" "$(top_builddir)/FileZilla.app/Contents/SharedSupport/locales/$$locale/libfilezilla.mo"; \
 	done
 
 endif
