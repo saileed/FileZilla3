@@ -8,9 +8,19 @@ Legend:
   Platform prefixes:
     MSW: Microsoft Windows
     *nix: Unix (e.g BSD) and Unix-like systems (e.g. Linux)
-    OS X: Apple Mac OS X
+    macOS/OS X: Apple macOS
 
-3.42.1 (2019-06-08)
+3.43-rc1 (2019-06-19)
+
+- macOS: Minimum required macOS version has been increased to 10.11 (El Capitan)
+- *nix: Official Linux binaries are now built for Debian 10 (Buster)
+- Building FileZilla now requires a C++17 compiler
+- Building and running FileZilla now depends on libfilezilla >= 0.17.0 (https://lib.filezilla-project.org/)
+- When using SFTP, fix fallback to password authentication on a server refusing a password-protected key
+- Fix HTTP proxy support
+- *nix: Improve resolution of program icon
+
+3.42.1 (2019-05-08)
 
 - OS X: Fix a compatibility issue with macOS 10.13
 
