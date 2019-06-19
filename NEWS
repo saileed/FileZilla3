@@ -10,7 +10,7 @@ Legend:
     *nix: Unix (e.g BSD) and Unix-like systems (e.g. Linux)
     macOS/OS X: Apple macOS
 
-3.43-rc1 (2019-06-19)
+3.43.0-rc1 (2019-06-19)
 
 - macOS: Minimum required macOS version has been increased to 10.11 (El Capitan)
 - *nix: Official Linux binaries are now built for Debian 10 (Buster)
