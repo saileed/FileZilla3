@@ -6,10 +6,10 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: filezilla 3.41.0-rc1\n"
+"Project-Id-Version: filezilla 3.42.1\n"
 "Report-Msgid-Bugs-To: https://trac.filezilla-project.org/\n"
-"POT-Creation-Date: 2019-06-18 09:54+0200\n"
-"PO-Revision-Date: 2019-02-27 08:46+0700\n"
+"POT-Creation-Date: 2019-06-19 09:40+0200\n"
+"PO-Revision-Date: 2019-05-10 15:33+0700\n"
 "Last-Translator: Trần Ngọc Quân <vnwildman@gmail.com>\n"
 "Language-Team: Vietnamese <translation-team-vi@lists.sourceforge.net>\n"
 "Language: vi_VN\n"
@@ -19,7 +19,7 @@ msgstr ""
 "Plural-Forms: nplurals=1; plural=0;\n"
 "X-Language-Team-Website: <http://translationproject.org/team/vi.html>\n"
 "X-Poedit-SourceCharset: UTF-8\n"
-"X-Generator: Gtranslator 2.91.7\n"
+"X-Generator: Poedit 2.2.1\n"
 
 #. @translator: This is a date/time formatting specifier. See https://wiki.filezilla-project.org/Date_and_Time_formatting
 #: ../src/interface/statuslinectrl.cpp:59
@@ -185,7 +185,7 @@ msgstr "%w - Mật khẩu máy chủ ủy nhiệm"
 
 #: ../src/interface/resources/xrc/dialogs.xrc:3682
 msgid "&Abort previous connection and connect in current tab"
-msgstr "&Bãi bỏ kết nối trước đó và kết nối vào tab hiện hành."
+msgstr "&Bãi bỏ kết nối trước đó và kết nối vào tab hiện hành"
 
 #: ../src/interface/menu_bar.cpp:174
 msgid "&About..."
@@ -1079,7 +1079,7 @@ msgstr "Dùng d&uyệt đồng bộ"
 
 #: ../src/interface/resources/xrc/settings.xrc:1769
 msgid "&Use system's default editor for text files"
-msgstr "&Dùng trình soạn thảo tập tin văn bản mặc định của hệ thống."
+msgstr "&Dùng trình soạn thảo tập tin văn bản mặc định của hệ thống"
 
 #: ../src/interface/resources/xrc/settings.xrc:348
 msgid "&Use the following IP address:"
@@ -1556,7 +1556,7 @@ msgstr "Tất cả các cổng phải nằm giữa 1024 và 65535."
 msgid "All transfers have finished. %d file could not be transferred."
 msgid_plural "All transfers have finished. %d files could not be transferred."
 msgstr[0] ""
-"Tất cả các việc truyền đã hoàn thành. %d tập tin không thể truyền được"
+"Tất cả các việc truyền đã hoàn thành. %d tập tin không thể truyền được."
 
 #: ../src/interface/resources/xrc/settings.xrc:214
 msgid "Allow &fall back to other transfer mode on failure"
@@ -2059,7 +2059,7 @@ msgstr "Thay đổi quyền truy cập tập tin."
 
 #: ../src/interface/resources/xrc/settings.xrc:2053
 msgid "Changing logfile settings requires restart of FileZilla."
-msgstr "Sửa tập tin nhật ký cần phải khởi động lại FileZilla"
+msgstr "Sửa cài đặt tập tin nhật ký cần phải khởi động lại FileZilla."
 
 #: ../src/interface/FileZilla.cpp:597
 msgid "Character encoding issue"
@@ -2533,7 +2533,7 @@ msgstr "Không thể truy cập đường dẫn %s"
 #: ../src/interface/bookmarks_dialog.cpp:103
 #: ../src/interface/bookmarks_dialog.cpp:573
 msgid "Could not add connection to Site Manager"
-msgstr "Không thể thêm kết nối này vào bộ quản danh bạ."
+msgstr "Không thể thêm kết nối này vào bộ quản danh bạ"
 
 #: ../src/interface/state.cpp:901
 msgid "Could not complete operation"
@@ -2615,7 +2615,7 @@ msgid ""
 "You can specify the data directory of FileZilla by setting the FZ_DATADIR "
 "environment variable."
 msgstr ""
-"không tìm thấy tập tin tài nguyên cho FileZilla, đang đóng FileZilla.\n"
+"Không tìm thấy tập tin tài nguyên cho FileZilla, đang đóng FileZilla.\n"
 "Bạn có thể đặt thư mục chứa dữ liệu cho FileZilla bằng cách đặt biến môi "
 "trường FZ_DATADIR."
 
@@ -3539,7 +3539,7 @@ msgstr "Nhập vào &lệnh tùy ý…"
 
 #: ../src/interface/resources/xrc/dialogs.xrc:3786
 msgid "Enter 0 for unlimited speed."
-msgstr "Nhập 0 để không giới hạn tốc độ"
+msgstr "Nhập 0 để không giới hạn tốc độ."
 
 #: ../src/interface/QueueView.cpp:1919
 msgid "Enter command"
@@ -3846,7 +3846,7 @@ msgstr "Gặp lỗi khi lấy địa chỉ của kết nối dữ liệu, kết 
 
 #: ../src/interface/context_control.cpp:114
 msgid "Failed to initialize FTP engine"
-msgstr "Khởi tạo bộ máy FTP gặp lỗi."
+msgstr "Khởi tạo bộ máy FTP gặp lỗi"
 
 #: ../src/interface/settings/settingsdialog.cpp:153
 msgid "Failed to load panels, invalid resource files?"
@@ -4160,7 +4160,7 @@ msgstr "Ứng dụng bộ lọc này cho:"
 
 #: ../src/interface/resources/xrc/settings.xrc:981
 msgid "Filter invalid characters in filenames"
-msgstr "Lọc các ký tự không hợp lệ trong tập tin."
+msgstr "Lọc các ký tự không hợp lệ trong tập tin"
 
 #: ../src/interface/filteredit.cpp:155 ../src/interface/filteredit.cpp:220
 #: ../src/interface/filteredit.cpp:261 ../src/interface/filteredit.cpp:362
@@ -4738,6 +4738,10 @@ msgstr ""
 "Chuỗi ký tự liên tiếp nhận được không hợp lệ, UTF-8 bị đình chỉ. Chọn tùy "
 "chọn UTF-8 trong Danh bạ để bắt buộc UTF-8."
 
+#: ../src/engine/socket_errors.cpp:94
+msgid "Invalid characters in hostname"
+msgstr "Có các ký tự không hợp lệ trong tên máy"
+
 #: ../src/engine/http/request.cpp:698
 msgid "Invalid chunk size"
 msgstr "Tổng kiểm tra kích thước không đúng"
@@ -4955,7 +4959,7 @@ msgstr "Vượt quá độ dài dòng"
 
 #: ../src/interface/resources/xrc/dialogs.xrc:918
 msgid "Linked against"
-msgstr "Dùng các thư viện:"
+msgstr "Dùng các thư viện"
 
 #: ../src/interface/netconfwizard.cpp:276
 msgid "Listen socket closed"
@@ -5013,7 +5017,7 @@ msgstr "Bộ lọc nội bộ:"
 
 #: ../src/interface/resources/xrc/dialogs.xrc:3518
 msgid "Local path handling:"
-msgstr "Xử lý đường dẫn máy nội bộ"
+msgstr "Xử lý đường dẫn máy nội bộ:"
 
 #: ../src/interface/viewheader.cpp:337
 msgid "Local site:"
@@ -5887,7 +5891,7 @@ msgstr ""
 
 #: ../src/interface/settings/optionspage_dateformatting.cpp:72
 msgid "Please enter a custom date format."
-msgstr "Đề nghị nhập định dạng ngày tháng"
+msgstr "Vui long nhập định dạng ngày tháng tùy ý."
 
 #: ../src/interface/settings/optionspage_dateformatting.cpp:82
 msgid "Please enter a custom time format."
@@ -6283,7 +6287,7 @@ msgstr "Tài khoả&n máy chủ ủy nhiệm:"
 
 #: ../src/engine/proxy.cpp:418
 msgid "Proxy authentication failed"
-msgstr "Sự xác thực máy chủ ủy nhiệm bị lỗi."
+msgstr "Việc xác thực máy chủ ủy nhiệm gặp lỗi"
 
 #: ../src/engine/ftp/transfersocket.cpp:109
 #, c-format
@@ -6314,6 +6318,10 @@ msgid "Proxy request failed: Unknown address type in CONNECT reply"
 msgstr ""
 "Gặp lỗi khi yêu cầu máy chủ ủy nhiệm: Không rõ kiểu địa chỉ trong trả lời "
 "CONNECT"
+
+#: ../src/engine/proxy.cpp:355
+msgid "Proxy sent data while we haven't sent out request yet"
+msgstr "Proxy đã gửi dữ liệu trong khi chúng tôi chưa gửi yêu cầu"
 
 #: ../src/engine/ftp/logon.cpp:91
 msgid "Proxy set but proxy host or port invalid"
@@ -6956,7 +6964,7 @@ msgstr[0] "Chọn %d thư mục cùng nội dung của nó để truyền."
 #, c-format
 msgid "Selected %d directory."
 msgid_plural "Selected %d directories."
-msgstr[0] "Đã chọn %d thư mục"
+msgstr[0] "Đã chọn %d thư mục."
 
 #: ../src/interface/search.cpp:869
 #, c-format
@@ -7623,6 +7631,10 @@ msgstr "Tập tin đích đã có sẵn từ trước!"
 #: ../src/interface/RemoteListView.cpp:1743
 msgid "Target filename already exists, really continue?"
 msgstr "Tên tập tin đích đã tạo rồi, có tiếp tục nữa không?"
+
+#: ../src/interface/verifycertdialog.cpp:653
+msgid "Telephone number:"
+msgstr "Số điện thoại:"
 
 #: ../src/engine/socket_errors.cpp:70
 msgid "Temporary failure in name resolution"
@@ -8460,7 +8472,7 @@ msgstr "Dùng trình soạn thảo &riêng:"
 
 #: ../src/interface/resources/xrc/dialogs.xrc:3168
 msgid "Use &default editor for text files"
-msgstr "&Dùng trình soạn thảo mặc định cho tập tin văn bản."
+msgstr "&Dùng trình soạn thảo mặc định cho tập tin văn bản"
 
 #: ../src/interface/resources/xrc/dialogs.xrc:2946
 #: ../src/interface/resources/xrc/dialogs.xrc:3027
@@ -8638,7 +8650,7 @@ msgid ""
 "When allowing FileZilla to remember passwords, you can reconnect without "
 "having to re-enter a password after restarting FileZilla."
 msgstr ""
-"khi bạn cho FileZilla ghi nhớ mật khẩu, bạn có thể kết nối lại mà không cần "
+"Khi bạn cho FileZilla ghi nhớ mật khẩu, bạn có thể kết nối lại mà không cần "
 "nhập lại mật khẩu nữa sau khi bạn khởi động lại FileZilla."
 
 #: ../src/interface/resources/xrc/settings.xrc:992
@@ -8802,7 +8814,7 @@ msgstr "Bạn phải nhập một địa chỉ IPv4 hợp lệ."
 
 #: ../src/interface/sitemanager_site.cpp:635
 msgid "You have to enter a valid encryption key"
-msgstr "Bạn phải nhập vào một khóa mã hóa hợp lệ."
+msgstr "Bạn phải nhập vào một khóa mã hóa hợp lệ"
 
 #: ../src/interface/search.cpp:932
 msgid "You have to enter a writable local directory."
@@ -8849,8 +8861,7 @@ msgstr "Bạn cần nhập tên máy chủ ủy nhiệm."
 
 #: ../src/interface/settings/optionspage_proxy.cpp:88
 msgid "You need to enter a proxy port in the range from 1 to 65535"
-msgstr ""
-"Bạn cần nhập giá trị cổng máy chủ ủy nhiệm trong khoảng từ 1 tới 65535."
+msgstr "Bạn cần nhập giá trị cổng máy chủ ủy nhiệm trong khoảng từ 1 tới 65535"
 
 #: ../src/interface/sitemanager_site.cpp:676
 msgid "You need to enter a value."
@@ -8939,7 +8950,7 @@ msgstr "có chứa"
 
 #: ../src/interface/updater.cpp:269
 msgid "custom"
-msgstr "Tùy chỉnh"
+msgstr "tùy chỉnh"
 
 #: ../src/interface/filter_conditions_dialog.cpp:67
 msgid "does not contain"

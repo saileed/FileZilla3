@@ -5,10 +5,10 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: FileZilla Client 3.39.0\n"
+"Project-Id-Version: FileZilla Client 3.42.1\n"
 "Report-Msgid-Bugs-To: https://trac.filezilla-project.org/\n"
-"POT-Creation-Date: 2019-06-18 09:54+0200\n"
-"PO-Revision-Date: 2018-11-29 21:42+0200\n"
+"POT-Creation-Date: 2019-06-19 09:40+0200\n"
+"PO-Revision-Date: 2019-05-31 16:36+0300\n"
 "Last-Translator: Ydatografida <ydatografida@gmail.com>\n"
 "Language-Team: Stamatis I. Stamatellos <ydatografida@gmail.com>\n"
 "Language: el_GR\n"
@@ -17,7 +17,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Poedit-SourceCharset: UTF-8\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"X-Generator: Poedit 2.2\n"
+"X-Generator: Poedit 2.2.3\n"
 
 #. @translator: This is a date/time formatting specifier. See https://wiki.filezilla-project.org/Date_and_Time_formatting
 #: ../src/interface/statuslinectrl.cpp:59
@@ -1970,7 +1970,7 @@ msgid ""
 "directories are enabled"
 msgstr ""
 "Αδυναμία σύγκρισης φακέλων, λόγω διαφορετικών φίλτρων στους τοπικούς και "
-"στους απομακρυσμένους φακέλους."
+"στους απομακρυσμένους φακέλους"
 
 #: ../src/interface/filteredit.cpp:150
 msgid "Cannot create new filter"
@@ -2646,6 +2646,17 @@ msgstr ""
 #: ../src/engine/ftp/rawtransfer.cpp:232
 msgid "Could not establish connection to server"
 msgstr "Αδύνατη η εδραίωση σύνδεσης με τον εξυπηρετητή"
+
+#: ../src/interface/FileZilla.cpp:470
+msgid ""
+"Could not find the resource files for FileZilla, closing FileZilla.\n"
+"You can specify the data directory of FileZilla by setting the FZ_DATADIR "
+"environment variable."
+msgstr ""
+"Δεν ήταν δυνατή η εύρεση αρχείων πόρων για το FileZilla, κλείσιμο του "
+"FileZilla.\n"
+"Μπορείτε να ορίσετε το φάκελο δεδομένων του FileZilla, προσδιορίζοντας την "
+"μεταβλητή περιβάλλοντος FZ_DATADIR."
 
 #: ../src/engine/ftp/logon.cpp:753
 msgid "Could not generate custom login sequence."
@@ -4827,6 +4838,10 @@ msgstr ""
 "Ελήφθη λάθος ακολουθία χαρακτήρων, απενεργοποίηση του UTF-8. Επιλέξτε την "
 "επιλογή UTF-8 στο διαχειριστή τοποθεσιών για να χρησιμοποιήσετε UTF-8."
 
+#: ../src/engine/socket_errors.cpp:94
+msgid "Invalid characters in hostname"
+msgstr "Μη έγκυροι χαρακτήρες στο όνομα κεντρικού υπολογιστή"
+
 #: ../src/engine/http/request.cpp:698
 msgid "Invalid chunk size"
 msgstr "Μη έγκυρο μέγεθος τμήματος"
@@ -6288,7 +6303,7 @@ msgstr ""
 "(router) σας χρησιμοποιεί το νεώτερο λογισμικό (firmware). Επιπρόσθετα, ο "
 "δρομολογητής σας πρέπει να είναι σωστά ρυθμισμένος. Θα πρέπει να "
 "χρησιμοποιήσετε τη χειροκίνητη προώθηση δεδομένων στις θύρες. Ο δρομολογητή "
-"δεν πρέπει να λειτουργεί σε καταστάσεις 'DMZ' ή 'game mode'."
+"δεν πρέπει να λειτουργεί σε καταστάσεις 'DMZ' ή 'game mode'"
 
 #: ../src/interface/verifycertdialog.cpp:742
 msgid "Port:"
@@ -6440,6 +6455,10 @@ msgid "Proxy request failed: Unknown address type in CONNECT reply"
 msgstr ""
 "Το αίτημα του διαμεσολαβητή απορρίφθηκε: Άγνωστος τύπος διεύθυνσης ως "
 "απάντηση κατά την σύνδεση"
+
+#: ../src/engine/proxy.cpp:355
+msgid "Proxy sent data while we haven't sent out request yet"
+msgstr "Ο διακομιστής έστειλε δεδομένα χωρίς να τα έχουμε αιτηθεί"
 
 #: ../src/engine/ftp/logon.cpp:91
 msgid "Proxy set but proxy host or port invalid"
@@ -7779,6 +7798,10 @@ msgstr "Το αρχείο προορισμού υπάρχει ήδη!"
 #: ../src/interface/RemoteListView.cpp:1743
 msgid "Target filename already exists, really continue?"
 msgstr "Το όνομα του αρχείου υπάρχει ήδη, θέλετε να συνεχίσετε;"
+
+#: ../src/interface/verifycertdialog.cpp:653
+msgid "Telephone number:"
+msgstr "Αριθμός τηλεφώνου:"
 
 #: ../src/engine/socket_errors.cpp:70
 msgid "Temporary failure in name resolution"
