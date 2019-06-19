@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: FileZilla 3\n"
 "Report-Msgid-Bugs-To: https://trac.filezilla-project.org/\n"
-"POT-Creation-Date: 2019-06-18 09:54+0200\n"
-"PO-Revision-Date: 2018-12-29 15:11+0800\n"
+"POT-Creation-Date: 2019-06-19 09:40+0200\n"
+"PO-Revision-Date: 2019-05-13 10:59+0800\n"
 "Last-Translator: Sun Junwen <sunjw8888@gmail.com>\n"
 "Language-Team: Chinese (simplified) <i18n-zh@googlegroups.com>\n"
 "Language: zh_CN\n"
@@ -2551,6 +2551,15 @@ msgstr ""
 msgid "Could not establish connection to server"
 msgstr "无法建立到服务器的连接"
 
+#: ../src/interface/FileZilla.cpp:470
+msgid ""
+"Could not find the resource files for FileZilla, closing FileZilla.\n"
+"You can specify the data directory of FileZilla by setting the FZ_DATADIR "
+"environment variable."
+msgstr ""
+"无法加载 FileZilla 资源文件，正在关闭 FileZilla 。\n"
+"您可以通过设置 FZ_DATADIR 环境变量来指定 FileZilla 的数据目录。"
+
 #: ../src/engine/ftp/logon.cpp:753
 msgid "Could not generate custom login sequence."
 msgstr "无法生成自定义登录过程。"
@@ -4595,6 +4604,10 @@ msgid ""
 "site manager to force UTF-8."
 msgstr "收到无效字节，将禁用 UTF-8 编码。请在站点管理器中强制选择 UTF-8 编码。"
 
+#: ../src/engine/socket_errors.cpp:94
+msgid "Invalid characters in hostname"
+msgstr "主机名中有无效字符"
+
 #: ../src/engine/http/request.cpp:698
 msgid "Invalid chunk size"
 msgstr "无效的块大小"
@@ -5665,6 +5678,12 @@ msgstr "权限"
 #: ../src/interface/resources/xrc/dialogs.xrc:947
 msgid "Platform:"
 msgstr "平台:"
+
+#: ../src/interface/osx_sandbox_userdirs.cpp:280
+msgid ""
+"Please add at least one directory you want to download files into or to "
+"upload files from."
+msgstr "请至少添加一个用于下载或者上传文件的目录。"
 
 #: ../src/interface/resources/xrc/dialogs.xrc:3998
 msgid "Please add the local directories you want to use FileZilla with."
@@ -7376,6 +7395,10 @@ msgstr "目标文件名已经存在！"
 msgid "Target filename already exists, really continue?"
 msgstr "目标文件名已经存在，是否继续？"
 
+#: ../src/interface/verifycertdialog.cpp:653
+msgid "Telephone number:"
+msgstr "电话:"
+
 #: ../src/engine/socket_errors.cpp:70
 msgid "Temporary failure in name resolution"
 msgstr "名字解析中临时出错"
@@ -7785,6 +7808,14 @@ msgstr "无法删除该过滤器集合。"
 #: ../src/interface/filter.cpp:318
 msgid "This filter set cannot be renamed."
 msgstr "无法重命名该过滤器集合。"
+
+#: ../src/interface/verifycertdialog.cpp:730
+msgid ""
+"This may be the result of a downgrade attack, only continue after you have "
+"spoken to the server administrator or server hosting provider."
+msgstr ""
+"可能发生了降级攻击 (downgrade attack)，请和系统管理员或服务提供商确认后再继续"
+"操作。"
 
 #: ../src/interface/netconfwizard.cpp:595
 msgid ""
